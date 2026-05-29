@@ -9,38 +9,238 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as CoursesRouteImport } from './routes/courses'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StudentDashboardRouteImport } from './routes/student.dashboard'
+import { Route as StudentCertificatesRouteImport } from './routes/student.certificates'
+import { Route as InstructorDashboardRouteImport } from './routes/instructor.dashboard'
+import { Route as InstructorCreateRouteImport } from './routes/instructor.create'
+import { Route as CoursesIdRouteImport } from './routes/courses.$id'
+import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as StudentQuizIdRouteImport } from './routes/student.quiz.$id'
+import { Route as StudentLearnIdRouteImport } from './routes/student.learn.$id'
+import { Route as StudentAssignmentIdRouteImport } from './routes/student.assignment.$id'
 
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CoursesRoute = CoursesRouteImport.update({
+  id: '/courses',
+  path: '/courses',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudentDashboardRoute = StudentDashboardRouteImport.update({
+  id: '/student/dashboard',
+  path: '/student/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentCertificatesRoute = StudentCertificatesRouteImport.update({
+  id: '/student/certificates',
+  path: '/student/certificates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorDashboardRoute = InstructorDashboardRouteImport.update({
+  id: '/instructor/dashboard',
+  path: '/instructor/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorCreateRoute = InstructorCreateRouteImport.update({
+  id: '/instructor/create',
+  path: '/instructor/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CoursesIdRoute = CoursesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => CoursesRoute,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentQuizIdRoute = StudentQuizIdRouteImport.update({
+  id: '/student/quiz/$id',
+  path: '/student/quiz/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentLearnIdRoute = StudentLearnIdRouteImport.update({
+  id: '/student/learn/$id',
+  path: '/student/learn/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentAssignmentIdRoute = StudentAssignmentIdRouteImport.update({
+  id: '/student/assignment/$id',
+  path: '/student/assignment/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/courses': typeof CoursesRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/courses/$id': typeof CoursesIdRoute
+  '/instructor/create': typeof InstructorCreateRoute
+  '/instructor/dashboard': typeof InstructorDashboardRoute
+  '/student/certificates': typeof StudentCertificatesRoute
+  '/student/dashboard': typeof StudentDashboardRoute
+  '/student/assignment/$id': typeof StudentAssignmentIdRoute
+  '/student/learn/$id': typeof StudentLearnIdRoute
+  '/student/quiz/$id': typeof StudentQuizIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/courses': typeof CoursesRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/courses/$id': typeof CoursesIdRoute
+  '/instructor/create': typeof InstructorCreateRoute
+  '/instructor/dashboard': typeof InstructorDashboardRoute
+  '/student/certificates': typeof StudentCertificatesRoute
+  '/student/dashboard': typeof StudentDashboardRoute
+  '/student/assignment/$id': typeof StudentAssignmentIdRoute
+  '/student/learn/$id': typeof StudentLearnIdRoute
+  '/student/quiz/$id': typeof StudentQuizIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/courses': typeof CoursesRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/courses/$id': typeof CoursesIdRoute
+  '/instructor/create': typeof InstructorCreateRoute
+  '/instructor/dashboard': typeof InstructorDashboardRoute
+  '/student/certificates': typeof StudentCertificatesRoute
+  '/student/dashboard': typeof StudentDashboardRoute
+  '/student/assignment/$id': typeof StudentAssignmentIdRoute
+  '/student/learn/$id': typeof StudentLearnIdRoute
+  '/student/quiz/$id': typeof StudentQuizIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/courses'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/admin/dashboard'
+    | '/courses/$id'
+    | '/instructor/create'
+    | '/instructor/dashboard'
+    | '/student/certificates'
+    | '/student/dashboard'
+    | '/student/assignment/$id'
+    | '/student/learn/$id'
+    | '/student/quiz/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/courses'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/admin/dashboard'
+    | '/courses/$id'
+    | '/instructor/create'
+    | '/instructor/dashboard'
+    | '/student/certificates'
+    | '/student/dashboard'
+    | '/student/assignment/$id'
+    | '/student/learn/$id'
+    | '/student/quiz/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/courses'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/admin/dashboard'
+    | '/courses/$id'
+    | '/instructor/create'
+    | '/instructor/dashboard'
+    | '/student/certificates'
+    | '/student/dashboard'
+    | '/student/assignment/$id'
+    | '/student/learn/$id'
+    | '/student/quiz/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CoursesRoute: typeof CoursesRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  InstructorCreateRoute: typeof InstructorCreateRoute
+  InstructorDashboardRoute: typeof InstructorDashboardRoute
+  StudentCertificatesRoute: typeof StudentCertificatesRoute
+  StudentDashboardRoute: typeof StudentDashboardRoute
+  StudentAssignmentIdRoute: typeof StudentAssignmentIdRoute
+  StudentLearnIdRoute: typeof StudentLearnIdRoute
+  StudentQuizIdRoute: typeof StudentQuizIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/courses': {
+      id: '/courses'
+      path: '/courses'
+      fullPath: '/courses'
+      preLoaderRoute: typeof CoursesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +248,98 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/student/dashboard': {
+      id: '/student/dashboard'
+      path: '/student/dashboard'
+      fullPath: '/student/dashboard'
+      preLoaderRoute: typeof StudentDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/certificates': {
+      id: '/student/certificates'
+      path: '/student/certificates'
+      fullPath: '/student/certificates'
+      preLoaderRoute: typeof StudentCertificatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/dashboard': {
+      id: '/instructor/dashboard'
+      path: '/instructor/dashboard'
+      fullPath: '/instructor/dashboard'
+      preLoaderRoute: typeof InstructorDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/create': {
+      id: '/instructor/create'
+      path: '/instructor/create'
+      fullPath: '/instructor/create'
+      preLoaderRoute: typeof InstructorCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/courses/$id': {
+      id: '/courses/$id'
+      path: '/$id'
+      fullPath: '/courses/$id'
+      preLoaderRoute: typeof CoursesIdRouteImport
+      parentRoute: typeof CoursesRoute
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/quiz/$id': {
+      id: '/student/quiz/$id'
+      path: '/student/quiz/$id'
+      fullPath: '/student/quiz/$id'
+      preLoaderRoute: typeof StudentQuizIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/learn/$id': {
+      id: '/student/learn/$id'
+      path: '/student/learn/$id'
+      fullPath: '/student/learn/$id'
+      preLoaderRoute: typeof StudentLearnIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/assignment/$id': {
+      id: '/student/assignment/$id'
+      path: '/student/assignment/$id'
+      fullPath: '/student/assignment/$id'
+      preLoaderRoute: typeof StudentAssignmentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface CoursesRouteChildren {
+  CoursesIdRoute: typeof CoursesIdRoute
+}
+
+const CoursesRouteChildren: CoursesRouteChildren = {
+  CoursesIdRoute: CoursesIdRoute,
+}
+
+const CoursesRouteWithChildren =
+  CoursesRoute._addFileChildren(CoursesRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CoursesRoute: CoursesRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  InstructorCreateRoute: InstructorCreateRoute,
+  InstructorDashboardRoute: InstructorDashboardRoute,
+  StudentCertificatesRoute: StudentCertificatesRoute,
+  StudentDashboardRoute: StudentDashboardRoute,
+  StudentAssignmentIdRoute: StudentAssignmentIdRoute,
+  StudentLearnIdRoute: StudentLearnIdRoute,
+  StudentQuizIdRoute: StudentQuizIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
