@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { courses, reviews, type Lesson } from "@/data/mock";
+import { courses, reviews, type Lesson, type Course } from "@/data/mock";
 import { categoryBadgeClass } from "@/lib/categoryColor";
 import { useApp } from "@/context/AppContext";
 
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/courses/$id")({
 const lessonIcon = (t: Lesson["type"]) => t === "video" ? PlayCircle : t === "doc" ? FileText : HelpCircle;
 
 function CourseDetail() {
-  const course = Route.useLoaderData();
+  const course = Route.useLoaderData() as Course;
   const navigate = useNavigate();
   const { enroll, enrolledCourseIds } = useApp();
   const isEnrolled = enrolledCourseIds.includes(course.id);
