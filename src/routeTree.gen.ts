@@ -16,7 +16,10 @@ import { Route as CoursesRouteImport } from './routes/courses'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentDashboardRouteImport } from './routes/student.dashboard'
 import { Route as StudentCertificatesRouteImport } from './routes/student.certificates'
+import { Route as InstructorDashboardRouteImport } from './routes/instructor.dashboard'
+import { Route as InstructorCreateRouteImport } from './routes/instructor.create'
 import { Route as CoursesIdRouteImport } from './routes/courses.$id'
+import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as StudentQuizIdRouteImport } from './routes/student.quiz.$id'
 import { Route as StudentLearnIdRouteImport } from './routes/student.learn.$id'
 import { Route as StudentAssignmentIdRouteImport } from './routes/student.assignment.$id'
@@ -56,10 +59,25 @@ const StudentCertificatesRoute = StudentCertificatesRouteImport.update({
   path: '/student/certificates',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InstructorDashboardRoute = InstructorDashboardRouteImport.update({
+  id: '/instructor/dashboard',
+  path: '/instructor/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorCreateRoute = InstructorCreateRouteImport.update({
+  id: '/instructor/create',
+  path: '/instructor/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CoursesIdRoute = CoursesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => CoursesRoute,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const StudentQuizIdRoute = StudentQuizIdRouteImport.update({
   id: '/student/quiz/$id',
@@ -83,7 +101,10 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
   '/courses/$id': typeof CoursesIdRoute
+  '/instructor/create': typeof InstructorCreateRoute
+  '/instructor/dashboard': typeof InstructorDashboardRoute
   '/student/certificates': typeof StudentCertificatesRoute
   '/student/dashboard': typeof StudentDashboardRoute
   '/student/assignment/$id': typeof StudentAssignmentIdRoute
@@ -96,7 +117,10 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
   '/courses/$id': typeof CoursesIdRoute
+  '/instructor/create': typeof InstructorCreateRoute
+  '/instructor/dashboard': typeof InstructorDashboardRoute
   '/student/certificates': typeof StudentCertificatesRoute
   '/student/dashboard': typeof StudentDashboardRoute
   '/student/assignment/$id': typeof StudentAssignmentIdRoute
@@ -110,7 +134,10 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
   '/courses/$id': typeof CoursesIdRoute
+  '/instructor/create': typeof InstructorCreateRoute
+  '/instructor/dashboard': typeof InstructorDashboardRoute
   '/student/certificates': typeof StudentCertificatesRoute
   '/student/dashboard': typeof StudentDashboardRoute
   '/student/assignment/$id': typeof StudentAssignmentIdRoute
@@ -125,7 +152,10 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/register'
+    | '/admin/dashboard'
     | '/courses/$id'
+    | '/instructor/create'
+    | '/instructor/dashboard'
     | '/student/certificates'
     | '/student/dashboard'
     | '/student/assignment/$id'
@@ -138,7 +168,10 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/register'
+    | '/admin/dashboard'
     | '/courses/$id'
+    | '/instructor/create'
+    | '/instructor/dashboard'
     | '/student/certificates'
     | '/student/dashboard'
     | '/student/assignment/$id'
@@ -151,7 +184,10 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/register'
+    | '/admin/dashboard'
     | '/courses/$id'
+    | '/instructor/create'
+    | '/instructor/dashboard'
     | '/student/certificates'
     | '/student/dashboard'
     | '/student/assignment/$id'
@@ -165,6 +201,9 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  InstructorCreateRoute: typeof InstructorCreateRoute
+  InstructorDashboardRoute: typeof InstructorDashboardRoute
   StudentCertificatesRoute: typeof StudentCertificatesRoute
   StudentDashboardRoute: typeof StudentDashboardRoute
   StudentAssignmentIdRoute: typeof StudentAssignmentIdRoute
@@ -223,12 +262,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentCertificatesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/instructor/dashboard': {
+      id: '/instructor/dashboard'
+      path: '/instructor/dashboard'
+      fullPath: '/instructor/dashboard'
+      preLoaderRoute: typeof InstructorDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/create': {
+      id: '/instructor/create'
+      path: '/instructor/create'
+      fullPath: '/instructor/create'
+      preLoaderRoute: typeof InstructorCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/courses/$id': {
       id: '/courses/$id'
       path: '/$id'
       fullPath: '/courses/$id'
       preLoaderRoute: typeof CoursesIdRouteImport
       parentRoute: typeof CoursesRoute
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/student/quiz/$id': {
       id: '/student/quiz/$id'
@@ -271,6 +331,9 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  InstructorCreateRoute: InstructorCreateRoute,
+  InstructorDashboardRoute: InstructorDashboardRoute,
   StudentCertificatesRoute: StudentCertificatesRoute,
   StudentDashboardRoute: StudentDashboardRoute,
   StudentAssignmentIdRoute: StudentAssignmentIdRoute,
