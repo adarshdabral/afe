@@ -14,7 +14,12 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as CoursesRouteImport } from './routes/courses'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StudentDashboardRouteImport } from './routes/student.dashboard'
+import { Route as StudentCertificatesRouteImport } from './routes/student.certificates'
 import { Route as CoursesIdRouteImport } from './routes/courses.$id'
+import { Route as StudentQuizIdRouteImport } from './routes/student.quiz.$id'
+import { Route as StudentLearnIdRouteImport } from './routes/student.learn.$id'
+import { Route as StudentAssignmentIdRouteImport } from './routes/student.assignment.$id'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -41,10 +46,35 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudentDashboardRoute = StudentDashboardRouteImport.update({
+  id: '/student/dashboard',
+  path: '/student/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentCertificatesRoute = StudentCertificatesRouteImport.update({
+  id: '/student/certificates',
+  path: '/student/certificates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CoursesIdRoute = CoursesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => CoursesRoute,
+} as any)
+const StudentQuizIdRoute = StudentQuizIdRouteImport.update({
+  id: '/student/quiz/$id',
+  path: '/student/quiz/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentLearnIdRoute = StudentLearnIdRouteImport.update({
+  id: '/student/learn/$id',
+  path: '/student/learn/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentAssignmentIdRoute = StudentAssignmentIdRouteImport.update({
+  id: '/student/assignment/$id',
+  path: '/student/assignment/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -54,6 +84,11 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/courses/$id': typeof CoursesIdRoute
+  '/student/certificates': typeof StudentCertificatesRoute
+  '/student/dashboard': typeof StudentDashboardRoute
+  '/student/assignment/$id': typeof StudentAssignmentIdRoute
+  '/student/learn/$id': typeof StudentLearnIdRoute
+  '/student/quiz/$id': typeof StudentQuizIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +97,11 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/courses/$id': typeof CoursesIdRoute
+  '/student/certificates': typeof StudentCertificatesRoute
+  '/student/dashboard': typeof StudentDashboardRoute
+  '/student/assignment/$id': typeof StudentAssignmentIdRoute
+  '/student/learn/$id': typeof StudentLearnIdRoute
+  '/student/quiz/$id': typeof StudentQuizIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +111,11 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/courses/$id': typeof CoursesIdRoute
+  '/student/certificates': typeof StudentCertificatesRoute
+  '/student/dashboard': typeof StudentDashboardRoute
+  '/student/assignment/$id': typeof StudentAssignmentIdRoute
+  '/student/learn/$id': typeof StudentLearnIdRoute
+  '/student/quiz/$id': typeof StudentQuizIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,6 +126,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/courses/$id'
+    | '/student/certificates'
+    | '/student/dashboard'
+    | '/student/assignment/$id'
+    | '/student/learn/$id'
+    | '/student/quiz/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,6 +139,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/courses/$id'
+    | '/student/certificates'
+    | '/student/dashboard'
+    | '/student/assignment/$id'
+    | '/student/learn/$id'
+    | '/student/quiz/$id'
   id:
     | '__root__'
     | '/'
@@ -97,6 +152,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/courses/$id'
+    | '/student/certificates'
+    | '/student/dashboard'
+    | '/student/assignment/$id'
+    | '/student/learn/$id'
+    | '/student/quiz/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -105,6 +165,11 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  StudentCertificatesRoute: typeof StudentCertificatesRoute
+  StudentDashboardRoute: typeof StudentDashboardRoute
+  StudentAssignmentIdRoute: typeof StudentAssignmentIdRoute
+  StudentLearnIdRoute: typeof StudentLearnIdRoute
+  StudentQuizIdRoute: typeof StudentQuizIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -144,12 +209,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/student/dashboard': {
+      id: '/student/dashboard'
+      path: '/student/dashboard'
+      fullPath: '/student/dashboard'
+      preLoaderRoute: typeof StudentDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/certificates': {
+      id: '/student/certificates'
+      path: '/student/certificates'
+      fullPath: '/student/certificates'
+      preLoaderRoute: typeof StudentCertificatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/courses/$id': {
       id: '/courses/$id'
       path: '/$id'
       fullPath: '/courses/$id'
       preLoaderRoute: typeof CoursesIdRouteImport
       parentRoute: typeof CoursesRoute
+    }
+    '/student/quiz/$id': {
+      id: '/student/quiz/$id'
+      path: '/student/quiz/$id'
+      fullPath: '/student/quiz/$id'
+      preLoaderRoute: typeof StudentQuizIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/learn/$id': {
+      id: '/student/learn/$id'
+      path: '/student/learn/$id'
+      fullPath: '/student/learn/$id'
+      preLoaderRoute: typeof StudentLearnIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/assignment/$id': {
+      id: '/student/assignment/$id'
+      path: '/student/assignment/$id'
+      fullPath: '/student/assignment/$id'
+      preLoaderRoute: typeof StudentAssignmentIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -171,7 +271,22 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  StudentCertificatesRoute: StudentCertificatesRoute,
+  StudentDashboardRoute: StudentDashboardRoute,
+  StudentAssignmentIdRoute: StudentAssignmentIdRoute,
+  StudentLearnIdRoute: StudentLearnIdRoute,
+  StudentQuizIdRoute: StudentQuizIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
