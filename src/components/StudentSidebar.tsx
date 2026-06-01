@@ -1,17 +1,29 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, BookOpen, Compass, Award, Settings, Sparkles } from "lucide-react";
+import {
+  LayoutDashboard,
+  GraduationCap,
+  Activity,
+  MessageSquare,
+  BookOpen,
+  Award,
+  Settings,
+  Sparkles,
+  LogOut,
+} from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
 const links = [
   { to: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/student/curriculum", label: "AI Course", icon: GraduationCap },
+  { to: "/student/progress", label: "Progress", icon: Activity },
+  { to: "/student/forum", label: "Forum", icon: MessageSquare },
   { to: "/courses", label: "My Courses", icon: BookOpen },
-  { to: "/courses", label: "Explore", icon: Compass },
-  { to: "/student/certificates", label: "Certificates", icon: Award },
+  { to: "/student/certificate", label: "Certificate", icon: Award },
   { to: "#", label: "Settings", icon: Settings },
 ] as const;
 
 export function StudentSidebar() {
-  const { currentUser } = useApp();
+  const { currentUser, authUser, logout } = useApp();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
@@ -49,11 +61,20 @@ export function StudentSidebar() {
             AS
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-foreground truncate">{currentUser.name}</div>
+            <div className="text-sm font-medium text-foreground truncate">
+              {authUser?.name ?? currentUser.name}
+            </div>
             <span className="text-xs bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded">
               Student
             </span>
           </div>
+          <button
+            onClick={logout}
+            aria-label="Sign out"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-foreground"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </aside>
 

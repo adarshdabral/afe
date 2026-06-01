@@ -1,18 +1,31 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Users, BookOpen, ClipboardCheck, BarChart2, Settings, Sparkles, Menu, X } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  ClipboardCheck,
+  BarChart2,
+  Settings,
+  Sparkles,
+  Menu,
+  X,
+  LogOut,
+} from "lucide-react";
 import { useState } from "react";
+import { useApp } from "@/context/AppContext";
 
 const links = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/dashboard", label: "Users", icon: Users },
   { to: "/admin/dashboard", label: "Courses", icon: BookOpen },
   { to: "/admin/dashboard", label: "Applications", icon: ClipboardCheck },
-  { to: "/admin/dashboard", label: "Analytics", icon: BarChart2 },
+  { to: "/admin/analytics", label: "Analytics", icon: BarChart2 },
   { to: "#", label: "Settings", icon: Settings },
 ] as const;
 
 export function AdminSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { authUser, logout } = useApp();
   const [open, setOpen] = useState(false);
 
   const Body = () => (
@@ -48,12 +61,21 @@ export function AdminSidebar() {
         <div className="w-10 h-10 rounded-full bg-gray-700 text-white flex items-center justify-center text-sm font-semibold">
           AD
         </div>
-        <div>
-          <div className="text-sm font-medium text-foreground">Admin User</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-foreground truncate">
+            {authUser?.name ?? "Admin User"}
+          </div>
           <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded">
             Admin
           </span>
         </div>
+        <button
+          onClick={logout}
+          aria-label="Sign out"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-foreground"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

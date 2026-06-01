@@ -1,102 +1,255 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { getRegistrationDirectoryFn, registerStudentFn } from "@/lib/auth/registration.functions";
 
 export const Route = createFileRoute("/register")({
-  head: () => ({ meta: [{ title: "Sign Up — AI For Everyone" }] }),
+  head: () => ({ meta: [{ title: "Student Registration — AI For Everyone" }] }),
   component: Register,
 });
 
+const CLASSES = ["8", "9", "10", "11", "12"] as const;
+
+const selectClass =
+  "mt-1.5 w-full h-11 px-3 rounded-xl border border-input bg-card text-sm text-foreground";
+
 function Register() {
-  const [form, setForm] = useState({ name: "", email: "", pwd: "", confirm: "" });
-  const [role, setRole] = useState<"Student" | "Instructor">("Student");
-  const [terms, setTerms] = useState(false);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { data: directory } = useQuery({
+    queryKey: ["registrationDirectory"],
+    queryFn: () => getRegistrationDirectoryFn(),
+  });
+
+  const [form, setForm] = useState({
+    name: "",
+    className: "",
+    rollNumber: "",
+    schoolId: "",
+    teacherId: "",
+    email: "",
+    mobile: "",
+    password: "",
+  });
   const [loading, setLoading] = useState(false);
   const [errs, setErrs] = useState<Record<string, string>>({});
-  const navigate = useNavigate();
 
-  const submit = (e: React.FormEvent) => {
+  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const teachers = useMemo(
+    () => (directory?.teachers ?? []).filter((t) => t.schoolId === form.schoolId),
+    [directory, form.schoolId],
+  );
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const er: Record<string, string> = {};
     if (!form.name) er.name = "Required";
-    if (!form.email) er.email = "Required";
-    else if (!/^\S+@\S+\.\S+$/.test(form.email)) er.email = "Invalid email";
-    if (!form.pwd) er.pwd = "Required";
-    else if (form.pwd.length < 6) er.pwd = "Min 6 characters";
-    if (form.confirm !== form.pwd) er.confirm = "Passwords don't match";
-    if (!terms) er.terms = "You must accept terms";
+    if (!form.className) er.className = "Select your class";
+    if (!form.rollNumber) er.rollNumber = "Required";
+    if (!form.schoolId) er.schoolId = "Select your school";
+    if (!form.teacherId) er.teacherId = "Select your teacher";
+    if (!form.mobile) er.mobile = "Required";
+    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) er.email = "Invalid email";
+    if (!form.password) er.password = "Required";
+    else if (form.password.length < 6) er.password = "Min 6 characters";
     setErrs(er);
     if (Object.keys(er).length) return;
+
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await registerStudentFn({
+        data: {
+          name: form.name,
+          className: form.className as (typeof CLASSES)[number],
+          rollNumber: form.rollNumber,
+          schoolId: form.schoolId,
+          teacherId: form.teacherId,
+          email: form.email || undefined,
+          mobile: form.mobile,
+          password: form.password,
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      toast.success("Registration submitted — awaiting teacher approval.");
+      navigate({ to: "/student/pending" });
+    } catch (err) {
       setLoading(false);
-      toast.success("Account created!");
-      navigate({ to: "/login" });
-    }, 1000);
+      const message = err instanceof Error ? err.message : "Registration failed";
+      setErrs({ form: message });
+      toast.error(message);
+    }
   };
 
   return (
     <div className="min-h-screen grid md:grid-cols-2">
       <div className="relative hidden md:flex flex-col justify-between p-12 text-white bg-gradient-to-br from-violet-600 to-violet-800 overflow-hidden">
         <Link to="/" className="flex items-center gap-2 font-semibold relative z-10">
-          <span className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><Sparkles className="w-4 h-4" /></span>
+          <span className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+            <Sparkles className="w-4 h-4" />
+          </span>
           AI For Everyone
         </Link>
         <div className="relative z-10">
-          <p className="text-3xl font-bold leading-tight">"Join 12,000+ learners building the future, one lesson at a time."</p>
+          <p className="text-3xl font-bold leading-tight">
+            "Register with your school and teacher to start your AI literacy journey."
+          </p>
+          <p className="mt-4 text-white/80">
+            Your teacher approves your enrollment — then your eight modules unlock.
+          </p>
         </div>
         <div className="absolute -bottom-20 -right-20 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
       </div>
 
       <div className="flex items-center justify-center p-6 md:p-12">
         <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold text-foreground">Create your account</h1>
-          <p className="text-muted-foreground mt-2">Free forever. No credit card.</p>
-
-          <div className="mt-6 flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
-            {(["Student", "Instructor"] as const).map((r) => (
-              <button key={r} onClick={() => setRole(r)} type="button"
-                className={`flex-1 py-2 rounded-lg text-sm font-medium ${role === r ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
-                {r}
-              </button>
-            ))}
-          </div>
+          <h1 className="text-3xl font-bold text-foreground">Student Registration</h1>
+          <p className="text-muted-foreground mt-2">
+            Free for school students. Access is granted after your teacher approves.
+          </p>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
-            {[
-              { k: "name", label: "Full Name", type: "text" },
-              { k: "email", label: "Email", type: "email" },
-              { k: "pwd", label: "Password", type: "password" },
-              { k: "confirm", label: "Confirm Password", type: "password" },
-            ].map((f) => (
-              <div key={f.k}>
-                <Label htmlFor={f.k}>{f.label}</Label>
-                <Input id={f.k} type={f.type} value={form[f.k as keyof typeof form]}
-                  onChange={(e) => setForm({ ...form, [f.k]: e.target.value })}
-                  className={`mt-1.5 rounded-xl h-11 ${errs[f.k] ? "ring-2 ring-red-500" : ""}`} />
-                {errs[f.k] && <p className="text-xs text-red-500 mt-1">{errs[f.k]}</p>}
-              </div>
-            ))}
-            <label className="flex items-start gap-2 text-sm">
-              <Checkbox checked={terms} onCheckedChange={(v) => setTerms(v === true)} />
-              <span className="text-muted-foreground">I agree to the <a href="#" className="text-violet-600 hover:underline">Terms</a> and <a href="#" className="text-violet-600 hover:underline">Privacy Policy</a></span>
-            </label>
-            {errs.terms && <p className="text-xs text-red-500 -mt-2">{errs.terms}</p>}
-            <Button type="submit" disabled={loading} className="w-full rounded-xl h-11 bg-violet-600 hover:bg-violet-700 text-white">
-              {loading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Create Account"}
+            <Field label="Full Name" error={errs.name}>
+              <Input
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+                className={`mt-1.5 rounded-xl h-11 ${errs.name ? "ring-2 ring-red-500" : ""}`}
+              />
+            </Field>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Class" error={errs.className}>
+                <select
+                  value={form.className}
+                  onChange={(e) => set("className", e.target.value)}
+                  className={selectClass}
+                >
+                  <option value="">Select</option>
+                  {CLASSES.map((c) => (
+                    <option key={c} value={c}>
+                      Class {c}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Roll Number" error={errs.rollNumber}>
+                <Input
+                  value={form.rollNumber}
+                  onChange={(e) => set("rollNumber", e.target.value)}
+                  className={`mt-1.5 rounded-xl h-11 ${errs.rollNumber ? "ring-2 ring-red-500" : ""}`}
+                />
+              </Field>
+            </div>
+
+            <Field label="School" error={errs.schoolId}>
+              <select
+                value={form.schoolId}
+                onChange={(e) => {
+                  set("schoolId", e.target.value);
+                  set("teacherId", ""); // reset teacher when school changes
+                }}
+                className={selectClass}
+              >
+                <option value="">Select your school</option>
+                {(directory?.schools ?? []).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Teacher" error={errs.teacherId}>
+              <select
+                value={form.teacherId}
+                onChange={(e) => set("teacherId", e.target.value)}
+                disabled={!form.schoolId}
+                className={`${selectClass} disabled:opacity-50`}
+              >
+                <option value="">
+                  {form.schoolId ? "Select your teacher" : "Select a school first"}
+                </option>
+                {teachers.map((t) => (
+                  <option key={`${t.id}-${t.schoolId}`} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Mobile Number" error={errs.mobile}>
+              <Input
+                value={form.mobile}
+                onChange={(e) => set("mobile", e.target.value)}
+                placeholder="Used to sign in"
+                className={`mt-1.5 rounded-xl h-11 ${errs.mobile ? "ring-2 ring-red-500" : ""}`}
+              />
+            </Field>
+
+            <Field label="Email (optional)" error={errs.email}>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => set("email", e.target.value)}
+                className={`mt-1.5 rounded-xl h-11 ${errs.email ? "ring-2 ring-red-500" : ""}`}
+              />
+            </Field>
+
+            <Field label="Password" error={errs.password}>
+              <Input
+                type="password"
+                value={form.password}
+                onChange={(e) => set("password", e.target.value)}
+                className={`mt-1.5 rounded-xl h-11 ${errs.password ? "ring-2 ring-red-500" : ""}`}
+              />
+            </Field>
+
+            {errs.form && <p className="text-xs text-red-500">{errs.form}</p>}
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl h-11 bg-violet-600 hover:bg-violet-700 text-white"
+            >
+              {loading ? (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                "Submit Registration"
+              )}
             </Button>
           </form>
 
           <p className="text-sm text-muted-foreground text-center mt-6">
-            Already have an account? <Link to="/login" className="text-violet-600 font-medium hover:underline">Login</Link>
+            Already have an account?{" "}
+            <Link to="/login" className="text-violet-600 font-medium hover:underline">
+              Login
+            </Link>
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      {children}
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );
 }

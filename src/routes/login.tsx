@@ -1,13 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { loginFn } from "@/lib/auth/auth.functions";
+import { roleHome } from "@/lib/auth/access";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Login — AI For Everyone" }] }),
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
   component: Login,
 });
 
@@ -18,21 +24,27 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [errs, setErrs] = useState<{ email?: string; pwd?: string }>({});
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { redirect: redirectTo } = Route.useSearch();
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const er: typeof errs = {};
-    if (!email) er.email = "Email is required";
-    else if (!/^\S+@\S+\.\S+$/.test(email)) er.email = "Enter a valid email";
+    if (!email) er.email = "Email or username is required";
     if (!pwd) er.pwd = "Password is required";
     setErrs(er);
     if (Object.keys(er).length) return;
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const user = await loginFn({ data: { login: email, password: pwd } });
+      await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       toast.success("Welcome back!");
-      navigate({ to: "/student/dashboard" });
-    }, 1000);
+      navigate({ to: (redirectTo ?? roleHome(user.role)) as string } as never);
+    } catch {
+      setLoading(false);
+      setErrs({ pwd: "Invalid email or password" });
+      toast.error("Invalid email or password");
+    }
   };
 
   return (
@@ -60,8 +72,8 @@ function Login() {
 
           <form onSubmit={submit} className="mt-8 space-y-5">
             <div>
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
+              <Label htmlFor="email">Email or username</Label>
+              <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@afe.edu"
                 className={`mt-1.5 rounded-xl h-11 ${errs.email ? "ring-2 ring-red-500" : ""}`} />
               {errs.email && <p className="text-xs text-red-500 mt-1">{errs.email}</p>}
             </div>

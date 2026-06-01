@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   createRootRouteWithContext,
+  redirect,
   useRouter,
   HeadContent,
   Scripts,
@@ -12,6 +13,8 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppProvider } from "@/context/AppContext";
+import { getCurrentUserFn, type CurrentUser } from "@/lib/auth/auth.functions";
+import { guardRedirect } from "@/lib/auth/access";
 
 function NotFoundComponent() {
   return (
@@ -63,6 +66,23 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  // Centralized auth gate: resolve the session once (cached via React Query so
+  // client navigations don't refetch), then enforce the RBAC route map. This is
+  // the single place that protects every /student, /instructor and /admin route.
+  beforeLoad: async ({ context, location }) => {
+    const user = await context.queryClient.ensureQueryData<CurrentUser | null>({
+      queryKey: ["currentUser"],
+      queryFn: () => getCurrentUserFn(),
+    });
+    const to = guardRedirect(location.pathname, user);
+    if (to) {
+      throw redirect({
+        to,
+        search: to === "/login" ? { redirect: location.pathname } : undefined,
+      } as never);
+    }
+    return { user };
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },

@@ -1,18 +1,33 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, BookOpen, PlusCircle, Users, Bell, Settings, Sparkles, Menu, X } from "lucide-react";
+import {
+  LayoutDashboard,
+  BookOpen,
+  PlusCircle,
+  ClipboardCheck,
+  BarChart2,
+  MessageSquare,
+  Settings,
+  Sparkles,
+  Menu,
+  X,
+  LogOut,
+} from "lucide-react";
 import { useState } from "react";
+import { useApp } from "@/context/AppContext";
 
 const links = [
   { to: "/instructor/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/instructor/dashboard", label: "My Courses", icon: BookOpen },
   { to: "/instructor/create", label: "Create Course", icon: PlusCircle },
-  { to: "/instructor/dashboard", label: "Students", icon: Users },
-  { to: "/instructor/dashboard", label: "Announcements", icon: Bell },
+  { to: "/instructor/approvals", label: "Approvals", icon: ClipboardCheck },
+  { to: "/instructor/analytics", label: "Analytics", icon: BarChart2 },
+  { to: "/instructor/forum", label: "Forum", icon: MessageSquare },
   { to: "#", label: "Settings", icon: Settings },
 ] as const;
 
 export function InstructorSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { authUser, logout } = useApp();
   const [open, setOpen] = useState(false);
 
   const SidebarBody = () => (
@@ -49,11 +64,20 @@ export function InstructorSidebar() {
           PS
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-foreground">Dr. Priya Sharma</div>
+          <div className="text-sm font-medium text-foreground truncate">
+            {authUser?.name ?? "Dr. Priya Sharma"}
+          </div>
           <span className="text-xs bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded">
             Instructor
           </span>
         </div>
+        <button
+          onClick={logout}
+          aria-label="Sign out"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-foreground"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
