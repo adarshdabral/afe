@@ -1,0 +1,8 @@
+# wrangler.toml
+
+name = "ai-spark"
+main = "dist/server/server.js"
+compatibility_date = "2026-06-02"
+
+[assets]
+directory = "dist/client"
