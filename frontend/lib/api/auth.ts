@@ -26,6 +26,15 @@ export interface RegisterInput {
   password: string;
 }
 
+export interface SignupInput {
+  role: Role;
+  name: string;
+  email?: string;
+  username?: string;
+  mobile?: string;
+  password: string;
+}
+
 /** Establish a session from email/username + password. Throws on bad creds. */
 export async function login(input: LoginInput): Promise<CurrentUser> {
   const { data } = await api.post<{ data: CurrentUser }>("/auth/login", input);
@@ -35,6 +44,12 @@ export async function login(input: LoginInput): Promise<CurrentUser> {
 /** Create a pending student account and establish a session. */
 export async function register(input: RegisterInput): Promise<CurrentUser> {
   const { data } = await api.post<{ data: CurrentUser }>("/auth/register", input);
+  return data.data;
+}
+
+/** Create an account with a chosen role and establish a session. */
+export async function signup(input: SignupInput): Promise<CurrentUser> {
+  const { data } = await api.post<{ data: CurrentUser }>("/auth/signup", input);
   return data.data;
 }
 

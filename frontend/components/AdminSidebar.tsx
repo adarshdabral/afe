@@ -66,7 +66,7 @@ export function AdminSidebar() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-foreground truncate">
-            {authUser?.name ?? "Admin User"}
+            {authUser?.name ?? "Dr Sudhanshu Joshi"}
           </div>
           <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded">
             Admin

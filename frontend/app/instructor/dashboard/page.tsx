@@ -45,7 +45,7 @@ export default function InstructorDashboard() {
       <InstructorSidebar />
       <main className="flex-1 min-w-0">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-          <h1 className="text-3xl font-bold text-foreground mb-6">Welcome, Dr. Priya</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-6">Welcome, Dr Sudhanshu Joshi</h1>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {stats.map((s) => (

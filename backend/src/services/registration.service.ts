@@ -16,7 +16,7 @@ import type { RegistrationStatus } from "../shared/access";
 import type { School, TeacherDirectoryEntry } from "../models/School";
 
 // The directory. Entries reference the seeded teacher account `u-teacher`
-// (Dr. Priya Sharma) — the approver who can actually log in. Approval is scoped
+// (Dr Sudhanshu Joshi) — the approver who can actually log in. Approval is scoped
 // by school, so any teacher of a school sees that school's pending requests
 // regardless of which teacher the student selected.
 export const SCHOOLS: School[] = [
@@ -25,8 +25,8 @@ export const SCHOOLS: School[] = [
 ];
 
 export const TEACHERS: TeacherDirectoryEntry[] = [
-  { id: "u-teacher", name: "Dr. Priya Sharma", schoolId: "school-1" },
-  { id: "u-teacher", name: "Dr. Priya Sharma", schoolId: "school-2" },
+  { id: "u-teacher", name: "Dr Sudhanshu Joshi", schoolId: "school-1" },
+  { id: "u-teacher", name: "Dr Sudhanshu Joshi", schoolId: "school-2" },
 ];
 
 function nowIso(): string {

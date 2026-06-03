@@ -44,10 +44,10 @@ export interface Course {
 }
 
 export const instructors: Instructor[] = [
-  { name: "Dr. Priya Sharma", avatarInitials: "PS", bio: "AI researcher with 12 years of experience at top labs. Author of three books on deep learning.", totalStudents: 8200, totalCourses: 6, rating: 4.9 },
-  { name: "Marcus Chen", avatarInitials: "MC", bio: "Senior software engineer turned educator. Helps developers ship production-ready apps.", totalStudents: 5400, totalCourses: 4, rating: 4.8 },
-  { name: "Ana Costa", avatarInitials: "AC", bio: "Data scientist at a Fortune 500. Specializes in making statistics intuitive.", totalStudents: 6100, totalCourses: 5, rating: 4.7 },
-  { name: "James Okafor", avatarInitials: "JO", bio: "Cloud solutions architect. AWS & GCP certified. Loves teaching infrastructure.", totalStudents: 3900, totalCourses: 3, rating: 4.6 },
+  { name: "Dr Sudhanshu Joshi", avatarInitials: "SJ", bio: "AI researcher with 12 years of experience at top labs. Author of three books on deep learning.", totalStudents: 8200, totalCourses: 6, rating: 4.9 },
+  { name: "Dr Sudhanshu Joshi", avatarInitials: "SJ", bio: "Senior software engineer turned educator. Helps developers ship production-ready apps.", totalStudents: 5400, totalCourses: 4, rating: 4.8 },
+  { name: "Dr Sudhanshu Joshi", avatarInitials: "SJ", bio: "Data scientist at a Fortune 500. Specializes in making statistics intuitive.", totalStudents: 6100, totalCourses: 5, rating: 4.7 },
+  { name: "Dr Sudhanshu Joshi", avatarInitials: "SJ", bio: "Cloud solutions architect. AWS & GCP certified. Loves teaching infrastructure.", totalStudents: 3900, totalCourses: 3, rating: 4.6 },
 ];
 
 const mkModules = (prefix: string): Module[] => [
@@ -183,11 +183,11 @@ export interface QnA {
 }
 
 export const qna: QnA[] = [
-  { id: "qa1", courseId: "1", question: "How do I install PyTorch on Windows?", askedBy: "Riya M.", timestamp: "2h ago", answer: "Use the official installer from pytorch.org and pick the CUDA version matching your GPU drivers.", answeredBy: "Dr. Priya Sharma", upvotes: 12 },
+  { id: "qa1", courseId: "1", question: "How do I install PyTorch on Windows?", askedBy: "Riya M.", timestamp: "2h ago", answer: "Use the official installer from pytorch.org and pick the CUDA version matching your GPU drivers.", answeredBy: "Dr Sudhanshu Joshi", upvotes: 12 },
   { id: "qa2", courseId: "1", question: "Is calculus required for this course?", askedBy: "Karan V.", timestamp: "5h ago", upvotes: 4 },
-  { id: "qa3", courseId: "1", question: "Can I use Google Colab instead of a local setup?", askedBy: "Sneha P.", timestamp: "1d ago", answer: "Yes — Colab is fully supported and recommended for beginners.", answeredBy: "Dr. Priya Sharma", upvotes: 22 },
+  { id: "qa3", courseId: "1", question: "Can I use Google Colab instead of a local setup?", askedBy: "Sneha P.", timestamp: "1d ago", answer: "Yes — Colab is fully supported and recommended for beginners.", answeredBy: "Dr Sudhanshu Joshi", upvotes: 22 },
   { id: "qa4", courseId: "2", question: "When should I use batch normalization?", askedBy: "Alex T.", timestamp: "3h ago", upvotes: 6 },
-  { id: "qa5", courseId: "3", question: "Does this cover React Server Components?", askedBy: "Megha S.", timestamp: "6h ago", answer: "Yes, module 2 covers RSC in detail.", answeredBy: "Marcus Chen", upvotes: 9 },
+  { id: "qa5", courseId: "3", question: "Does this cover React Server Components?", askedBy: "Megha S.", timestamp: "6h ago", answer: "Yes, module 2 covers RSC in detail.", answeredBy: "Dr Sudhanshu Joshi", upvotes: 9 },
   { id: "qa6", courseId: "3", question: "What's the difference between useEffect and useLayoutEffect?", askedBy: "Devon K.", timestamp: "1d ago", upvotes: 3 },
 ];
 
@@ -255,9 +255,9 @@ export interface PendingCourse {
 }
 
 export const pendingCourses: PendingCourse[] = [
-  { id: "pc1", title: "Intro to Reinforcement Learning", instructorName: "Dr. Priya Sharma", submittedOn: "2026-05-27", thumbnailColor: "#6C63FF" },
-  { id: "pc2", title: "Advanced Tailwind Patterns", instructorName: "Marcus Chen", submittedOn: "2026-05-26", thumbnailColor: "#3B82F6" },
-  { id: "pc3", title: "GCP for Data Engineers", instructorName: "James Okafor", submittedOn: "2026-05-25", thumbnailColor: "#F59E0B" },
+  { id: "pc1", title: "Intro to Reinforcement Learning", instructorName: "Dr Sudhanshu Joshi", submittedOn: "2026-05-27", thumbnailColor: "#6C63FF" },
+  { id: "pc2", title: "Advanced Tailwind Patterns", instructorName: "Dr Sudhanshu Joshi", submittedOn: "2026-05-26", thumbnailColor: "#3B82F6" },
+  { id: "pc3", title: "GCP for Data Engineers", instructorName: "Dr Sudhanshu Joshi", submittedOn: "2026-05-25", thumbnailColor: "#F59E0B" },
 ];
 
 export interface AdminUser {
@@ -269,13 +269,13 @@ export interface AdminUser {
 
 export const adminUsers: AdminUser[] = [
   { id: "au1", name: "Aarav Singh", email: "aarav@example.com", role: "student", joinedDate: "2026-01-12", status: "active" },
-  { id: "au2", name: "Dr. Priya Sharma", email: "priya@example.com", role: "instructor", joinedDate: "2025-08-04", status: "active" },
-  { id: "au3", name: "Marcus Chen", email: "marcus@example.com", role: "instructor", joinedDate: "2025-09-21", status: "active" },
+  { id: "au2", name: "Dr Sudhanshu Joshi", email: "priya@example.com", role: "instructor", joinedDate: "2025-08-04", status: "active" },
+  { id: "au3", name: "Dr Sudhanshu Joshi", email: "marcus@example.com", role: "instructor", joinedDate: "2025-09-21", status: "active" },
   { id: "au4", name: "Ananya R.", email: "ananya@example.com", role: "student", joinedDate: "2026-02-15", status: "active" },
   { id: "au5", name: "Karan V.", email: "karan@example.com", role: "student", joinedDate: "2026-03-02", status: "suspended" },
   { id: "au6", name: "Sneha P.", email: "sneha@example.com", role: "student", joinedDate: "2026-03-10", status: "active" },
-  { id: "au7", name: "Ana Costa", email: "ana@example.com", role: "instructor", joinedDate: "2025-10-11", status: "active" },
+  { id: "au7", name: "Dr Sudhanshu Joshi", email: "ana@example.com", role: "instructor", joinedDate: "2025-10-11", status: "active" },
   { id: "au8", name: "Riya M.", email: "riya@example.com", role: "student", joinedDate: "2026-04-01", status: "active" },
   { id: "au9", name: "Alex T.", email: "alex@example.com", role: "student", joinedDate: "2026-04-18", status: "active" },
-  { id: "au10", name: "Admin User", email: "admin@example.com", role: "admin", joinedDate: "2025-06-01", status: "active" },
+  { id: "au10", name: "Dr Sudhanshu Joshi", email: "admin@example.com", role: "admin", joinedDate: "2025-06-01", status: "active" },
 ];

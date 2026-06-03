@@ -51,7 +51,15 @@ _Note (non-blocking): Express logs a `res.clearCookie maxAge` deprecation on log
 
 **Final verification:** `next build` exit 0 (22 pages + Middleware) · backend `tsc` exit 0 · dependency audit (`depcheck`) backend clean, frontend only false positives (CSS `@import` + build tooling) · zero references to deleted TanStack files from `frontend/`+`backend/`.
 
-_Last updated: Part A (frontend RBAC) + Part B (cutover) complete and verified; legacy preserved in legacy-backup/._
+**Post-migration feature changes (institution branding + role signup):**
+- **Staff identity** → all instructor/admin display names set to **"Dr Sudhanshu Joshi"**: backend seeds (teacher/school_admin/platform_admin), teacher directory (`registration.service.ts`), forum seed author, and frontend `mock.ts` (course instructors `+` initials `SJ`, qna answers, pending courses, admin user table), plus sidebar fallbacks + instructor dashboard welcome.
+- **Global footer** — new `frontend/components/Footer.tsx` ("Developed by : Centre of Excellence in Logistics & Supply Chain Management, Doon University under financial aid by UCOST, Government of Uttarakhand") rendered app-wide via `app/layout.tsx`.
+- **Role selection at signup** — register page now has an "I am a" role select (Student / Teacher / School Admin / Platform Admin). Students keep the school-linked teacher-approval flow (`/api/registrations`); staff roles create an active account via the new `POST /api/auth/signup` (`createUser` service, `signup` controller) → redirected to their role home. Frontend `lib/api/auth.ts` gains `signup()`.
+- **Admin credentials** — platform_admin seed username is now **`Moocs@admin`** (password `Admin@123`, unchanged email `admin@afe.edu` still valid).
+- **Verified:** new `backend/verify/feature-check.mts` **9/9** (Moocs@admin login, names, teacher/admin signup + login, duplicate-identifier 409); regression: runtime **33/33**, RBAC **21/21**; backend+frontend `tsc` 0; `next build` green.
+- _Note: role selection allows self-registering as platform_admin/school_admin (per request). For production, consider gating staff signup behind an invite/approval — flagged, not changed._
+
+_Last updated: post-migration feature changes (staff name, footer, role signup, Moocs@admin) — verified._
 
 _Last updated: runtime verification complete — 33/33 live API checks + production build green._
 

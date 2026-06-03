@@ -68,7 +68,7 @@ export function InstructorSidebar() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-foreground truncate">
-            {authUser?.name ?? "Dr. Priya Sharma"}
+            {authUser?.name ?? "Dr Sudhanshu Joshi"}
           </div>
           <span className="text-xs bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded">
             Instructor

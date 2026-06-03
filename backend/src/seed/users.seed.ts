@@ -30,7 +30,7 @@ const seedUsers: SeedUser[] = [
   {
     id: "u-teacher",
     role: "teacher",
-    name: "Dr. Priya Sharma",
+    name: "Dr Sudhanshu Joshi",
     email: "teacher@afe.edu",
     username: "priya",
     password: process.env.SEED_TEACHER_PASSWORD ?? "Teacher@123",
@@ -38,7 +38,7 @@ const seedUsers: SeedUser[] = [
   {
     id: "u-school-admin",
     role: "school_admin",
-    name: "Doon Public School Admin",
+    name: "Dr Sudhanshu Joshi",
     email: "school@afe.edu",
     username: "schooladmin",
     password: process.env.SEED_SCHOOL_ADMIN_PASSWORD ?? "School@123",
@@ -46,9 +46,9 @@ const seedUsers: SeedUser[] = [
   {
     id: "u-platform-admin",
     role: "platform_admin",
-    name: "Platform Administrator",
+    name: "Dr Sudhanshu Joshi",
     email: "admin@afe.edu",
-    username: "admin",
+    username: "Moocs@admin",
     password: process.env.SEED_PLATFORM_ADMIN_PASSWORD ?? "Admin@123",
   },
 ];

@@ -34,7 +34,7 @@ export async function seedForum(): Promise<void> {
     threadId: String(t1._id),
     body: "No prerequisites needed — Module 2 builds intuition first. We avoid heavy maths and focus on ideas like data, bias, and overfitting.",
     authorId: "u-teacher",
-    authorName: "Dr. Priya Sharma",
+    authorName: "Dr Sudhanshu Joshi",
     authorRole: "teacher",
     isAnswer: true,
     hidden: false,
