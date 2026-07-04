@@ -1,6 +1,7 @@
-// Registration controllers (SRS FR-01 / FR-02) — ported handler bodies from
-// src/lib/auth/registration.functions.ts. Role + scope come from req.user
-// (the verified JWT), never the client.
+// Registration controllers (SRS FR-01 / FR-02). Student self-registration is
+// PUBLIC; the queue + decide endpoints are role-guarded (teacher / platform_admin)
+// at the route layer, and ownership is enforced in the service. Role + identity
+// come from req.user (the verified JWT), never the client.
 
 import type { Request, Response } from "express";
 import { z } from "zod";
@@ -8,21 +9,21 @@ import { createStudentUser, loginIdentifierTaken } from "../services/auth.servic
 import {
   createRegistration,
   decideRegistration,
-  getDirectory,
+  getDefaultTeacher,
+  getTeacherDirectory,
   getStudentRegistration,
-  listPendingForTeacher,
+  listRegistrations,
 } from "../services/registration.service";
 import { signToken, cookieOptions, SESSION_COOKIE } from "../utils/jwt";
 
+// Student registration payload (email REQUIRED; schoolName informational; the
+// student picks a teacher directly via selectedTeacherId).
 const registerSchema = z.object({
-  name: z.string().min(1),
-  className: z.enum(["8", "9", "10", "11", "12"]),
-  rollNumber: z.string().min(1),
-  schoolId: z.string().min(1),
-  teacherId: z.string().min(1),
-  email: z.string().email().optional().or(z.literal("")),
-  mobile: z.string().min(7).max(20),
+  fullName: z.string().trim().min(1).max(120),
+  email: z.string().email(),
   password: z.string().min(6),
+  mobileNumber: z.string().trim().min(7).max(20),
+  schoolName: z.string().trim().min(1).max(160),
 });
 
 const decideSchema = z.object({
@@ -30,36 +31,53 @@ const decideSchema = z.object({
   reason: z.string().max(500).optional(),
 });
 
-/** GET /api/registrations/directory — schools + teachers (PUBLIC). */
+const listQuerySchema = z.object({
+  status: z.enum(["all", "pending", "approved", "rejected"]).default("pending"),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(10),
+  search: z.string().trim().max(120).optional(),
+});
+
+/** GET /api/registrations/directory — active teachers for the dropdown (PUBLIC). */
 export async function directory(_req: Request, res: Response): Promise<void> {
-  res.json({ data: getDirectory() });
+  res.json({ data: await getTeacherDirectory() });
 }
 
-/** POST /api/registrations — FR-01 submit a school-linked registration + session. */
+/** POST /api/registrations — FR-01 submit a registration + establish a session. */
 export async function register(req: Request, res: Response): Promise<void> {
   const data = registerSchema.parse(req.body);
-  const loginId = data.email || data.mobile;
-  if (await loginIdentifierTaken(loginId)) {
+  // Auto-assign every new student to the default teacher (no user choice). If it
+  // isn't configured, fail gracefully BEFORE creating an orphaned account.
+  const teacher = await getDefaultTeacher();
+  if (!teacher) {
+    res.status(503).json({
+      error: {
+        message:
+          "Registration is temporarily unavailable: the default teacher account is not configured. Please contact support.",
+      },
+    });
+    return;
+  }
+  if (await loginIdentifierTaken(data.email)) {
     res.status(409).json({
-      error: { message: "An account with this email or mobile number already exists." },
+      error: { message: "An account with this email already exists." },
     });
     return;
   }
   const user = await createStudentUser({
-    name: data.name,
-    email: data.email || undefined,
-    mobile: data.mobile,
+    name: data.fullName,
+    email: data.email,
+    mobile: data.mobileNumber,
     password: data.password,
   });
   await createRegistration({
     studentUserId: user.id,
-    name: data.name,
-    className: data.className,
-    rollNumber: data.rollNumber,
-    schoolId: data.schoolId,
-    teacherId: data.teacherId,
-    email: data.email || undefined,
-    mobile: data.mobile,
+    studentName: data.fullName,
+    schoolName: data.schoolName,
+    teacherId: teacher.id,
+    teacherName: teacher.name,
+    email: data.email,
+    mobile: data.mobileNumber,
   });
   const token = signToken({
     sub: user.id,
@@ -76,9 +94,21 @@ export async function mine(req: Request, res: Response): Promise<void> {
   res.json({ data: result });
 }
 
-/** GET /api/registrations/pending — FR-02 pending requests for the teacher's school(s). */
-export async function pending(req: Request, res: Response): Promise<void> {
-  const result = await listPendingForTeacher(req.user!.id);
+/**
+ * GET /api/registrations/queue — FR-02 registration queue.
+ *  - teacher        → their assigned requests (ownership enforced in service).
+ *  - platform_admin → all requests (full visibility).
+ * Query: status (pending|approved|rejected|all), page, pageSize, search.
+ */
+export async function queue(req: Request, res: Response): Promise<void> {
+  const q = listQuerySchema.parse(req.query);
+  const result = await listRegistrations({
+    actor: { id: req.user!.id, role: req.user!.role },
+    status: q.status,
+    page: q.page,
+    pageSize: q.pageSize,
+    search: q.search,
+  });
   res.json({ data: result });
 }
 
@@ -88,7 +118,7 @@ export async function decide(req: Request, res: Response): Promise<void> {
   const requestId = z.string().min(1).parse(req.params.id);
   const result = await decideRegistration({
     requestId,
-    teacherUserId: req.user!.id,
+    actor: { id: req.user!.id, role: req.user!.role },
     decision: data.decision,
     reason: data.reason,
   });

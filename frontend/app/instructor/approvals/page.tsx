@@ -1,182 +1,226 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, X, Inbox, GraduationCap } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Check, X, Inbox } from "lucide-react";
 import { toast } from "sonner";
 import { InstructorSidebar } from "@/components/InstructorSidebar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useApp } from "@/context/AppContext";
 import {
-  pendingRegistrations,
+  registrationQueue,
   decideRegistration,
+  type QueueResult,
   type RegistrationRequest,
+  type StatusFilter,
 } from "@/lib/api/registrations";
 
+const PAGE_SIZE = 8;
+const TABS: { value: StatusFilter; label: string }[] = [
+  { value: "pending", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "rejected", label: "Rejected" },
+  { value: "all", label: "All" },
+];
+
+// Teacher approval queue (also reachable by platform admins, who see every
+// request). Guarded by ROUTE_ACCESS["/instructor"] in middleware; API enforces
+// the role + teacher ownership.
 export default function Approvals() {
-  const [requests, setRequests] = useState<RegistrationRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { role } = useApp();
+  const isStaff = role === "teacher" || role === "platform_admin";
 
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [rejectId, setRejectId] = useState<string | null>(null);
-  const [reason, setReason] = useState("");
+  const [tab, setTab] = useState<StatusFilter>("pending");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState<QueueResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [actingId, setActingId] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    try {
-      const data = await pendingRegistrations();
-      setRequests(data);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not load requests");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const load = useCallback(() => {
+    if (!isStaff) return;
+    setLoading(true);
+    registrationQueue({ status: tab, page, pageSize: PAGE_SIZE, search: search.trim() || undefined })
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, [isStaff, tab, page, search]);
 
   useEffect(() => {
-    void refresh();
-    const id = setInterval(() => {
-      void refresh();
-    }, 8000);
-    return () => clearInterval(id);
-  }, [refresh]);
+    const t = setTimeout(load, 250);
+    return () => clearTimeout(t);
+  }, [load]);
 
-  const approve = async (id: string) => {
-    setBusyId(id);
+  useEffect(() => {
+    setPage(1);
+  }, [tab, search]);
+
+  const decide = async (req: RegistrationRequest, decision: "approved" | "rejected") => {
+    setActingId(req.id);
     try {
-      await decideRegistration({ requestId: id, decision: "approved" });
-      toast.success("Student approved — access granted.");
-      await refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not approve");
+      const reason =
+        decision === "rejected"
+          ? window.prompt(`Reason for rejecting ${req.studentName}? (optional)`) ?? undefined
+          : undefined;
+      await decideRegistration({ requestId: req.id, decision, reason });
+      toast.success(`${req.studentName} ${decision}.`);
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Action failed");
     } finally {
-      setBusyId(null);
+      setActingId(null);
     }
   };
 
-  const confirmReject = async () => {
-    if (!rejectId) return;
-    setBusyId(rejectId);
-    try {
-      await decideRegistration({
-        requestId: rejectId,
-        decision: "rejected",
-        reason: reason.trim() || undefined,
-      });
-      toast.success("Registration rejected.");
-      setRejectId(null);
-      setReason("");
-      await refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not reject");
-    } finally {
-      setBusyId(null);
-    }
-  };
+  if (!isStaff) {
+    return (
+      <Shell>
+        <p className="text-muted-foreground">You do not have access to this page.</p>
+      </Shell>
+    );
+  }
 
+  const requests = data?.requests ?? [];
+  const totalPages = data?.totalPages ?? 1;
+
+  return (
+    <Shell>
+      <header className="mb-6">
+        <h1 className="text-3xl font-bold text-foreground">Student Approvals</h1>
+        <p className="text-muted-foreground mt-1">
+          Review and decide registrations {role === "teacher" ? "assigned to you" : "across all teachers"}.
+        </p>
+      </header>
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {TABS.map((t) => (
+          <button
+            key={t.value}
+            onClick={() => setTab(t.value)}
+            className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
+              tab === t.value
+                ? "bg-violet-600 text-white"
+                : "bg-card border border-gray-200 dark:border-gray-700 text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, email, roll, school…"
+            className="rounded-xl h-10 pl-9"
+          />
+        </div>
+      </div>
+
+      <div className="bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+        {loading && requests.length === 0 ? (
+          <Empty>Loading…</Empty>
+        ) : requests.length === 0 ? (
+          <Empty>
+            <Inbox className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            No {tab === "all" ? "" : tab} registrations.
+          </Empty>
+        ) : (
+          <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+            {requests.map((r) => (
+              <li key={r.id} className="p-4 flex flex-wrap items-center gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-foreground">{r.studentName}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {r.email || r.mobile} · {r.schoolName || "—"}
+                  </p>
+                  {role !== "teacher" && (
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Assigned to {r.teacherName}
+                    </p>
+                  )}
+                </div>
+                <StatusPill status={r.status} />
+                {r.status === "pending" ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      disabled={actingId === r.id}
+                      onClick={() => decide(r, "approved")}
+                      className="rounded-lg h-9 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Check className="w-4 h-4 mr-1" /> Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={actingId === r.id}
+                      onClick={() => decide(r, "rejected")}
+                      className="rounded-lg h-9"
+                    >
+                      <X className="w-4 h-4 mr-1" /> Reject
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {r.status === "rejected" && r.reason ? r.reason : "Decided"}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between mt-4">
+        <p className="text-sm text-muted-foreground">
+          {data?.total ?? 0} total · page {data?.page ?? 1} of {totalPages}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="rounded-xl h-9"
+            disabled={(data?.page ?? 1) <= 1 || loading}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            <ChevronLeft className="w-4 h-4" /> Prev
+          </Button>
+          <Button
+            variant="outline"
+            className="rounded-xl h-9"
+            disabled={(data?.page ?? 1) >= totalPages || loading}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex bg-background">
       <InstructorSidebar />
       <main className="flex-1 min-w-0">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-          <header className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Student Approvals</h1>
-            <p className="text-muted-foreground mt-1">
-              Verify and approve registration requests from students in your school.
-            </p>
-          </header>
-
-          {isLoading ? (
-            <div className="space-y-3">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="h-24 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse"
-                />
-              ))}
-            </div>
-          ) : requests.length === 0 ? (
-            <div className="bg-card rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 p-12 text-center">
-              <Inbox className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600" />
-              <h3 className="mt-4 font-semibold text-foreground">No pending requests</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                New student registrations will appear here for your approval.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {requests.map((r) => (
-                <div
-                  key={r.id}
-                  className="bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 flex flex-col sm:flex-row sm:items-center gap-4"
-                >
-                  <div className="w-11 h-11 rounded-full bg-violet-600 text-white flex items-center justify-center shrink-0">
-                    <GraduationCap className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground">{r.studentName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {r.schoolName} · Class {r.className} · Roll {r.rollNumber}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {r.mobile}
-                      {r.email ? ` · ${r.email}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button
-                      onClick={() => approve(r.id)}
-                      disabled={busyId === r.id}
-                      className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
-                    >
-                      <Check className="w-4 h-4" /> Approve
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setRejectId(r.id);
-                        setReason("");
-                      }}
-                      disabled={busyId === r.id}
-                      className="rounded-xl text-red-600 gap-1"
-                    >
-                      <X className="w-4 h-4" /> Reject
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">{children}</div>
       </main>
-
-      <Dialog open={!!rejectId} onOpenChange={(open) => !open && setRejectId(null)}>
-        <DialogContent className="rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Reject registration</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Optionally tell the student why. They'll see this on their status screen.
-          </p>
-          <Textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Reason (optional)"
-            className="rounded-xl"
-          />
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" className="rounded-xl" onClick={() => setRejectId(null)}>
-              Cancel
-            </Button>
-            <Button
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white"
-              onClick={confirmReject}
-              disabled={!!busyId}
-            >
-              Reject
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
+}
+
+function StatusPill({ status }: { status: RegistrationRequest["status"] }) {
+  const map = {
+    pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+    approved: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300",
+    rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300",
+  } as const;
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${map[status]}`}>{status}</span>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return <div className="p-12 text-center text-muted-foreground">{children}</div>;
 }

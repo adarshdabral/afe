@@ -5,10 +5,17 @@ import { env } from "./config/env";
 import { connectDb } from "./config/db";
 import { seedDemoUsers } from "./seed/users.seed";
 import authRoutes from "./routes/auth.routes";
+import teacherRoutes from "./routes/teacher.routes";
+import adminCourseRoutes from "./routes/admin.course.routes";
+import courseRoutes from "./routes/course.routes";
+import adminAssessmentRoutes from "./routes/admin.assessment.routes";
+import assessmentRoutes from "./routes/assessment.routes";
+import progressRoutes from "./routes/progress.routes";
 import certificateRoutes from "./routes/certificate.routes";
 import registrationRoutes from "./routes/registration.routes";
 import analyticsRoutes from "./routes/analytics.routes";
 import forumRoutes from "./routes/forum.routes";
+import reviewRoutes from "./routes/review.routes";
 import { seedAnalyticsCohort } from "./seed/analytics.seed";
 import { seedForum } from "./seed/forum.seed";
 
@@ -23,10 +30,17 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin/teachers", teacherRoutes);
+app.use("/api/admin/courses", adminCourseRoutes);
+app.use("/api/courses", courseRoutes);
+app.use("/api/admin/assessments", adminAssessmentRoutes);
+app.use("/api/assessments", assessmentRoutes);
+app.use("/api/progress", progressRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/registrations", registrationRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/forum", forumRoutes);
+app.use("/api", reviewRoutes);
 
 // Central error handler — zod validation → 400, everything else → 500.
 app.use(

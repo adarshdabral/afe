@@ -59,7 +59,9 @@ _Note (non-blocking): Express logs a `res.clearCookie maxAge` deprecation on log
 - **Verified:** new `backend/verify/feature-check.mts` **9/9** (Moocs@admin login, names, teacher/admin signup + login, duplicate-identifier 409); regression: runtime **33/33**, RBAC **21/21**; backend+frontend `tsc` 0; `next build` green.
 - _Note: role selection allows self-registering as platform_admin/school_admin (per request). For production, consider gating staff signup behind an invite/approval — flagged, not changed._
 
-_Last updated: post-migration feature changes (staff name, footer, role signup, Moocs@admin) — verified._
+**Phase 2E — Reviews & Ratings (course = the spec's "store"):** New `Review` + `CourseRating` (aggregate) Mongo models; `review.service`/`controller`/`routes` mounted at `/api`. Users can add / edit-own / delete-own reviews (rating 1–5 + comment); aggregates (averageRating, totalReviews) recompute automatically on every mutation. Duplicate reviews blocked (unique `{courseId,userId}` + 409); invalid ratings rejected (zod 1–5 int → 400); ownership enforced (403). Frontend `lib/api/reviews.ts` + `CourseReviews` component wired into the course-detail page (average, total, recent reviews, own-review add/edit/delete), replacing the old static mock reviews block. **Verified:** `reviews-check.mts` **21/21**; regression runtime **33/33**; BE+FE `tsc` 0; `next build` green.
+
+_Last updated: Phase 2E reviews & ratings implemented and verified._
 
 _Last updated: runtime verification complete — 33/33 live API checks + production build green._
 

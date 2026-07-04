@@ -14,7 +14,6 @@ function roleHome(role: Role): string {
   switch (role) {
     case "teacher":
       return "/instructor/dashboard";
-    case "school_admin":
     case "platform_admin":
       return "/admin/dashboard";
     default:
@@ -51,35 +50,53 @@ export default function Login() {
 
   return (
     <div className="min-h-screen grid md:grid-cols-2">
-      <div className="relative hidden md:flex flex-col justify-between p-12 text-white bg-gradient-to-br from-violet-600 to-violet-800 overflow-hidden">
-        <Link href="/" className="flex items-center gap-2 font-semibold relative z-10">
-          <span className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+      <div
+        className="relative hidden md:flex flex-col justify-between p-12 text-white overflow-hidden"
+        style={{ background: "#0a0a0f" }}
+      >
+        <div
+          aria-hidden
+          className="absolute -bottom-24 -right-24 w-[28rem] h-[28rem] rounded-full blur-3xl"
+          style={{
+            background:
+              "radial-gradient(closest-side, color-mix(in srgb, var(--primary) 55%, transparent), transparent)",
+          }}
+        />
+        <div
+          aria-hidden
+          className="absolute -top-24 -left-16 w-72 h-72 rounded-full blur-3xl opacity-70"
+          style={{
+            background:
+              "radial-gradient(closest-side, color-mix(in srgb, var(--primary) 35%, transparent), transparent)",
+          }}
+        />
+        <Link href="/" className="flex items-center gap-2.5 font-semibold relative z-10 tracking-tight">
+          <span className="w-8 h-8 rounded-[10px] bg-white/10 border border-white/15 flex items-center justify-center">
             <Sparkles className="w-4 h-4" />
           </span>
           AI For Everyone
         </Link>
-        <div className="relative z-10">
-          <p className="text-3xl font-bold leading-tight">
-            "This platform completely changed my career trajectory. I learned more in 6 months than
-            4 years of college."
+        <div className="relative z-10 max-w-sm">
+          <p className="text-[1.75rem] leading-snug font-semibold tracking-tight text-white">
+            &ldquo;This platform completely changed my career trajectory — I learned more in 6 months
+            than in years of study.&rdquo;
           </p>
-          <p className="mt-4 text-white/80">— Ananya R., ML Engineer</p>
+          <p className="mt-5 text-sm text-white/60">Ananya R. · ML Engineer</p>
         </div>
-        <div className="absolute -bottom-20 -right-20 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
       </div>
 
       <div className="flex items-center justify-center p-6 md:p-12">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-sm animate-fade-up">
           <Link href="/" className="md:hidden flex items-center gap-2 font-semibold mb-8">
-            <span className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center">
+            <span className="w-8 h-8 rounded-[10px] bg-violet-600 text-white flex items-center justify-center">
               <Sparkles className="w-4 h-4" />
             </span>
             AI For Everyone
           </Link>
-          <h1 className="text-3xl font-bold text-foreground">Welcome back</h1>
-          <p className="text-muted-foreground mt-2">Login to continue your learning journey.</p>
+          <h1 className="text-[2rem] font-semibold text-foreground tracking-tight">Welcome back</h1>
+          <p className="text-muted-foreground mt-2">Sign in to continue learning.</p>
 
-          <form onSubmit={submit} className="mt-8 space-y-5">
+          <form onSubmit={submit} className="mt-8 space-y-4">
             <div>
               <Label htmlFor="email">Email or username</Label>
               <Input
@@ -87,7 +104,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@afe.edu"
-                className={`mt-1.5 rounded-xl h-11 ${errs.email ? "ring-2 ring-red-500" : ""}`}
+                className={`mt-1.5 rounded-2xl h-12 bg-secondary/60 border-transparent focus-visible:bg-card ${errs.email ? "ring-2 ring-red-500" : ""}`}
               />
               {errs.email && <p className="text-xs text-red-500 mt-1">{errs.email}</p>}
             </div>
@@ -104,7 +121,7 @@ export default function Login() {
                   type={show ? "text" : "password"}
                   value={pwd}
                   onChange={(e) => setPwd(e.target.value)}
-                  className={`rounded-xl h-11 pr-10 ${errs.pwd ? "ring-2 ring-red-500" : ""}`}
+                  className={`rounded-2xl h-12 pr-10 bg-secondary/60 border-transparent focus-visible:bg-card ${errs.pwd ? "ring-2 ring-red-500" : ""}`}
                 />
                 <button
                   type="button"
@@ -119,7 +136,7 @@ export default function Login() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl h-11 bg-violet-600 hover:bg-violet-700 text-white"
+              className="w-full rounded-full h-12 bg-violet-600 hover:bg-violet-700 text-white shadow-sm mt-2"
             >
               {loading ? (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -130,7 +147,7 @@ export default function Login() {
             <Button
               type="button"
               variant="outline"
-              className="w-full rounded-xl h-11"
+              className="w-full rounded-full h-12 bg-card"
               onClick={() => toast("Mock Google sign-in")}
             >
               Continue with Google

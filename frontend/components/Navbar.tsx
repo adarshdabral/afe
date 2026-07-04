@@ -18,37 +18,47 @@ export function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-40 w-full backdrop-blur-md bg-white/80 dark:bg-gray-900/80 transition-shadow ${
-        scrolled ? "shadow-sm border-b border-gray-100 dark:border-gray-800" : ""
+      className={`glass sticky top-0 z-40 w-full transition-all duration-300 ${
+        scrolled ? "border-b border-border/70" : "border-b border-transparent"
       }`}
     >
-      <div className="max-w-7xl mx-auto h-16 px-4 sm:px-6 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-semibold text-foreground">
-          <span className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center">
-            <Sparkles className="w-4 h-4" />
+      <div className="max-w-6xl mx-auto h-14 px-5 sm:px-6 flex items-center justify-between">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 font-semibold text-foreground tracking-tight"
+        >
+          <span className="w-7 h-7 rounded-[10px] bg-violet-600 text-white flex items-center justify-center shadow-sm">
+            <Sparkles className="w-3.5 h-3.5" />
           </span>
-          <span>AI For Everyone</span>
+          <span className="text-[15px]">AI For Everyone</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
-          <Link href="/courses" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <Link
+            href="/courses"
+            className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+          >
             Courses
           </Link>
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={toggleDarkMode}
-            className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-foreground"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
             aria-label="Toggle theme"
           >
-            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {darkMode ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
           </button>
           <Link href="/login">
-            <Button variant="outline" className="rounded-xl h-9">Login</Button>
+            <Button variant="ghost" className="rounded-full h-9 px-4 text-[13px]">
+              Sign in
+            </Button>
           </Link>
           <Link href="/register">
-            <Button className="rounded-xl h-9 bg-violet-600 hover:bg-violet-700 text-white">Get Started</Button>
+            <Button className="rounded-full h-9 px-4 text-[13px] bg-violet-600 hover:bg-violet-700 text-white shadow-sm">
+              Get Started
+            </Button>
           </Link>
         </div>
       </div>

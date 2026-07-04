@@ -1,11 +1,19 @@
 // Isomorphic RBAC config — the single source of truth for roles + route access,
-// identical to backend/src/shared/access.ts (and the original src/lib/auth/access.ts).
-// Pure: no server-only imports, no secrets. Consumed by middleware.ts.
+// identical to backend/src/shared/access.ts. Pure: no server-only imports, no
+// secrets. Consumed by middleware.ts.
+//
+// Role model is exactly three roles: students self-register (and start pending),
+// teachers are provisioned by a platform admin (and log in only while active),
+// and platform admins are seeded with full access.
 
-export type Role = "student" | "teacher" | "school_admin" | "platform_admin";
+export type Role = "student" | "teacher" | "platform_admin";
 
 /** Student enrollment-approval state (FR-01/FR-02). */
 export type RegistrationStatus = "pending" | "approved" | "rejected";
+
+// Teachers never self-register — a platform admin provisions them via the
+// teacher-management resource (/api/admin/teachers). `platform_admin` accounts
+// are bootstrap-only (seeded). Only `student` self-registers.
 
 /** Minimal shape the route guard needs. */
 export interface SessionPrincipal {
@@ -15,16 +23,22 @@ export interface SessionPrincipal {
   email: string;
   /** Only meaningful for students; undefined for staff roles. */
   registrationStatus?: RegistrationStatus;
+  /** Only meaningful for teachers; whether the account may sign in. */
+  active?: boolean;
 }
 
 /** The pending/approval landing route for students who aren't yet approved. */
 export const STUDENT_PENDING_PATH = "/student/pending";
 
-/** Route-prefix → roles allowed to access it. */
+/**
+ * Route-prefix → roles allowed to access it. Platform admins have full access
+ * (they appear on every protected surface).
+ */
 export const ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles: readonly Role[] }> = [
   { prefix: "/student", roles: ["student"] },
+  { prefix: "/learn", roles: ["student", "teacher", "platform_admin"] },
   { prefix: "/instructor", roles: ["teacher", "platform_admin"] },
-  { prefix: "/admin", roles: ["school_admin", "platform_admin"] },
+  { prefix: "/admin", roles: ["platform_admin"] },
 ];
 
 /** Where each role lands after login / when redirected off an unauthorized route. */
@@ -34,7 +48,6 @@ export function roleHome(role: Role): string {
       return "/student/dashboard";
     case "teacher":
       return "/instructor/dashboard";
-    case "school_admin":
     case "platform_admin":
       return "/admin/dashboard";
   }
@@ -47,8 +60,6 @@ export function roleLabel(role: Role): string {
       return "Student";
     case "teacher":
       return "Teacher";
-    case "school_admin":
-      return "School Admin";
     case "platform_admin":
       return "Platform Admin";
   }
@@ -59,12 +70,10 @@ function matchedRule(pathname: string) {
 }
 
 /**
- * Pure access decision used by the route guard (verbatim logic from the TanStack
- * __root.tsx beforeLoad guard).
+ * Pure access decision used by the route guard.
  *  - public route                → null
  *  - protected + unauthenticated  → "/login"
  *  - protected + wrong role       → that user's own home (no privilege escalation)
- *  - student not yet approved     → "/student/pending" (and approved-on-pending → dashboard)
  */
 export function guardRedirect(pathname: string, principal: SessionPrincipal | null): string | null {
   if (principal && (pathname === "/login" || pathname === "/register")) {

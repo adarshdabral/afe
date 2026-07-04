@@ -7,7 +7,6 @@ const student = (s: "approved" | "pending"): SessionPrincipal => ({
   id: "u", role: "student", name: "S", email: "s@x", registrationStatus: s,
 });
 const teacher: SessionPrincipal = { id: "t", role: "teacher", name: "T", email: "t@x" };
-const schoolAdmin: SessionPrincipal = { id: "sa", role: "school_admin", name: "SA", email: "sa@x" };
 const platformAdmin: SessionPrincipal = { id: "pa", role: "platform_admin", name: "PA", email: "pa@x" };
 
 type Case = [string, SessionPrincipal | null, string, string | null];
@@ -31,12 +30,14 @@ const cases: Case[] = [
   ["teacher → /student/* ⇒ own home", teacher, "/student/dashboard", "/instructor/dashboard"],
   ["teacher → /admin/* ⇒ own home", teacher, "/admin/dashboard", "/instructor/dashboard"],
 
-  ["school_admin → /admin/dashboard ⇒ allow", schoolAdmin, "/admin/dashboard", null],
-  ["school_admin → /instructor/* ⇒ own home", schoolAdmin, "/instructor/dashboard", "/admin/dashboard"],
-  ["school_admin → /student/* ⇒ own home", schoolAdmin, "/student/dashboard", "/admin/dashboard"],
-
   ["platform_admin → /admin/* ⇒ allow", platformAdmin, "/admin/dashboard", null],
   ["platform_admin → /instructor/* ⇒ allow (shared)", platformAdmin, "/instructor/dashboard", null],
+  ["platform_admin → /student/* ⇒ own home", platformAdmin, "/student/dashboard", "/admin/dashboard"],
+
+  ["teacher → /instructor/approvals ⇒ allow", teacher, "/instructor/approvals", null],
+  ["platform_admin → /instructor/approvals ⇒ allow (shared)", platformAdmin, "/instructor/approvals", null],
+  ["student → /instructor/approvals ⇒ own home", student("approved"), "/instructor/approvals", "/student/dashboard"],
+  ["anon → /instructor/approvals ⇒ /login", null, "/instructor/approvals", "/login"],
 
   ["authed on /login ⇒ own home", teacher, "/login", "/instructor/dashboard"],
   ["authed on /register ⇒ own home", student("approved"), "/register", "/student/dashboard"],

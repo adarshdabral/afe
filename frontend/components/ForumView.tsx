@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useApp } from "@/context/AppContext";
 import { roleLabel, type Role } from "@/lib/roles";
-import { AI_COURSE } from "@/data/curriculum";
+import { listPublicCourses, type Course } from "@/lib/api/courses";
 import {
   createThread,
   getThread,
@@ -33,10 +33,11 @@ import {
   type ThreadListItem,
 } from "@/lib/api/forum";
 
-function moduleTag(moduleId: string | null): string {
-  if (!moduleId) return "General";
-  const m = AI_COURSE.modules.find((x) => x.id === moduleId);
-  return m ? `Module ${m.order}` : "General";
+// Threads can be tagged with a real (published) course as their topic. The thread's
+// `moduleId` field holds the course id; unset → "General".
+function topicLabel(topicId: string | null, topics: Course[]): string {
+  if (!topicId) return "General";
+  return topics.find((c) => c.id === topicId)?.title ?? "General";
 }
 
 function fmtDate(iso: string) {
@@ -45,7 +46,7 @@ function fmtDate(iso: string) {
 
 export function ForumView() {
   const { role } = useApp();
-  const isStaff = role === "teacher" || role === "school_admin" || role === "platform_admin";
+  const isStaff = role === "teacher" || role === "platform_admin";
 
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -55,6 +56,14 @@ export function ForumView() {
 
   const [data, setData] = useState<ThreadList | null>(null);
   const [isLoading, setLoading] = useState(true);
+  const [topics, setTopics] = useState<Course[]>([]);
+
+  // Real Course CMS courses used as forum topic tags (replaces mock curriculum).
+  useEffect(() => {
+    listPublicCourses({ pageSize: 100 })
+      .then((r) => setTopics(r.courses))
+      .catch(() => setTopics([]));
+  }, []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -111,6 +120,7 @@ export function ForumView() {
 
       {asking && (
         <AskForm
+          topics={topics}
           onCancel={() => setAsking(false)}
           onPosted={() => {
             setAsking(false);
@@ -142,6 +152,7 @@ export function ForumView() {
             <ThreadCard
               key={t.id}
               thread={t}
+              topics={topics}
               isStaff={isStaff}
               expanded={expandedId === t.id}
               onToggle={() => setExpandedId((id) => (id === t.id ? null : t.id))}
@@ -190,7 +201,15 @@ export function ForumView() {
   );
 }
 
-function AskForm({ onCancel, onPosted }: { onCancel: () => void; onPosted: () => void }) {
+function AskForm({
+  topics,
+  onCancel,
+  onPosted,
+}: {
+  topics: Course[];
+  onCancel: () => void;
+  onPosted: () => void;
+}) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [moduleId, setModuleId] = useState("");
@@ -233,9 +252,9 @@ function AskForm({ onCancel, onPosted }: { onCancel: () => void; onPosted: () =>
         className="w-full h-11 px-3 rounded-xl border border-input bg-card text-sm text-foreground"
       >
         <option value="">General</option>
-        {AI_COURSE.modules.map((m) => (
-          <option key={m.id} value={m.id}>
-            Module {m.order}: {m.title}
+        {topics.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.title}
           </option>
         ))}
       </select>
@@ -257,12 +276,14 @@ function AskForm({ onCancel, onPosted }: { onCancel: () => void; onPosted: () =>
 
 function ThreadCard({
   thread,
+  topics,
   isStaff,
   expanded,
   onToggle,
   onModerated,
 }: {
   thread: ThreadListItem;
+  topics: Course[];
   isStaff: boolean;
   expanded: boolean;
   onToggle: () => void;
@@ -301,7 +322,7 @@ function ThreadCard({
             <RoleBadge role={thread.authorRole} />
             <span>· {fmtDate(thread.createdAt)}</span>
             <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-foreground">
-              {moduleTag(thread.moduleId)}
+              {topicLabel(thread.moduleId, topics)}
             </span>
             {thread.hasTeacherAnswer && (
               <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">

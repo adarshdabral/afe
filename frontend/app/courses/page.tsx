@@ -1,194 +1,144 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Search, X, BookX } from "lucide-react";
-import { Navbar } from "@/components/Navbar";
-import { CourseCard } from "@/components/CourseCard";
-import { CourseCardSkeleton } from "@/components/CourseCardSkeleton";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { Search, BookOpen, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { courses, type Category, type Level } from "@/data/mock";
+import { Navbar } from "@/components/Navbar";
+import { listPublicCourses, type Course, type CourseListResult } from "@/lib/api/courses";
 
-const cats: Category[] = ["AI & ML", "Web Dev", "Data Science", "Cloud"];
-const levels: Level[] = ["Beginner", "Intermediate", "Advanced"];
-const ratings = [4.5, 4.0, 3.5, 0];
-const durations = [
-  { label: "< 2h", min: 0, max: 2 },
-  { label: "2–5h", min: 2, max: 5 },
-  { label: "5–10h", min: 5, max: 10 },
-  { label: "10h+", min: 10, max: 999 },
-];
-
-function parseHrs(d: string) {
-  const m = d.match(/(\d+)h/);
-  return m ? parseInt(m[1]) : 0;
-}
-
+// Public course catalog — published courses only (the API scopes by role).
 export default function Catalog() {
-  const [q, setQ] = useState("");
-  const [selCats, setSelCats] = useState<Category[]>([]);
-  const [selLevel, setSelLevel] = useState<Level | null>(null);
-  const [minRating, setMinRating] = useState(0);
-  const [selDur, setSelDur] = useState<string[]>([]);
-  const [sort, setSort] = useState("popular");
-  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [data, setData] = useState<CourseListResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(false);
+    listPublicCourses({ search: search.trim() || undefined, pageSize: 24 })
+      .then(setData)
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [search]);
 
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 300);
+    const t = setTimeout(load, 250);
     return () => clearTimeout(t);
-  }, []);
-
-  const filtered = useMemo(() => {
-    let res = courses.filter((c) => {
-      if (q && !c.title.toLowerCase().includes(q.toLowerCase())) return false;
-      if (selCats.length && !selCats.includes(c.category)) return false;
-      if (selLevel && c.level !== selLevel) return false;
-      if (c.rating < minRating) return false;
-      if (selDur.length) {
-        const h = parseHrs(c.duration);
-        const ok = selDur.some((label) => {
-          const d = durations.find((x) => x.label === label)!;
-          return h >= d.min && h < d.max;
-        });
-        if (!ok) return false;
-      }
-      return true;
-    });
-    if (sort === "rating") res = [...res].sort((a, b) => b.rating - a.rating);
-    else if (sort === "newest") res = [...res].reverse();
-    else res = [...res].sort((a, b) => b.enrolledCount - a.enrolledCount);
-    return res;
-  }, [q, selCats, selLevel, minRating, selDur, sort]);
-
-  const perPage = 6;
-  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-  const pageItems = filtered.slice((page - 1) * perPage, page * perPage);
-
-  const hasFilters = q || selCats.length || selLevel || minRating || selDur.length;
-  const clearAll = () => { setQ(""); setSelCats([]); setSelLevel(null); setMinRating(0); setSelDur([]); setPage(1); };
-
-  useEffect(() => { setPage(1); }, [q, selCats, selLevel, minRating, selDur]);
+  }, [load]);
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 grid lg:grid-cols-[260px_1fr] gap-8">
-        {/* Sidebar */}
-        <aside className="space-y-6">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search courses..." className="pl-9 rounded-xl h-10" />
+      <div className="max-w-6xl mx-auto px-5 sm:px-6 py-12 animate-fade-up">
+        <header className="mb-8">
+          <h1 className="text-[2.5rem] leading-tight font-semibold text-foreground tracking-tight">
+            Course catalog
+          </h1>
+          <p className="text-lg text-muted-foreground mt-1.5">
+            Explore the course and start learning.
+          </p>
+        </header>
+
+        <div className="relative max-w-md mb-8">
+          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search courses"
+            className="rounded-full h-11 pl-10 bg-card border-border shadow-soft"
+          />
+        </div>
+
+        {error ? (
+          <State icon={BookOpen} title="We couldn't load the catalog">
+            <button onClick={load} className="text-violet-600 font-medium hover:underline">
+              Try again
+            </button>
+          </State>
+        ) : loading && !data ? (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="skeleton h-52 rounded-3xl" />
+            ))}
           </div>
-
-          {hasFilters && (
-            <div className="flex flex-wrap gap-1.5">
-              {selCats.map((c) => (
-                <button key={c} onClick={() => setSelCats(selCats.filter((x) => x !== c))}
-                  className="text-xs bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 px-2 py-1 rounded inline-flex items-center gap-1">
-                  {c} <X className="w-3 h-3" />
-                </button>
-              ))}
-              {selLevel && (
-                <button onClick={() => setSelLevel(null)} className="text-xs bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 px-2 py-1 rounded inline-flex items-center gap-1">
-                  {selLevel} <X className="w-3 h-3" />
-                </button>
-              )}
-              <Button variant="ghost" size="sm" onClick={clearAll} className="text-xs h-7">Clear All</Button>
-            </div>
-          )}
-
-          <FilterGroup title="Category">
-            {cats.map((c) => (
-              <label key={c} className="flex items-center gap-2 text-sm py-1.5 cursor-pointer">
-                <Checkbox checked={selCats.includes(c)} onCheckedChange={(v) => setSelCats(v ? [...selCats, c] : selCats.filter((x) => x !== c))} />
-                <span className="text-foreground">{c}</span>
-              </label>
+        ) : (data?.courses.length ?? 0) === 0 ? (
+          <State icon={BookOpen} title="No courses yet">
+            <span className="text-muted-foreground">New courses will appear here soon.</span>
+          </State>
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {data!.courses.map((c) => (
+              <CourseCard key={c.id} course={c} />
             ))}
-          </FilterGroup>
-
-          <FilterGroup title="Level">
-            {levels.map((l) => (
-              <label key={l} className="flex items-center gap-2 text-sm py-1.5 cursor-pointer">
-                <input type="radio" checked={selLevel === l} onChange={() => setSelLevel(l)} className="accent-violet-600" />
-                <span className="text-foreground">{l}</span>
-              </label>
-            ))}
-          </FilterGroup>
-
-          <FilterGroup title="Rating">
-            {ratings.map((r) => (
-              <label key={r} className="flex items-center gap-2 text-sm py-1.5 cursor-pointer">
-                <input type="radio" checked={minRating === r} onChange={() => setMinRating(r)} className="accent-violet-600" />
-                <span className="text-foreground">{r === 0 ? "Any" : `${r}+`}</span>
-              </label>
-            ))}
-          </FilterGroup>
-
-          <FilterGroup title="Duration">
-            {durations.map((d) => (
-              <label key={d.label} className="flex items-center gap-2 text-sm py-1.5 cursor-pointer">
-                <Checkbox checked={selDur.includes(d.label)} onCheckedChange={(v) => setSelDur(v ? [...selDur, d.label] : selDur.filter((x) => x !== d.label))} />
-                <span className="text-foreground">{d.label}</span>
-              </label>
-            ))}
-          </FilterGroup>
-        </aside>
-
-        {/* Content */}
-        <main>
-          <div className="flex items-center justify-between mb-6">
-            <p className="text-sm text-muted-foreground">{filtered.length} {filtered.length === 1 ? "course" : "courses"}</p>
-            <select value={sort} onChange={(e) => setSort(e.target.value)}
-              className="h-10 px-3 rounded-xl border border-input bg-card text-sm">
-              <option value="popular">Most Popular</option>
-              <option value="newest">Newest</option>
-              <option value="rating">Highest Rated</option>
-            </select>
           </div>
-
-          {loading ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => <CourseCardSkeleton key={i} />)}
-            </div>
-          ) : pageItems.length === 0 ? (
-            <div className="text-center py-20">
-              <BookX className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600" />
-              <h3 className="mt-4 text-lg font-semibold text-foreground">No courses found</h3>
-              <p className="text-muted-foreground text-sm mt-1">Try adjusting your filters.</p>
-              <Button onClick={clearAll} className="mt-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white">Clear Filters</Button>
-            </div>
-          ) : (
-            <>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {pageItems.map((c) => <CourseCard key={c.id} course={c} />)}
-              </div>
-              {totalPages > 1 && (
-                <div className="mt-8 flex items-center justify-center gap-2">
-                  <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)} className="rounded-xl">Prev</Button>
-                  {Array.from({ length: totalPages }).map((_, i) => (
-                    <button key={i} onClick={() => setPage(i + 1)}
-                      className={`w-9 h-9 rounded-xl text-sm ${page === i + 1 ? "bg-violet-600 text-white" : "hover:bg-gray-100 dark:hover:bg-gray-800"}`}>
-                      {i + 1}
-                    </button>
-                  ))}
-                  <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(page + 1)} className="rounded-xl">Next</Button>
-                </div>
-              )}
-            </>
-          )}
-        </main>
+        )}
       </div>
     </div>
   );
 }
 
-function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
+function CourseCard({ course }: { course: Course }) {
   return (
-    <div>
-      <h4 className="font-semibold text-sm text-foreground mb-2">{title}</h4>
-      <div>{children}</div>
+    <Link
+      href={`/courses/${course.slug}`}
+      className="group block rounded-3xl border border-border bg-card overflow-hidden shadow-soft elevate"
+    >
+      <div className="h-32 bg-secondary flex items-center justify-center relative overflow-hidden">
+        {course.thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
+        ) : (
+          <>
+            <div
+              aria-hidden
+              className="absolute inset-0 opacity-60"
+              style={{
+                background:
+                  "radial-gradient(120% 120% at 20% 0%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 60%)",
+              }}
+            />
+            <Sparkles className="w-8 h-8 text-violet-600/70 relative transition-transform duration-300 group-hover:scale-110" />
+          </>
+        )}
+      </div>
+      <div className="p-5">
+        <span className="text-[11px] uppercase tracking-[0.06em] text-violet-600 font-semibold capitalize">
+          {course.level}
+        </span>
+        <h3 className="font-semibold text-foreground mt-1.5 line-clamp-2 leading-snug">
+          {course.title}
+        </h3>
+        <p className="text-[13px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
+          {course.shortDescription || "Start learning at your own pace."}
+        </p>
+        {course.instructor && (
+          <p className="text-[12px] text-muted-foreground mt-3 pt-3 border-t border-border">
+            {course.instructor}
+          </p>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function State({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: typeof BookOpen;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-3xl border border-border bg-card p-14 text-center shadow-soft">
+      <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
+        <Icon className="w-7 h-7 text-muted-foreground" />
+      </div>
+      <p className="font-semibold text-foreground">{title}</p>
+      <div className="mt-1.5 text-sm">{children}</div>
     </div>
   );
 }

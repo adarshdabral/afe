@@ -1,6 +1,7 @@
-// RegistrationRequest model (SRS FR-01 / FR-02) — Mongo-backed replacement for the
-// in-memory `requests` map in src/lib/auth/registrations.server.ts. One row per
-// student registration submission; a teacher (scoped by school) approves/rejects.
+// RegistrationRequest model (SRS FR-01 / FR-02) — one row per student
+// registration submission. A student self-registers, picks a teacher directly
+// (selectedTeacherId), and that teacher approves/rejects. There is NO School
+// entity: `schoolName` is free-text informational data only.
 
 import { Schema, model, type InferSchemaType, type HydratedDocument } from "mongoose";
 import type { RegistrationStatus } from "../shared/access";
@@ -9,11 +10,8 @@ export interface RegistrationRequestView {
   id: string;
   studentUserId: string;
   studentName: string;
-  className: string;
-  rollNumber: string;
-  schoolId: string;
-  schoolName: string;
-  teacherId: string;
+  schoolName: string; // informational text only
+  teacherId: string; // the auto-assigned default teacher's user id
   teacherName: string;
   email: string;
   mobile: string;
@@ -28,11 +26,8 @@ const registrationRequestSchema = new Schema(
   {
     studentUserId: { type: String, required: true, index: true },
     studentName: { type: String, required: true },
-    className: { type: String, required: true },
-    rollNumber: { type: String, required: true },
-    schoolId: { type: String, required: true, index: true },
-    schoolName: { type: String, required: true },
-    teacherId: { type: String, required: true },
+    schoolName: { type: String, default: "" }, // informational only — no School entity
+    teacherId: { type: String, required: true, index: true }, // auto-assigned default teacher
     teacherName: { type: String, required: true },
     email: { type: String, default: "" },
     mobile: { type: String, required: true },
@@ -56,10 +51,7 @@ export function toRegistrationRequest(doc: RegistrationRequestDoc): Registration
     id: String(doc._id),
     studentUserId: doc.studentUserId,
     studentName: doc.studentName,
-    className: doc.className,
-    rollNumber: doc.rollNumber,
-    schoolId: doc.schoolId,
-    schoolName: doc.schoolName,
+    schoolName: doc.schoolName ?? "",
     teacherId: doc.teacherId,
     teacherName: doc.teacherName,
     email: doc.email ?? "",

@@ -1,10 +1,18 @@
-// Isomorphic RBAC config — moved verbatim from src/lib/auth/access.ts (the single
-// source of truth for roles + route access). No server-only imports, no secrets.
+// Isomorphic RBAC config — the single source of truth for roles + route access.
+// Kept in sync with frontend/lib/access.ts. No server-only imports, no secrets.
+//
+// Role model is exactly three roles: students self-register (and start pending),
+// teachers are provisioned by a platform admin (and log in only while active),
+// and platform admins are seeded with full access.
 
-export type Role = "student" | "teacher" | "school_admin" | "platform_admin";
+export type Role = "student" | "teacher" | "platform_admin";
 
 /** Student enrollment-approval state (FR-01/FR-02). */
 export type RegistrationStatus = "pending" | "approved" | "rejected";
+
+// Teachers never self-register — a platform admin provisions them via the
+// teacher-management resource (/api/admin/teachers). `platform_admin` accounts
+// are bootstrap-only (seeded). Only `student` self-registers.
 
 /** Minimal shape the route guard needs — avoids importing server types. */
 export interface SessionPrincipal {
@@ -14,18 +22,22 @@ export interface SessionPrincipal {
   email: string;
   /** Only meaningful for students; undefined for staff roles. */
   registrationStatus?: RegistrationStatus;
+  /** Only meaningful for teachers; whether the account may sign in. */
+  active?: boolean;
 }
 
 /** The pending/approval landing route for students who aren't yet approved. */
 export const STUDENT_PENDING_PATH = "/student/pending";
 
 /**
- * Route-prefix → roles allowed to access it.
+ * Route-prefix → roles allowed to access it. Platform admins have full access
+ * (they appear on every protected surface).
  */
 export const ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles: readonly Role[] }> = [
   { prefix: "/student", roles: ["student"] },
+  { prefix: "/learn", roles: ["student", "teacher", "platform_admin"] },
   { prefix: "/instructor", roles: ["teacher", "platform_admin"] },
-  { prefix: "/admin", roles: ["school_admin", "platform_admin"] },
+  { prefix: "/admin", roles: ["platform_admin"] },
 ];
 
 /** Where each role lands after login / when redirected off an unauthorized route. */
@@ -35,7 +47,6 @@ export function roleHome(role: Role): string {
       return "/student/dashboard";
     case "teacher":
       return "/instructor/dashboard";
-    case "school_admin":
     case "platform_admin":
       return "/admin/dashboard";
   }
@@ -48,8 +59,6 @@ export function roleLabel(role: Role): string {
       return "Student";
     case "teacher":
       return "Teacher";
-    case "school_admin":
-      return "School Admin";
     case "platform_admin":
       return "Platform Admin";
   }

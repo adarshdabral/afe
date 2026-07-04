@@ -1,5 +1,7 @@
-// Auth controllers — ported handler bodies from src/lib/auth/auth.functions.ts
-// (login/logout/me) and the account-creation portion of registration.functions.ts.
+// Auth controllers — login / register (student self-registration) / me / logout.
+// Teacher accounts are NOT created here: they are provisioned by a platform admin
+// through the teacher-management resource (`/api/admin/teachers`). Teachers may
+// log in only while active (enforced in `login`).
 
 import type { Request, Response } from "express";
 import { z } from "zod";
@@ -7,7 +9,6 @@ import {
   authenticate,
   getUserById,
   createStudentUser,
-  createUser,
   loginIdentifierTaken,
 } from "../services/auth.service";
 import { signToken, cookieOptions, SESSION_COOKIE } from "../utils/jwt";
@@ -21,21 +22,18 @@ const registerSchema = z.object({
   password: z.string().min(6),
 });
 
-const signupSchema = z.object({
-  role: z.enum(["student", "teacher", "school_admin", "platform_admin"]),
-  name: z.string().min(1),
-  email: z.string().email().optional().or(z.literal("")),
-  username: z.string().min(3).max(40).optional().or(z.literal("")),
-  mobile: z.string().min(7).max(20).optional().or(z.literal("")),
-  password: z.string().min(6),
-});
-
 /** POST /api/auth/login */
 export async function login(req: Request, res: Response): Promise<void> {
   const data = loginSchema.parse(req.body);
   const user = await authenticate(data.login, data.password);
   if (!user) {
     res.status(401).json({ error: { message: "Invalid email or password" } });
+    return;
+  }
+  // Teachers may sign in only while active (credentials verified above, so this
+  // is an authorization decision, not a credential leak).
+  if (user.role === "teacher" && user.active === false) {
+    res.status(403).json({ error: { message: "This teacher account has been deactivated." } });
     return;
   }
   const token = signToken({ sub: user.id, role: user.role, registrationStatus: user.registrationStatus });
@@ -58,37 +56,6 @@ export async function register(req: Request, res: Response): Promise<void> {
     password: data.password,
   });
   const token = signToken({ sub: user.id, role: user.role, registrationStatus: user.registrationStatus });
-  res.cookie(SESSION_COOKIE, token, cookieOptions());
-  res.status(201).json({ data: user });
-}
-
-/** POST /api/auth/signup — create an account with a chosen role + session. */
-export async function signup(req: Request, res: Response): Promise<void> {
-  const data = signupSchema.parse(req.body);
-  const loginId = data.email || data.username || data.mobile;
-  if (!loginId) {
-    res.status(400).json({ error: { message: "Provide an email, username, or mobile number." } });
-    return;
-  }
-  if (await loginIdentifierTaken(loginId)) {
-    res
-      .status(409)
-      .json({ error: { message: "An account with that email, username, or mobile already exists." } });
-    return;
-  }
-  const user = await createUser({
-    role: data.role,
-    name: data.name,
-    email: data.email || undefined,
-    username: data.username || undefined,
-    mobile: data.mobile || undefined,
-    password: data.password,
-  });
-  const token = signToken({
-    sub: user.id,
-    role: user.role,
-    registrationStatus: user.registrationStatus,
-  });
   res.cookie(SESSION_COOKIE, token, cookieOptions());
   res.status(201).json({ data: user });
 }

@@ -76,6 +76,7 @@ async function main() {
   process.env.PORT = String(PORT);
   process.env.NODE_ENV = "test";
   process.env.CORS_ORIGIN = "http://localhost:3000";
+  process.env.REQUIRE_TEACHER_APPROVAL = "true"; // this harness tests the approval workflow
   console.log("Mongo URI:", process.env.MONGODB_URI);
 
   // Importing the app triggers start(): connectDb → seeds → listen.
@@ -144,28 +145,21 @@ async function main() {
 
   // ---- Task 3: registration flow ----
   console.log("\n[Task 3] Registration / approval flow");
-  let schoolId = "", teacherId = "";
+  let teacherId = "";
   {
     const dir = await anon.get("/registrations/directory");
-    const ok = dir.status === 200 && Array.isArray(dir.json?.data?.schools) && dir.json.data.schools.length > 0;
-    check("GET /registrations/directory (public) → schools+teachers", ok, dir.json?.data);
-    if (ok) {
-      schoolId = dir.json.data.schools[0].id;
-      const t = dir.json.data.teachers.find((x: any) => x.schoolId === schoolId);
-      teacherId = t?.id ?? dir.json.data.teachers[0]?.id;
-    }
+    const ok = dir.status === 200 && Array.isArray(dir.json?.data?.teachers) && dir.json.data.teachers.length > 0;
+    check("GET /registrations/directory (public) → teachers", ok, dir.json?.data);
+    if (ok) teacherId = dir.json.data.teachers[0].id;
   }
   const newStudent = makeClient();
   const mobile = "9990001122";
   {
     const r = await newStudent.post("/registrations", {
-      name: "Test Learner",
-      className: "10",
-      rollNumber: "R-42",
-      schoolId,
-      teacherId,
+      fullName: "Test Learner",
+      schoolName: "Riverside High",
       email: "test.learner@example.com",
-      mobile,
+      mobileNumber: mobile,
       password: "Passw0rd!",
     });
     check("POST /registrations (new student) → 201", r.status === 201, r);
@@ -179,9 +173,9 @@ async function main() {
   }
   let requestId = "";
   {
-    const pend = await teacher.get("/registrations/pending");
-    const found = Array.isArray(pend.json?.data) && pend.json.data.find((x: any) => x.mobile === mobile);
-    check("GET /registrations/pending (teacher) → includes new request", !!found, pend.json?.data);
+    const pend = await teacher.get("/registrations/queue?status=pending");
+    const found = Array.isArray(pend.json?.data?.requests) && pend.json.data.requests.find((x: any) => x.mobile === mobile);
+    check("GET /registrations/queue (teacher) → includes new request", !!found, pend.json?.data);
     requestId = found?.id ?? "";
   }
   {
@@ -210,15 +204,15 @@ async function main() {
   }
   {
     const r = await student.get("/certificates/mine");
-    check("GET /certificates/mine (student) → 200 data:null", r.status === 200 && r.json?.data === null, r.json);
+    check("GET /certificates/mine (student) → 200 array", r.status === 200 && Array.isArray(r.json?.data), r.json);
   }
   {
-    const r = await student.post("/certificates/issue", { completedLessons: { l1: true }, assessmentScores: { m1: { scorePct: 80, passed: true } } });
-    check("POST /certificates/issue (not eligible) → 400", r.status === 400, r);
+    const r = await student.post("/certificates/issue", { courseId: "nonexistent-course" });
+    check("POST /certificates/issue (not eligible) → 403", r.status === 403, r.status);
   }
   {
-    const r = await anon.get("/certificates/verify/nonexistent-token");
-    check("GET /certificates/verify/:token (public, bad) → valid:false", r.status === 200 && r.json?.data?.valid === false, r.json);
+    const r = await anon.get("/certificates/verify/AFE-2026-NOPE0000");
+    check("GET /certificates/verify/:id (public, bad) → valid:false", r.status === 200 && r.json?.data?.valid === false, r.json);
   }
   {
     const list = await student.get("/forum/threads");

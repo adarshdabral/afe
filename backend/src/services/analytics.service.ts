@@ -6,18 +6,11 @@
 // aggregation helpers are ported verbatim; the snapshot reads hit Mongo.
 
 import { AI_COURSE, flattenLessons } from "../data/curriculum";
-import { SCHOOLS } from "./registration.service";
 import {
   AnalyticsSnapshot,
   toSnapshot,
   type StudentSnapshot,
 } from "../models/AnalyticsSnapshot";
-
-// Which school each school-admin oversees (demo mapping).
-const ADMIN_SCHOOL: Record<string, string> = { "u-school-admin": "school-1" };
-export function schoolForAdmin(userId: string): string {
-  return ADMIN_SCHOOL[userId] ?? "school-1";
-}
 
 /** Upsert a learner's snapshot (called by the student app's sync). */
 export async function recordSnapshot(s: StudentSnapshot): Promise<void> {
@@ -26,7 +19,6 @@ export async function recordSnapshot(s: StudentSnapshot): Promise<void> {
     {
       $set: {
         studentName: s.studentName,
-        schoolId: s.schoolId,
         schoolName: s.schoolName,
         className: s.className,
         lessonsCompleted: s.lessonsCompleted,
@@ -46,8 +38,15 @@ export async function recordSnapshot(s: StudentSnapshot): Promise<void> {
 }
 
 // ---- snapshot reads ---------------------------------------------------------
-async function snapshotsInSchools(ids: Set<string>): Promise<StudentSnapshot[]> {
-  const docs = await AnalyticsSnapshot.find({ schoolId: { $in: [...ids] } });
+async function snapshotsForSchools(names: Set<string>): Promise<StudentSnapshot[]> {
+  const docs = await AnalyticsSnapshot.find({ schoolName: { $in: [...names] } });
+  return docs.map(toSnapshot);
+}
+
+/** Snapshots for a specific set of student ids (teacher analytics scope). */
+async function snapshotsForStudents(ids: string[]): Promise<StudentSnapshot[]> {
+  if (ids.length === 0) return [];
+  const docs = await AnalyticsSnapshot.find({ studentUserId: { $in: ids } });
   return docs.map(toSnapshot);
 }
 
@@ -84,8 +83,8 @@ function classBreakdown(students: StudentSnapshot[]) {
   }));
 }
 
-export async function teacherAnalytics(schoolIds: string[]) {
-  const students = await snapshotsInSchools(new Set(schoolIds));
+export async function teacherAnalytics(studentUserIds: string[]) {
+  const students = await snapshotsForStudents(studentUserIds);
   const moduleTrend = AI_COURSE.modules.map((m) => {
     const scores = students
       .map((s) => s.moduleScores[m.id])
@@ -115,12 +114,11 @@ export async function teacherAnalytics(schoolIds: string[]) {
   };
 }
 
-export async function schoolAnalytics(schoolId: string) {
-  const students = await snapshotsInSchools(new Set([schoolId]));
-  const schoolName =
-    students[0]?.schoolName ?? SCHOOLS.find((s) => s.id === schoolId)?.name ?? "School";
+export async function schoolAnalytics(schoolName: string) {
+  const students = await snapshotsForSchools(new Set([schoolName]));
+  const resolvedName = students[0]?.schoolName ?? schoolName ?? "School";
   return {
-    schoolName,
+    schoolName: resolvedName,
     totalStudents: students.length,
     participationRate: rate(students, (s) => s.lessonsCompleted > 0 || s.totalTimeSec > 0),
     completionRate: rate(students, isComplete),
@@ -135,8 +133,8 @@ export async function platformAnalytics() {
   const all = await allSnapshots();
   const bySchool = new Map<string, StudentSnapshot[]>();
   for (const s of all) {
-    if (!bySchool.has(s.schoolId)) bySchool.set(s.schoolId, []);
-    bySchool.get(s.schoolId)!.push(s);
+    if (!bySchool.has(s.schoolName)) bySchool.set(s.schoolName, []);
+    bySchool.get(s.schoolName)!.push(s);
   }
   return {
     totalSchools: bySchool.size,

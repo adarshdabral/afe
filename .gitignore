@@ -35,3 +35,7 @@ package-lock.json
 *.sln
 *.sw?
 .vercel
+
+# EC2 / SSH private keys — NEVER commit
+*.pem
+key.pem

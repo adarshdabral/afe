@@ -17,7 +17,7 @@ import {
 import { getUserById } from "../services/auth.service";
 import type { Role } from "../shared/access";
 
-const STAFF: Role[] = ["teacher", "school_admin", "platform_admin"];
+const STAFF: Role[] = ["teacher", "platform_admin"];
 void STAFF; // route-level requireRole enforces staff access for moderation.
 
 /** Resolve the author identity (incl. display name) from the session. */

@@ -13,20 +13,18 @@ import {
   Linkedin,
   BookOpen,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
-import { CourseCard } from "@/components/CourseCard";
 import { Button } from "@/components/ui/button";
-import { courses, type Category } from "@/data/mock";
-
-const categories: ("All" | Category)[] = ["All", "AI & ML", "Web Dev", "Data Science", "Cloud"];
+import { listPublicCourses, type Course } from "@/lib/api/courses";
 
 export default function Landing() {
-  const [active, setActive] = useState<"All" | Category>("All");
-  const filtered =
-    active === "All"
-      ? courses.slice(0, 6)
-      : courses.filter((c) => c.category === active).slice(0, 6);
+  const [featured, setFeatured] = useState<Course[]>([]);
+  useEffect(() => {
+    listPublicCourses({ pageSize: 6 })
+      .then((r) => setFeatured(r.courses))
+      .catch(() => setFeatured([]));
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -34,37 +32,45 @@ export default function Landing() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-50 via-background to-background dark:from-violet-500/10" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-20 md:py-32 grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-xs font-medium">
-              <Sparkles className="w-3.5 h-3.5" /> AI-powered learning platform
+        {/* One soft ambient glow — the only color in a near-white stage. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[560px] rounded-full opacity-60 blur-3xl"
+          style={{
+            background:
+              "radial-gradient(closest-side, color-mix(in srgb, var(--primary) 16%, transparent), transparent)",
+          }}
+        />
+        <div className="relative max-w-6xl mx-auto px-5 sm:px-6 py-24 md:py-36 grid lg:grid-cols-[1.05fr_0.95fr] gap-14 items-center">
+          <div className="animate-fade-up">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-card border border-border text-muted-foreground text-[12px] font-medium shadow-soft">
+              <Sparkles className="w-3.5 h-3.5 text-violet-600" /> AI-powered learning platform
             </span>
-            <h1 className="mt-6 text-5xl md:text-6xl font-bold leading-tight text-foreground">
-              Learn{" "}
-              <span className="bg-gradient-to-r from-violet-600 to-violet-400 bg-clip-text text-transparent">
-                AI
-              </span>
-              .
+            <h1 className="mt-6 text-[3.4rem] leading-[1.02] md:text-7xl md:leading-[1.03] font-semibold text-foreground tracking-[-0.03em]">
+              Learn <span className="text-violet-600">AI</span>.
               <br />
-              Build the Future.
+              Build the future.
             </h1>
-            <p className="mt-6 text-lg text-muted-foreground max-w-xl">
-              World-class courses in AI, Web Development, Data Science, and Cloud — taught by leading
-              industry experts. Free for everyone.
+            <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed">
+              A world-class AI-literacy course — from what AI is to building responsibly. Taught by
+              experts. Free for everyone.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-9 flex flex-wrap gap-3">
               <Link href="/courses">
                 <Button
                   size="lg"
-                  className="rounded-xl bg-violet-600 hover:bg-violet-700 text-white h-12 px-6"
+                  className="rounded-full bg-violet-600 hover:bg-violet-700 text-white h-12 px-7 text-[15px] shadow-sm"
                 >
-                  Browse Courses <ArrowRight className="w-4 h-4" />
+                  Browse the course <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
               <Link href="/register">
-                <Button size="lg" variant="outline" className="rounded-xl h-12 px-6">
-                  Become an Instructor
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="rounded-full h-12 px-7 text-[15px] bg-card"
+                >
+                  Create account
                 </Button>
               </Link>
             </div>
@@ -74,7 +80,7 @@ export default function Landing() {
                   <div
                     key={i}
                     className="w-9 h-9 rounded-full ring-2 ring-background flex items-center justify-center text-xs font-semibold text-white"
-                    style={{ background: ["#6C63FF", "#3B82F6", "#10B981", "#F59E0B"][n] }}
+                    style={{ background: ["#0071e3", "#5e5ce6", "#34c759", "#ff9f0a"][n] }}
                   >
                     {i}
                   </div>
@@ -86,23 +92,22 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Decorative grid */}
-          <div className="relative hidden lg:block">
-            <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-              {courses.slice(0, 4).map((c, i) => (
+          {/* Floating course preview cards */}
+          <div className="relative hidden lg:block animate-fade-up [animation-delay:120ms]">
+            <div className="grid grid-cols-2 gap-5 max-w-md mx-auto">
+              {(featured.length ? featured : Array.from({ length: 4 })).slice(0, 4).map((c, i) => (
                 <div
-                  key={c.id}
-                  className="bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
-                  style={{ transform: `translateY(${i % 2 === 0 ? "-12px" : "12px"})` }}
+                  key={(c as Course)?.id ?? i}
+                  className="bg-card rounded-3xl shadow-soft border border-border overflow-hidden elevate"
+                  style={{ transform: `translateY(${i % 2 === 0 ? "-16px" : "16px"})` }}
                 >
-                  <div
-                    className="aspect-video flex items-center justify-center"
-                    style={{ background: c.thumbnailColor }}
-                  >
-                    <BookOpen className="w-8 h-8 text-white/50" />
+                  <div className="aspect-video flex items-center justify-center bg-secondary">
+                    <BookOpen className="w-7 h-7 text-violet-600/70" />
                   </div>
-                  <div className="p-3">
-                    <p className="text-xs font-medium text-foreground line-clamp-2">{c.title}</p>
+                  <div className="p-4">
+                    <p className="text-[13px] font-medium text-foreground line-clamp-2 leading-snug">
+                      {(c as Course)?.title ?? "AI for Everyone"}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -143,27 +148,32 @@ export default function Landing() {
           </Link>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-8">
-          {categories.map((c) => (
-            <button
-              key={c}
-              onClick={() => setActive(c)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                active === c
-                  ? "bg-violet-600 text-white"
-                  : "bg-secondary text-foreground hover:bg-gray-200 dark:hover:bg-gray-700"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((c) => (
-            <CourseCard key={c.id} course={c} variant="catalog" />
-          ))}
-        </div>
+        {featured.length === 0 ? (
+          <p className="text-muted-foreground">No published courses yet — check back soon.</p>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featured.map((c) => (
+              <Link
+                key={c.id}
+                href={`/courses/${c.slug}`}
+                className="block bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
+              >
+                <div className="aspect-video bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center">
+                  <BookOpen className="w-8 h-8 text-white/60" />
+                </div>
+                <div className="p-4">
+                  <span className="text-[11px] uppercase tracking-wide text-violet-600 font-medium capitalize">
+                    {c.level}
+                  </span>
+                  <h3 className="font-semibold text-foreground mt-1 line-clamp-2">{c.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                    {c.shortDescription || "Start learning today."}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* How it works */}
@@ -294,8 +304,8 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-gray-100 dark:border-gray-800 bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid md:grid-cols-4 gap-8">
-          <div className="md:col-span-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
             <div className="flex items-center gap-2">
               <span className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center">
                 <Sparkles className="w-4 h-4" />
@@ -306,41 +316,18 @@ export default function Landing() {
               World-class learning, free for everyone.
             </p>
           </div>
-          {[
-            { title: "Platform", links: ["Courses", "Instructors", "Certificates", "Pricing"] },
-            { title: "Company", links: ["About", "Careers", "Press", "Blog"] },
-            { title: "Support", links: ["Help Center", "Contact", "Privacy", "Terms"] },
-          ].map((col) => (
-            <div key={col.title}>
-              <h4 className="font-semibold text-foreground text-sm">{col.title}</h4>
-              <ul className="mt-3 space-y-2">
-                {col.links.map((l) => (
-                  <li key={l}>
-                    <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                      {l}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {/* Only functional links */}
+          <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <Link href="/courses" className="text-muted-foreground hover:text-foreground">Courses</Link>
+            <Link href="/login" className="text-muted-foreground hover:text-foreground">Login</Link>
+            <Link href="/register" className="text-muted-foreground hover:text-foreground">Sign up</Link>
+          </nav>
         </div>
         <div className="border-t border-gray-100 dark:border-gray-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
             <p className="text-xs text-muted-foreground">
               © 2026 AI For Everyone. All rights reserved.
             </p>
-            <div className="flex items-center gap-3">
-              {[Github, Twitter, Linkedin].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="w-9 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center text-muted-foreground"
-                >
-                  <Icon className="w-4 h-4" />
-                </a>
-              ))}
-            </div>
           </div>
         </div>
       </footer>

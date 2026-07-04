@@ -11,8 +11,6 @@ export function roleLabel(role: Role): string {
       return "Student";
     case "teacher":
       return "Teacher";
-    case "school_admin":
-      return "School Admin";
     case "platform_admin":
       return "Platform Admin";
   }

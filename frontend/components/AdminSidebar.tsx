@@ -5,7 +5,9 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  UserPlus,
   BookOpen,
+  Award,
   ClipboardCheck,
   BarChart2,
   Settings,
@@ -19,12 +21,17 @@ import { useApp } from "@/context/AppContext";
 
 const links = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/admin/dashboard", label: "Users", icon: Users },
-  { to: "/admin/dashboard", label: "Courses", icon: BookOpen },
-  { to: "/admin/dashboard", label: "Applications", icon: ClipboardCheck },
+  { to: "/admin/teachers", label: "Teachers", icon: UserPlus },
+  { to: "/admin/courses", label: "Courses", icon: BookOpen },
+  { to: "/admin/certificates", label: "Certificates", icon: Award },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart2 },
-  { to: "#", label: "Settings", icon: Settings },
 ] as const;
+
+function initials(name?: string): string {
+  if (!name) return "AD";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "AD";
+}
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -33,49 +40,48 @@ export function AdminSidebar() {
 
   const Body = () => (
     <div className="flex flex-col h-full">
-      <div className="px-6 h-16 flex items-center gap-2 border-b border-gray-100 dark:border-gray-800">
-        <span className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center">
+      <div className="px-5 h-16 flex items-center gap-2.5">
+        <span className="w-8 h-8 rounded-[10px] bg-violet-600 text-white flex items-center justify-center shadow-sm">
           <Sparkles className="w-4 h-4" />
         </span>
-        <span className="font-semibold text-foreground">Admin</span>
+        <span className="font-semibold text-foreground tracking-tight">Admin</span>
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-3 space-y-0.5">
         {links.map((l, i) => {
-          const active = l.to !== "#" && pathname === l.to;
+          const active = pathname === l.to;
           const Icon = l.icon;
           return (
             <Link
               key={i}
               href={l.to}
               onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors border-l-2 ${
+              aria-current={active ? "page" : undefined}
+              className={`flex items-center gap-3 px-3 py-2 rounded-xl text-[14px] transition-colors ${
                 active
-                  ? "bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-600"
-                  : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-foreground border-transparent"
+                  ? "bg-violet-600/10 text-violet-700 dark:text-violet-300 font-medium"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className={`w-[18px] h-[18px] ${active ? "text-violet-600" : ""}`} />
               <span>{l.label}</span>
             </Link>
           );
         })}
       </nav>
-      <div className="border-t border-gray-100 dark:border-gray-800 p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-gray-700 text-white flex items-center justify-center text-sm font-semibold">
-          AD
+      <div className="m-3 rounded-2xl bg-secondary/60 p-2.5 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center text-[13px] font-semibold shrink-0">
+          {initials(authUser?.name)}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-foreground truncate">
-            {authUser?.name ?? "Dr Sudhanshu Joshi"}
+          <div className="text-[13px] font-medium text-foreground truncate">
+            {authUser?.name ?? "Administrator"}
           </div>
-          <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded">
-            Admin
-          </span>
+          <div className="text-[11px] text-muted-foreground">Platform admin</div>
         </div>
         <button
           onClick={logout}
           aria-label="Sign out"
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-foreground"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
         >
           <LogOut className="w-4 h-4" />
         </button>
@@ -85,22 +91,22 @@ export function AdminSidebar() {
 
   return (
     <>
-      <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+      <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-border bg-card">
         <Body />
       </aside>
       <button
-        className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex items-center justify-center"
+        className="glass lg:hidden fixed top-4 left-4 z-50 w-10 h-10 rounded-xl border border-border flex items-center justify-center shadow-soft"
         onClick={() => setOpen(true)}
         aria-label="Open menu"
       >
         <Menu className="w-5 h-5" />
       </button>
       {open && (
-        <div className="lg:hidden fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-64 bg-white dark:bg-gray-900">
+        <div className="lg:hidden fixed inset-0 z-50 animate-fade-in">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-0 bottom-0 w-64 bg-card border-r border-border shadow-soft">
             <button
-              className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
               onClick={() => setOpen(false)}
             >
               <X className="w-4 h-4" />

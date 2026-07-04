@@ -1,29 +1,17 @@
-// Frontend registration service — replaces the TanStack registration.functions.ts
-// callables with Axios calls to the Express API.
+// Frontend registration service — Axios calls to the Express registration API.
+// There is no School entity (schoolName is free-text informational data) and no
+// teacher selection: every new student is auto-assigned to the default teacher.
 
 import { api } from "./axios";
 import type { CurrentUser } from "./auth";
 
 export type RegistrationStatus = "pending" | "approved" | "rejected";
-
-export interface School {
-  id: string;
-  name: string;
-}
-
-export interface TeacherDirectoryEntry {
-  id: string;
-  name: string;
-  schoolId: string;
-}
+export type StatusFilter = RegistrationStatus | "all";
 
 export interface RegistrationRequest {
   id: string;
   studentUserId: string;
   studentName: string;
-  className: string;
-  rollNumber: string;
-  schoolId: string;
   schoolName: string;
   teacherId: string;
   teacherName: string;
@@ -45,14 +33,26 @@ export interface Notification {
 }
 
 export interface RegisterInput {
-  name: string;
-  className: "8" | "9" | "10" | "11" | "12";
-  rollNumber: string;
-  schoolId: string;
-  teacherId: string;
-  email?: string;
-  mobile: string;
+  fullName: string;
+  email: string;
   password: string;
+  mobileNumber: string;
+  schoolName: string;
+}
+
+export interface QueueParams {
+  status?: StatusFilter;
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
+
+export interface QueueResult {
+  requests: RegistrationRequest[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 export interface DecideInput {
@@ -61,21 +61,13 @@ export interface DecideInput {
   reason?: string;
 }
 
-export async function getRegistrationDirectory(): Promise<{
-  schools: School[];
-  teachers: TeacherDirectoryEntry[];
-}> {
-  const { data } = await api.get<{ data: { schools: School[]; teachers: TeacherDirectoryEntry[] } }>(
-    "/registrations/directory",
-  );
-  return data.data;
-}
-
+/** Self-register a student and establish a session (auto-assigned to the default teacher). */
 export async function registerStudent(input: RegisterInput): Promise<CurrentUser> {
   const { data } = await api.post<{ data: CurrentUser }>("/registrations", input);
   return data.data;
 }
 
+/** Current student's request status + notifications. */
 export async function myRegistration(): Promise<{
   request: RegistrationRequest | null;
   notifications: Notification[];
@@ -86,8 +78,9 @@ export async function myRegistration(): Promise<{
   return data.data;
 }
 
-export async function pendingRegistrations(): Promise<RegistrationRequest[]> {
-  const { data } = await api.get<{ data: RegistrationRequest[] }>("/registrations/pending");
+/** Registration queue — teacher sees own assigned requests, platform admin sees all. */
+export async function registrationQueue(params: QueueParams): Promise<QueueResult> {
+  const { data } = await api.get<{ data: QueueResult }>("/registrations/queue", { params });
   return data.data;
 }
 

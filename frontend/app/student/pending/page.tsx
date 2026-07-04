@@ -90,7 +90,6 @@ export default function PendingApproval() {
           <div className="mt-6 text-left text-sm bg-gray-50 dark:bg-gray-800/60 rounded-xl p-4 space-y-1.5">
             <Row label="School" value={request.schoolName} />
             <Row label="Teacher" value={request.teacherName} />
-            <Row label="Class" value={`Class ${request.className} · Roll ${request.rollNumber}`} />
             <Row
               label="Status"
               value={

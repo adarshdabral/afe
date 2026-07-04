@@ -15,6 +15,7 @@ function isGuarded(pathname: string): boolean {
     pathname === "/login" ||
     pathname === "/register" ||
     pathname.startsWith("/student") ||
+    pathname.startsWith("/learn") ||
     pathname.startsWith("/instructor") ||
     pathname.startsWith("/admin")
   );
@@ -54,5 +55,12 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/student/:path*", "/instructor/:path*", "/admin/:path*", "/login", "/register"],
+  matcher: [
+    "/student/:path*",
+    "/learn/:path*",
+    "/instructor/:path*",
+    "/admin/:path*",
+    "/login",
+    "/register",
+  ],
 };

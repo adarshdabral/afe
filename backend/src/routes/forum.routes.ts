@@ -19,13 +19,13 @@ router.post("/threads/:id/replies", authenticate, asyncHandler(reply));
 router.post(
   "/threads/:id/moderate",
   authenticate,
-  requireRole("teacher", "school_admin", "platform_admin"),
+  requireRole("teacher", "platform_admin"),
   asyncHandler(moderateThread),
 );
 router.post(
   "/posts/:id/moderate",
   authenticate,
-  requireRole("teacher", "school_admin", "platform_admin"),
+  requireRole("teacher", "platform_admin"),
   asyncHandler(moderatePost),
 );
 

@@ -4,7 +4,8 @@
 
 import { User, principalOf } from "../models/User";
 import { hashPassword, verifyPassword } from "../utils/password";
-import type { Role, SessionPrincipal } from "../shared/access";
+import { requireTeacherApproval } from "../config/env";
+import type { SessionPrincipal } from "../shared/access";
 
 let dummyHashPromise: Promise<string> | null = null;
 
@@ -52,42 +53,15 @@ export async function createStudentUser(input: {
   const identifiers = [input.email, input.mobile]
     .filter((s): s is string => !!s)
     .map((s) => s.toLowerCase());
+  // Default: students are approved immediately. Only when teacher approval is
+  // required (REQUIRE_TEACHER_APPROVAL=true) do they start as pending.
   const doc = await User.create({
     role: "student",
     name: input.name,
     email: input.email ?? "",
     mobile: input.mobile,
     passwordHash: await hashPassword(input.password),
-    registrationStatus: "pending",
-    identifiers,
-  });
-  return principalOf(doc);
-}
-
-/**
- * Create an account with an explicit role (self-service sign-up with role
- * selection). Students start `pending`; staff accounts are active immediately.
- * Login identifiers are derived from any provided email / username / mobile.
- */
-export async function createUser(input: {
-  role: Role;
-  name: string;
-  email?: string;
-  username?: string;
-  mobile?: string;
-  password: string;
-}): Promise<SessionPrincipal> {
-  const identifiers = [input.email, input.username, input.mobile]
-    .filter((s): s is string => !!s)
-    .map((s) => s.toLowerCase());
-  const doc = await User.create({
-    role: input.role,
-    name: input.name,
-    email: input.email ?? "",
-    username: input.username,
-    mobile: input.mobile,
-    passwordHash: await hashPassword(input.password),
-    registrationStatus: input.role === "student" ? "pending" : undefined,
+    registrationStatus: requireTeacherApproval() ? "pending" : "approved",
     identifiers,
   });
   return principalOf(doc);

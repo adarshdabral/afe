@@ -1,52 +1,36 @@
-import { useEffect, useRef } from "react";
-import { useApp } from "@/context/AppContext";
+"use client";
 
-const FLUSH_MS = 20_000; // periodic flush so time survives an abrupt tab close
+import { useEffect, useRef } from "react";
 
 /**
- * Accrues active, foreground-only time on the given lesson and flushes whole
- * seconds into AppContext (FR-08 time spent). Time while the tab is hidden is
- * not counted. Flushes periodically, on visibility-hide, and on unmount / lesson
- * change. `addTimeSpent` is held in a ref so the effect only re-runs per lesson.
+ * Lesson time tracker. While `enabled`, it runs a 30-second heartbeat that reports
+ * newly-elapsed WHOLE minutes via `onMinutes` (so the server's minute counter stays
+ * accurate — no double counting), and flushes any remaining whole minute on
+ * unmount / navigation. The callback identity may change freely (kept in a ref),
+ * so the timer only (re)starts when `enabled` flips.
  */
-export function useLessonTimer(lessonId: string) {
-  const { addTimeSpent } = useApp();
-  const addRef = useRef(addTimeSpent);
-  addRef.current = addTimeSpent;
+export function useLessonTimer(enabled: boolean, onMinutes: (minutes: number) => void): void {
+  const cb = useRef(onMinutes);
+  cb.current = onMinutes;
 
   useEffect(() => {
-    if (typeof document === "undefined") return;
-
-    let last = Date.now();
-    let accMs = 0;
-
-    const accrue = () => {
-      const now = Date.now();
-      if (!document.hidden) accMs += now - last;
-      last = now;
-    };
+    if (!enabled) return;
+    const start = Date.now();
+    let reported = 0;
 
     const flush = () => {
-      accrue();
-      const secs = Math.floor(accMs / 1000);
-      if (secs > 0) {
-        accMs -= secs * 1000;
-        addRef.current(lessonId, secs);
+      const elapsedMin = Math.floor((Date.now() - start) / 60000);
+      const delta = elapsedMin - reported;
+      if (delta >= 1) {
+        reported = elapsedMin;
+        cb.current(delta);
       }
     };
 
-    const onVisibility = () => {
-      // Count time up to the moment of hiding; don't count the hidden gap.
-      accrue();
-    };
-
-    const interval = setInterval(flush, FLUSH_MS);
-    document.addEventListener("visibilitychange", onVisibility);
-
+    const id = setInterval(flush, 30_000); // heartbeat every 30s
     return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisibility);
-      flush(); // final partial flush for this lesson
+      clearInterval(id);
+      flush(); // persist the final partial interval's whole minutes on unmount
     };
-  }, [lessonId]);
+  }, [enabled]);
 }

@@ -18,7 +18,6 @@ function moduleScoresFor(passed: number, avg: number): Record<string, number> {
 interface SeedRow {
   id: string;
   name: string;
-  schoolId: string;
   schoolName: string;
   className: string;
   lessons: number;
@@ -33,7 +32,6 @@ function fromSeed(r: SeedRow): StudentSnapshot {
   return {
     studentUserId: r.id,
     studentName: r.name,
-    schoolId: r.schoolId,
     schoolName: r.schoolName,
     className: r.className,
     lessonsCompleted: r.lessons,
@@ -50,8 +48,8 @@ function fromSeed(r: SeedRow): StudentSnapshot {
 }
 
 export async function seedAnalyticsCohort(): Promise<void> {
-  const D = { schoolId: "school-1", schoolName: "Doon Public School" };
-  const S = { schoolId: "school-2", schoolName: "St. Joseph's Academy" };
+  const D = { schoolName: "Doon Public School" };
+  const S = { schoolName: "St. Joseph's Academy" };
   const cohort: SeedRow[] = [
     {
       id: "u-student",

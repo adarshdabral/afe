@@ -1,53 +1,73 @@
-// Frontend certificate service — replaces the TanStack certificate.functions.ts
-// callables (issueCertificateFn / myCertificateFn / verifyCertificateFn) with
-// Axios calls to the Express API.
+// Frontend certificate service — Axios calls to the Express certificate API.
+// Mirrors backend/src/services/certificate.service.ts.
 
 import { api } from "./axios";
 
+export type CertificateStatus = "active" | "revoked";
+
 export interface Certificate {
   id: string;
-  certificateCode: string;
-  verificationToken: string;
-  studentUserId: string;
+  certificateId: string;
+  studentId: string;
+  courseId: string;
   studentName: string;
   schoolName: string;
-  courseId: string;
   courseTitle: string;
-  issuedAt: string;
-  status: "valid" | "revoked";
+  issueDate: string;
+  verificationCode: string;
+  qrCode: string;
+  status: CertificateStatus;
 }
 
 export interface PublicCertificate {
-  certificateCode: string;
+  certificateId: string;
   studentName: string;
   schoolName: string;
   courseTitle: string;
-  issuedAt: string;
+  issueDate: string;
+  status: CertificateStatus;
 }
 
-export interface IssueInput {
-  completedLessons: Record<string, boolean>;
-  assessmentScores: Record<string, { scorePct: number; passed: boolean }>;
-}
-
-/** FR-11 idempotent issue once eligible. Throws if not yet eligible. */
-export async function issueCertificate(input: IssueInput): Promise<Certificate> {
-  const { data } = await api.post<{ data: Certificate }>("/certificates/issue", input);
+/** The signed-in student's certificates. */
+export async function myCertificates(): Promise<Certificate[]> {
+  const { data } = await api.get<{ data: Certificate[] }>("/certificates/mine");
   return data.data;
 }
 
-/** The signed-in student's certificate for the AI course, or null. */
-export async function myCertificate(): Promise<Certificate | null> {
-  const { data } = await api.get<{ data: Certificate | null }>("/certificates/mine");
+/** Claim a certificate for a completed course (idempotent; 403 if not eligible). */
+export async function claimCertificate(courseId: string): Promise<Certificate> {
+  const { data } = await api.post<{ data: Certificate }>("/certificates/issue", { courseId });
   return data.data;
 }
 
-/** PUBLIC verification by the opaque token embedded in the QR. */
+/** PUBLIC verification by certificate id. */
 export async function verifyCertificate(
-  token: string,
+  certificateId: string,
 ): Promise<{ valid: boolean; certificate: PublicCertificate | null }> {
   const { data } = await api.get<{ data: { valid: boolean; certificate: PublicCertificate | null } }>(
-    `/certificates/verify/${encodeURIComponent(token)}`,
+    `/certificates/verify/${encodeURIComponent(certificateId)}`,
   );
   return data.data;
+}
+
+/** Admin: all certificates (optionally filtered by status). */
+export async function listAllCertificates(status?: CertificateStatus): Promise<Certificate[]> {
+  const { data } = await api.get<{ data: Certificate[] }>("/certificates", {
+    params: status ? { status } : undefined,
+  });
+  return data.data;
+}
+
+/** Admin: revoke a certificate. */
+export async function revokeCertificate(certificateId: string): Promise<Certificate> {
+  const { data } = await api.post<{ data: Certificate }>(
+    `/certificates/${encodeURIComponent(certificateId)}/revoke`,
+  );
+  return data.data;
+}
+
+/** Absolute URL for the certificate PDF download (auth cookie sent by the browser). */
+export function certificateDownloadUrl(certificateId: string): string {
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api";
+  return `${base}/certificates/${encodeURIComponent(certificateId)}/download`;
 }

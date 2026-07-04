@@ -24,7 +24,7 @@ function nowIso(): string {
 }
 
 export function isStaff(role: Role): boolean {
-  return role === "teacher" || role === "school_admin" || role === "platform_admin";
+  return role === "teacher" || role === "platform_admin";
 }
 
 /** Posts for a thread, oldest-first; hidden posts only for staff viewers. */
