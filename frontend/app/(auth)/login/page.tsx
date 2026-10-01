@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login, type Role } from "@/lib/api/auth";
+import { useApp } from "@/context/AppContext";
 
 function roleHome(role: Role): string {
   switch (role) {
@@ -28,6 +29,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errs, setErrs] = useState<{ email?: string; pwd?: string }>({});
   const router = useRouter();
+  const { setSession } = useApp();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +41,7 @@ export default function Login() {
     setLoading(true);
     try {
       const user = await login({ login: email, password: pwd });
+      setSession(user); // sync the session into context so the role is known before navigating
       toast.success("Welcome back!");
       router.push(roleHome(user.role));
     } catch {
@@ -74,14 +77,14 @@ export default function Login() {
           <span className="w-8 h-8 rounded-[10px] bg-white/10 border border-white/15 flex items-center justify-center">
             <Sparkles className="w-4 h-4" />
           </span>
-          AI For Everyone
+          AI Spark
         </Link>
         <div className="relative z-10 max-w-sm">
-          <p className="text-[1.75rem] leading-snug font-semibold tracking-tight text-white">
-            &ldquo;This platform completely changed my career trajectory — I learned more in 6 months
-            than in years of study.&rdquo;
+          <p className="text-sm font-medium text-white/60">AI for Everyone</p>
+          <p className="mt-2 text-[1.75rem] leading-snug font-semibold tracking-tight text-white">
+            Understand artificial intelligence — its applications, opportunities and impact.
           </p>
-          <p className="mt-5 text-sm text-white/60">Ananya R. · ML Engineer</p>
+          <p className="mt-5 text-sm text-white/60">With Dr. Sudhanshu Joshi</p>
         </div>
       </div>
 
@@ -91,7 +94,7 @@ export default function Login() {
             <span className="w-8 h-8 rounded-[10px] bg-violet-600 text-white flex items-center justify-center">
               <Sparkles className="w-4 h-4" />
             </span>
-            AI For Everyone
+            AI Spark
           </Link>
           <h1 className="text-[2rem] font-semibold text-foreground tracking-tight">Welcome back</h1>
           <p className="text-muted-foreground mt-2">Sign in to continue learning.</p>

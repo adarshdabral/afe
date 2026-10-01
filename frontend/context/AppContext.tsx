@@ -19,6 +19,11 @@ interface AppContextType {
   role: Role | null;
   isAuthenticated: boolean;
   loadingUser: boolean;
+  /** Set the session identity directly (e.g. from a login/register response) so
+   *  the app knows the role immediately — no page refresh needed. */
+  setSession: (user: AuthUser | null) => void;
+  /** Re-fetch the session from the server (`/auth/me`) and update state. */
+  refresh: () => Promise<void>;
   logout: () => Promise<void>;
   darkMode: boolean;
   toggleDarkMode: () => void;
@@ -38,6 +43,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .catch(() => setAuthUser(null))
       .finally(() => setLoadingUser(false));
   }, []);
+
+  const refresh = async () => {
+    setLoadingUser(true);
+    try {
+      setAuthUser(await getCurrentUser());
+    } catch {
+      setAuthUser(null);
+    } finally {
+      setLoadingUser(false);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -70,6 +86,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         role: authUser?.role ?? null,
         isAuthenticated: !!authUser,
         loadingUser,
+        setSession: setAuthUser,
+        refresh,
         logout,
         darkMode,
         toggleDarkMode: () => setDarkMode((d) => !d),

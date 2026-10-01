@@ -29,7 +29,7 @@ export default function ForgotPassword() {
           <span className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center">
             <Sparkles className="w-4 h-4" />
           </span>
-          AI For Everyone
+          AI Spark
         </Link>
         {!sent ? (
           <>

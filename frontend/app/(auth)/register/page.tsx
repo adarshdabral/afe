@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { registerStudent } from "@/lib/api/registrations";
+import { useApp } from "@/context/AppContext";
 
 // zod schema mirrors the backend registerSchema. No class / roll number, and no
 // teacher selection — every student is auto-assigned to the default teacher.
@@ -23,6 +24,7 @@ const schema = z.object({
 
 export default function Register() {
   const router = useRouter();
+  const { setSession } = useApp();
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -48,6 +50,7 @@ export default function Register() {
     setLoading(true);
     try {
       const user = await registerStudent(parsed.data);
+      setSession(user); // sync session so the dashboard/pending page knows the user immediately
       if (user.registrationStatus === "approved") {
         toast.success("Welcome! Your account is ready.");
         router.push("/student/dashboard");
@@ -89,14 +92,15 @@ export default function Register() {
           <span className="w-8 h-8 rounded-[10px] bg-white/10 border border-white/15 flex items-center justify-center">
             <Sparkles className="w-4 h-4" />
           </span>
-          AI For Everyone
+          AI Spark
         </Link>
         <div className="relative z-10 max-w-sm">
           <p className="text-[1.75rem] leading-snug font-semibold tracking-tight text-white">
-            Start your AI literacy journey.
+            Start AI for Everyone.
           </p>
           <p className="mt-4 text-sm text-white/60 leading-relaxed">
-            Free for school students. Create your account and start learning right away.
+            Create your account to begin the course with Dr. Sudhanshu Joshi — self-paced, with
+            module assessments and a verifiable certificate.
           </p>
         </div>
       </div>
@@ -107,7 +111,7 @@ export default function Register() {
             Create your account
           </h1>
           <p className="text-muted-foreground mt-2">
-            Free for school students. You&apos;ll get access as soon as you sign up.
+            Join AI Spark to start AI for Everyone.
           </p>
 
           <form onSubmit={submit} className="mt-6 space-y-4" noValidate>

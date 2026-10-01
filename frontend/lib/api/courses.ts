@@ -8,6 +8,7 @@ export const COURSE_LEVELS = ["beginner", "intermediate", "advanced"] as const;
 export const LESSON_CONTENT_TYPES = [
   "video",
   "pdf",
+  "presentation",
   "rich_text",
   "infographic",
   "case_study",

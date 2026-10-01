@@ -6,12 +6,15 @@ import { useParams } from "next/navigation";
 import { ArrowLeft, ClipboardList, CheckCircle2, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LearnSidebar } from "@/components/learn/LearnSidebar";
+import { useApp } from "@/context/AppContext";
 import { useLearning } from "@/context/LearningContext";
+import { pad2 } from "@/lib/course";
 import { getPublicCourse, type CourseTree } from "@/lib/api/courses";
 
 export default function ModuleOverview() {
   const { slug, moduleId } = useParams<{ slug: string; moduleId: string }>();
-  const { load, completedLessons, isUnlocked } = useLearning();
+  const { load, completedLessons, isUnlocked, detail } = useLearning();
+  const isStudent = useApp().role === "student";
   const [tree, setTree] = useState<CourseTree | null>(null);
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
 
@@ -30,6 +33,10 @@ export default function ModuleOverview() {
     [tree],
   );
   const module = tree?.modules.find((m) => m.id === moduleId) ?? null;
+  const moduleIndex = tree && module ? tree.modules.indexOf(module) : -1;
+  const score = module?.assessmentId
+    ? detail?.progress.assessmentScores.find((a) => a.assessmentId === module.assessmentId)
+    : undefined;
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,20 +47,23 @@ export default function ModuleOverview() {
             <ArrowLeft className="w-4 h-4" /> Course overview
           </Link>
           {status === "loading" ? (
-            <div className="h-40 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+            <div className="skeleton h-40 rounded-3xl" />
           ) : !module ? (
-            <div className="rounded-2xl border border-gray-100 dark:border-gray-700 bg-card p-10 text-center">
+            <div className="rounded-3xl border border-border bg-card p-10 text-center shadow-soft">
               <p className="font-medium text-foreground">Module not found</p>
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-bold text-foreground mb-1">{module.title}</h1>
-              {module.description && <p className="text-sm text-muted-foreground mb-4">{module.description}</p>}
-              <div className="bg-card rounded-2xl border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-violet-600">
+                Module {pad2(moduleIndex + 1)} of {tree?.modules.length}
+              </p>
+              <h1 className="mt-1.5 text-3xl md:text-4xl font-semibold tracking-tight text-foreground mb-2">{module.title}</h1>
+              {module.description && <p className="text-[16px] text-muted-foreground leading-relaxed mb-6 max-w-2xl">{module.description}</p>}
+              <div className="bg-card rounded-3xl border border-border shadow-soft divide-y divide-border overflow-hidden">
                 {module.lessons.map((l) => {
-                  const unlocked = isUnlocked(sequence, l.id);
+                  const unlocked = !isStudent || isUnlocked(sequence, l.id);
                   return (
-                    <div key={l.id} className="flex items-center gap-3 p-3">
+                    <div key={l.id} className="flex items-center gap-3 px-5 py-4">
                       {completedLessons.has(l.id) ? (
                         <CheckCircle2 className="w-4 h-4 text-green-600" />
                       ) : (
@@ -67,7 +77,7 @@ export default function ModuleOverview() {
                           </Button>
                         </Link>
                       ) : (
-                        <span className="text-xs text-muted-foreground">Locked</span>
+                        <span className="text-xs text-muted-foreground" title="Complete the previous lesson to unlock">Locked</span>
                       )}
                     </div>
                   );
@@ -75,8 +85,9 @@ export default function ModuleOverview() {
               </div>
               {module.assessmentId && (
                 <Link href={`/learn/${slug}/assessment/${module.assessmentId}`}>
-                  <Button className="rounded-xl mt-4 bg-violet-600 hover:bg-violet-700 text-white">
-                    <ClipboardList className="w-4 h-4 mr-2" /> Take module quiz
+                  <Button className="rounded-full h-11 px-5 mt-5 bg-violet-600 hover:bg-violet-700 text-white">
+                    <ClipboardList className="w-4 h-4 mr-2" />
+                    {score ? (score.passed ? `Assessment passed · ${score.score}%` : `Retake assessment · best ${score.score}%`) : "Take the module assessment"}
                   </Button>
                 </Link>
               )}

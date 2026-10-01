@@ -25,7 +25,7 @@ import {
 export default function TeacherDetail() {
   const params = useParams<{ id: string }>();
   const id = params.id;
-  const { role } = useApp();
+  const { role, loadingUser } = useApp();
   const isPlatform = role === "platform_admin";
 
   const [teacher, setTeacher] = useState<Teacher | null>(null);
@@ -141,7 +141,7 @@ export default function TeacherDetail() {
             <ArrowLeft className="w-4 h-4" /> Back to teachers
           </Link>
 
-          {!isPlatform ? (
+          {!loadingUser && !isPlatform ? (
             <div className="bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">
               <ShieldCheck className="w-10 h-10 text-violet-600 mx-auto mb-3" />
               <p className="font-medium text-foreground">Platform admins only</p>

@@ -252,3 +252,49 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Course landing (AI for Everyone) ─────────────────────────────────────── */
+
+/* Faint engineering grid, faded at the edges — hero backdrop. */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--foreground) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--foreground) 6%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 40%, transparent 100%);
+}
+
+/* Hero network: a very slow orbit and a soft node pulse (both disabled by the
+   prefers-reduced-motion rule above). */
+.hv-orbit {
+  transform-box: view-box;
+  transform-origin: 200px 200px;
+  animation: hvSpin 140s linear infinite;
+}
+.hv-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hvPulse 3.2s ease-in-out infinite;
+}
+@keyframes hvSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes hvPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+/* Anchor targets clear the sticky navbar. */
+[id] {
+  scroll-margin-top: 7rem;
+}

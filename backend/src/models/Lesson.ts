@@ -8,6 +8,7 @@ import { Schema, model, type InferSchemaType, type HydratedDocument } from "mong
 export const LESSON_CONTENT_TYPES = [
   "video",
   "pdf",
+  "presentation",
   "rich_text",
   "infographic",
   "case_study",

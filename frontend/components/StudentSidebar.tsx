@@ -14,10 +14,11 @@ import {
   LogOut,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
+import { FLAGSHIP_SLUG } from "@/lib/course";
 
 const links = [
   { to: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/courses", label: "Courses", icon: BookOpen },
+  { to: `/learn/${FLAGSHIP_SLUG}`, label: "My course", icon: BookOpen },
   { to: "/student/certificates", label: "Certificates", icon: Award },
   { to: "/student/forum", label: "Forum", icon: MessageSquare },
 ] as const;
@@ -40,7 +41,7 @@ export function StudentSidebar() {
           <span className="w-8 h-8 rounded-[10px] bg-violet-600 text-white flex items-center justify-center shadow-sm">
             <Sparkles className="w-4 h-4" />
           </span>
-          <span className="font-semibold text-foreground tracking-tight">AI For Everyone</span>
+          <span className="font-semibold text-foreground tracking-tight">AI Spark</span>
         </div>
         <nav className="flex-1 px-3 py-3 space-y-0.5">
           {links.map((l, i) => {

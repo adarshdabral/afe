@@ -28,7 +28,7 @@ import {
 export default function ModuleEditor() {
   const params = useParams<{ courseId: string; moduleId: string }>();
   const { courseId, moduleId } = params;
-  const { role } = useApp();
+  const { role, loadingUser } = useApp();
   const isPlatform = role === "platform_admin";
 
   const [module, setModule] = useState<ModuleWithLessons | null>(null);
@@ -139,7 +139,7 @@ export default function ModuleEditor() {
             <ArrowLeft className="w-4 h-4" /> Back to builder
           </Link>
 
-          {!isPlatform ? (
+          {!loadingUser && !isPlatform ? (
             <p className="text-muted-foreground">Platform admins only.</p>
           ) : status === "loading" ? (
             <div className="h-40 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />

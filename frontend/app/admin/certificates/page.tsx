@@ -18,7 +18,7 @@ import {
 const selectClass = "h-11 px-3 rounded-xl border border-input bg-card text-sm text-foreground";
 
 export default function AdminCertificates() {
-  const { role } = useApp();
+  const { role, loadingUser } = useApp();
   const isPlatform = role === "platform_admin";
 
   const [certs, setCerts] = useState<Certificate[] | null>(null);
@@ -51,7 +51,7 @@ export default function AdminCertificates() {
     }
   };
 
-  if (!isPlatform) {
+  if (!loadingUser && !isPlatform) {
     return (
       <Shell>
         <div className="bg-card rounded-2xl border border-gray-100 dark:border-gray-700 p-8 text-center text-muted-foreground">

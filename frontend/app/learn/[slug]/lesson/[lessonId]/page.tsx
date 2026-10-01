@@ -3,18 +3,22 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Lock, CheckCircle2, Home } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, CheckCircle2, ClipboardCheck, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { LearnSidebar } from "@/components/learn/LearnSidebar";
 import { LessonRenderer } from "@/components/learn/LessonRenderer";
+import { useApp } from "@/context/AppContext";
 import { useLearning } from "@/context/LearningContext";
+import { pad2 } from "@/lib/course";
 import { useLessonTimer } from "@/hooks/use-lesson-timer";
 import { getPublicCourse, type CourseTree, type Lesson } from "@/lib/api/courses";
 
 export default function LessonPage() {
   const { slug, lessonId } = useParams<{ slug: string; lessonId: string }>();
   const router = useRouter();
+  // Progress + sequential locking are student concepts; staff preview freely.
+  const isStudent = useApp().role === "student";
   const { load, completedLessons, isUnlocked, markComplete, recordVisit, addMinutes } =
     useLearning();
 
@@ -32,8 +36,8 @@ export default function LessonPage() {
       .catch(() => setStatus("error"));
   }, [slug, load]);
 
-  const { lesson, moduleTitle, sequence, prevId, nextId } = useMemo(() => {
-    if (!tree) return { lesson: null as Lesson | null, moduleTitle: "", sequence: [] as string[], prevId: null as string | null, nextId: null as string | null };
+  const { lesson, moduleTitle, moduleIndex, moduleId, assessmentId, isLastInModule, sequence, prevId, nextId } = useMemo(() => {
+    if (!tree) return { lesson: null as Lesson | null, moduleTitle: "", moduleIndex: -1, moduleId: "", assessmentId: null as string | null, isLastInModule: false, sequence: [] as string[], prevId: null as string | null, nextId: null as string | null };
     const seq: string[] = [];
     for (const m of tree.modules) for (const l of m.lessons) seq.push(l.id);
     const owning = tree.modules.find((m) => m.lessons.some((l) => l.id === lessonId));
@@ -42,6 +46,10 @@ export default function LessonPage() {
     return {
       lesson: les,
       moduleTitle: owning?.title ?? "",
+      moduleIndex: owning ? tree.modules.indexOf(owning) : -1,
+      moduleId: owning?.id ?? "",
+      assessmentId: owning?.assessmentId ?? null,
+      isLastInModule: !!owning && owning.lessons[owning.lessons.length - 1]?.id === lessonId,
       sequence: seq,
       prevId: idx > 0 ? seq[idx - 1] : null,
       nextId: idx >= 0 && idx < seq.length - 1 ? seq[idx + 1] : null,
@@ -57,17 +65,28 @@ export default function LessonPage() {
   useLessonTimer(status === "ready" && !!lesson, (minutes) => void addMinutes(minutes));
 
   if (status === "loading") return <Center><div className="h-64 w-full max-w-3xl bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" /></Center>;
-  if (status === "error" || !tree) return <Center><Msg title="Course unavailable" href="/courses" cta="Back to catalog" /></Center>;
+  if (status === "error" || !tree) return <Center><Msg title="Course unavailable" href="/" cta="Back to home" /></Center>;
   if (!lesson) return <Center><Msg title="Lesson not found" href={`/learn/${slug}`} cta="Course overview" /></Center>;
 
-  const locked = !isUnlocked(sequence, lesson.id);
+  const locked = isStudent && !isUnlocked(sequence, lesson.id);
   const done = completedLessons.has(lesson.id);
 
   const completeAndContinue = async () => {
+    if (!isStudent) {
+      if (nextId) router.push(`/learn/${slug}/lesson/${nextId}`);
+      return;
+    }
     setSaving(true);
     try {
-      await markComplete(lesson.id);
-      if (nextId) router.push(`/learn/${slug}/lesson/${nextId}`);
+      const next = await markComplete(lesson.id);
+      const assessmentPassed = next?.progress.assessmentScores.some(
+        (a) => a.assessmentId === assessmentId && a.passed,
+      );
+      // Finished a module's lessons → hand off to its assessment (once, until passed).
+      if (isLastInModule && assessmentId && !assessmentPassed && !done) {
+        toast.success(`Module ${pad2(moduleIndex + 1)} lessons complete — time for the assessment.`);
+        router.push(`/learn/${slug}/assessment/${assessmentId}`);
+      } else if (nextId) router.push(`/learn/${slug}/lesson/${nextId}`);
       else toast.success("Course content complete! 🎉");
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
@@ -84,14 +103,12 @@ export default function LessonPage() {
 
         <main className="flex-1 min-w-0">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3 flex-wrap">
-            <Link href="/courses" className="hover:text-foreground flex items-center gap-1">
-              <Home className="w-3.5 h-3.5" /> Courses
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3 flex-wrap">
+            <Link href={`/learn/${slug}`} className="hover:text-foreground">{tree.title}</Link>
+            <span aria-hidden>/</span>
+            <Link href={`/learn/${slug}/module/${moduleId}`} className="hover:text-foreground">
+              Module {pad2(moduleIndex + 1)} · {moduleTitle}
             </Link>
-            <span>/</span>
-            <Link href={`/courses/${slug}`} className="hover:text-foreground">{tree.title}</Link>
-            <span>/</span>
-            <span className="text-foreground">{moduleTitle}</span>
           </nav>
 
           <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.08em] font-medium text-violet-600 bg-violet-600/10 rounded-full px-2.5 py-1">
@@ -131,6 +148,22 @@ export default function LessonPage() {
                 </div>
               </article>
 
+              {isLastInModule && assessmentId && (done || !isStudent) && (
+                <Link
+                  href={`/learn/${slug}/assessment/${assessmentId}`}
+                  className="mt-6 flex items-center gap-4 rounded-3xl border border-violet-600/25 bg-violet-600/[0.05] p-5 hover:bg-violet-600/[0.09] transition-colors"
+                >
+                  <span className="w-10 h-10 rounded-2xl bg-violet-600 text-white flex items-center justify-center shrink-0">
+                    <ClipboardCheck className="w-5 h-5" aria-hidden />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-medium text-foreground">Module {pad2(moduleIndex + 1)} assessment</span>
+                    <span className="block text-[13px] text-muted-foreground">Check your understanding of {moduleTitle}.</span>
+                  </span>
+                  <ArrowRight className="w-5 h-5 text-violet-600 shrink-0" aria-hidden />
+                </Link>
+              )}
+
               {/* Sticky frosted lesson navigation */}
               <div className="sticky bottom-4 mt-6 z-20">
                 <div className="glass rounded-full border border-border shadow-soft px-2 py-2 flex items-center justify-between">
@@ -145,10 +178,12 @@ export default function LessonPage() {
                   )}
                   <Button
                     onClick={completeAndContinue}
-                    disabled={saving}
+                    disabled={saving || (!isStudent && !nextId)}
                     className="rounded-full h-10 px-6 bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
                   >
-                    {done ? (nextId ? "Next lesson" : "Finish") : "Mark complete"}
+                    {!isStudent
+                      ? nextId ? "Next lesson" : "End of course"
+                      : done ? (nextId ? "Next lesson" : "Finish") : "Mark complete"}
                     {nextId && <ChevronRight className="w-4 h-4 ml-1" />}
                   </Button>
                 </div>

@@ -30,7 +30,7 @@ const schema = z.object({
 
 export default function CreateCourse() {
   const router = useRouter();
-  const { role } = useApp();
+  const { role, loadingUser } = useApp();
   const isPlatform = role === "platform_admin";
 
   const [form, setForm] = useState({
@@ -95,7 +95,7 @@ export default function CreateCourse() {
             Courses start as a draft. You can add modules and lessons after creating it.
           </p>
 
-          {!isPlatform ? (
+          {!loadingUser && !isPlatform ? (
             <div className="mt-6 bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">
               <ShieldCheck className="w-10 h-10 text-violet-600 mx-auto mb-3" />
               <p className="font-medium text-foreground">Platform admins only</p>

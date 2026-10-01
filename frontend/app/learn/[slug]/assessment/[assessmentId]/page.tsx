@@ -17,7 +17,7 @@ import {
 
 export default function AssessmentPage() {
   const { slug, assessmentId } = useParams<{ slug: string; assessmentId: string }>();
-  const { detail, load } = useLearning();
+  const { load, certificateEligible } = useLearning();
 
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [questions, setQuestions] = useState<PublicQuestion[]>([]);
@@ -44,7 +44,7 @@ export default function AssessmentPage() {
         questions.map((q) => ({ questionId: q.id, answer: answers[q.id] ?? "" })),
       );
       setResult({ score: res.attempt.score, passed: res.attempt.passed, review: res.review });
-      if (assessment && detail) await load(assessment.courseId); // refresh progress
+      if (assessment) await load(assessment.courseId); // refresh progress + certificate state
       toast[res.attempt.passed ? "success" : "message"](
         res.attempt.passed ? `Passed with ${res.attempt.score}%` : `Scored ${res.attempt.score}% — keep going`,
       );
@@ -72,7 +72,7 @@ export default function AssessmentPage() {
             </p>
           </div>
         ) : result ? (
-          <ResultView result={result} questions={questions} passingScore={assessment.passingScore} slug={slug} onRetry={() => { setResult(null); setAnswers({}); }} />
+          <ResultView result={result} questions={questions} passingScore={assessment.passingScore} slug={slug} certificateEligible={certificateEligible} onRetry={() => { setResult(null); setAnswers({}); }} />
         ) : (
           <div className="animate-fade-up">
             <h1 className="text-3xl font-semibold text-foreground tracking-tight">{assessment.title}</h1>
@@ -164,12 +164,14 @@ function ResultView({
   questions,
   passingScore,
   slug,
+  certificateEligible,
   onRetry,
 }: {
   result: { score: number; passed: boolean; review: GradedAnswer[] };
   questions: PublicQuestion[];
   passingScore: number;
   slug: string;
+  certificateEligible: boolean;
   onRetry: () => void;
 }) {
   const byId = new Map(questions.map((q) => [q.id, q]));
@@ -193,7 +195,33 @@ function ResultView({
         <p className="text-[15px] text-muted-foreground mt-1.5">
           {result.passed ? "You passed — nicely done." : `You need ${passingScore}% to pass. Try again.`}
         </p>
+        {result.passed && (
+          <Link
+            href={`/learn/${slug}`}
+            className="mt-6 inline-flex items-center justify-center h-11 px-6 rounded-full bg-violet-600 hover:bg-violet-700 text-white text-[14px] font-medium shadow-sm"
+          >
+            Continue the course
+          </Link>
+        )}
       </div>
+
+      {result.passed && certificateEligible && (
+        <div className="mt-4 rounded-3xl border border-green-600/25 bg-green-600/[0.06] p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+          <Award className="w-7 h-7 text-green-600 shrink-0" aria-hidden />
+          <div className="flex-1">
+            <p className="font-semibold text-foreground">You&apos;ve completed the course</p>
+            <p className="text-[14px] text-muted-foreground">
+              Your Certificate of Completion has been issued — download it or share its verification link.
+            </p>
+          </div>
+          <Link
+            href="/student/certificates"
+            className="inline-flex items-center justify-center h-10 px-5 rounded-full bg-green-600 hover:bg-green-700 text-white text-[14px] font-medium shrink-0"
+          >
+            View certificate
+          </Link>
+        </div>
+      )}
 
       <h2 className="font-semibold text-foreground mt-8 mb-3 text-lg tracking-tight">Review</h2>
       <div className="space-y-3">

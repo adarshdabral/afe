@@ -19,7 +19,7 @@ const PAGE_SIZE = 10;
 const selectClass = "h-11 px-3 rounded-xl border border-input bg-card text-sm text-foreground";
 
 export default function CoursesList() {
-  const { role } = useApp();
+  const { role, loadingUser } = useApp();
   const isPlatform = role === "platform_admin";
 
   const [search, setSearch] = useState("");
@@ -48,7 +48,7 @@ export default function CoursesList() {
     setPage(1);
   }, [search, status]);
 
-  if (!isPlatform) {
+  if (!loadingUser && !isPlatform) {
     return (
       <Shell>
         <div className="bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">

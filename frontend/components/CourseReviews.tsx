@@ -43,9 +43,9 @@ function StarInput({ value, onChange }: { value: number; onChange: (n: number) =
   );
 }
 
-function StarRow({ rating, size = "w-4 h-4" }: { rating: number; size?: string }) {
+export function StarRow({ rating, size = "w-4 h-4" }: { rating: number; size?: string }) {
   return (
-    <div className="flex gap-0.5">
+    <div className="flex gap-0.5" role="img" aria-label={`${rating.toFixed(1)} out of 5 stars`}>
       {[1, 2, 3, 4, 5].map((n) => (
         <Star
           key={n}
@@ -75,7 +75,7 @@ function ReviewForm({
   const [comment, setComment] = useState(initialComment);
 
   return (
-    <div className="rounded-xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+    <div className="rounded-xl border border-border p-4 space-y-3">
       <div>
         <p className="text-sm font-medium text-foreground mb-1.5">Your rating</p>
         <StarInput value={rating} onChange={setRating} />
@@ -104,15 +104,7 @@ function ReviewForm({
   );
 }
 
-export function CourseReviews({
-  courseId,
-  fallbackRating,
-  fallbackCount,
-}: {
-  courseId: string;
-  fallbackRating: number;
-  fallbackCount: number;
-}) {
+export function CourseReviews({ courseId }: { courseId: string }) {
   const { isAuthenticated } = useApp();
   const [data, setData] = useState<ReviewsData | null>(null);
   const [busy, setBusy] = useState(false);
@@ -128,11 +120,9 @@ export function CourseReviews({
     load();
   }, [load]);
 
+  // Live aggregate only — never a placeholder rating.
   const total = data?.aggregate.totalReviews ?? 0;
-  // Show the live aggregate once real reviews exist; until then, the seeded
-  // catalog rating so the page isn't empty.
-  const avg = total > 0 ? data!.aggregate.averageRating : fallbackRating;
-  const shownTotal = total > 0 ? total : fallbackCount;
+  const avg = data?.aggregate.averageRating ?? 0;
   const mine = data?.mine ?? null;
   const others = (data?.reviews ?? []).filter((r) => r.id !== mine?.id);
 
@@ -180,19 +170,24 @@ export function CourseReviews({
   };
 
   return (
-    <div className="bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-      <h2 className="text-xl font-semibold text-foreground">Student Reviews</h2>
-
-      <div className="mt-4 flex items-center gap-6">
-        <div className="text-center">
-          <div className="text-5xl font-bold text-foreground">{avg.toFixed(1)}</div>
-          <div className="flex justify-center mt-2">
-            <StarRow rating={avg} />
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {shownTotal.toLocaleString()} {shownTotal === 1 ? "review" : "reviews"}
-          </p>
-        </div>
+    <div className="bg-card rounded-3xl shadow-soft border border-border p-6 md:p-8">
+      <h3 className="sr-only">Course rating</h3>
+      <div className="flex items-center gap-5">
+        {total > 0 ? (
+          <>
+            <div className="text-5xl font-semibold text-foreground tracking-tight tabular-nums">
+              {avg.toFixed(1)}
+            </div>
+            <div>
+              <StarRow rating={avg} />
+              <p className="text-[13px] text-muted-foreground mt-1">
+                {total.toLocaleString()} {total === 1 ? "review" : "reviews"}
+              </p>
+            </div>
+          </>
+        ) : (
+          <p className="text-[15px] text-muted-foreground">No ratings yet.</p>
+        )}
       </div>
 
       {/* Your review — add / edit / delete */}
@@ -248,7 +243,7 @@ export function CourseReviews({
           </p>
         ) : (
           others.map((r: Review) => (
-            <div key={r.id} className="border-t border-gray-100 dark:border-gray-700 pt-4">
+            <div key={r.id} className="border-t border-border pt-4">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-violet-600 text-white flex items-center justify-center text-xs font-semibold">
                   {r.userName.slice(0, 2).toUpperCase()}

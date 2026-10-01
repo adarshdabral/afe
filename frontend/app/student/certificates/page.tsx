@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Award, Download, ShieldCheck, ExternalLink } from "lucide-react";
 import { StudentSidebar } from "@/components/StudentSidebar";
+import { FLAGSHIP_SLUG } from "@/lib/course";
 import { Button } from "@/components/ui/button";
 import {
   myCertificates,
@@ -44,8 +45,8 @@ export default function StudentCertificates() {
           ) : certs.length === 0 ? (
             <Empty>
               <Award className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-              No certificates yet. Complete a course to earn one.{" "}
-              <Link href="/courses" className="text-violet-600 underline">Browse courses</Link>.
+              No certificates yet — complete every lesson and pass each module assessment to earn yours.{" "}
+              <Link href={`/learn/${FLAGSHIP_SLUG}`} className="text-violet-600 underline">Continue AI for Everyone</Link>.
             </Empty>
           ) : (
             <div className="space-y-4">

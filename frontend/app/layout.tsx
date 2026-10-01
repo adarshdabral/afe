@@ -6,9 +6,14 @@ import { AppProvider } from "@/context/AppContext";
 import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "AI For Everyone — Learn AI. Build the Future.",
+  title: {
+    default: "AI for Everyone — Learn Artificial Intelligence | AI Spark",
+    template: "%s",
+  },
   description:
-    "Learn AI, web development, data science, and cloud — taught by industry experts. Free for everyone.",
+    "AI Spark presents AI for Everyone by Dr. Sudhanshu Joshi — a self-paced course on artificial intelligence, its applications and its impact, with module assessments and a verifiable certificate.",
+  applicationName: "AI Spark",
+  openGraph: { siteName: "AI Spark", type: "website" },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

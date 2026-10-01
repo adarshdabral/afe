@@ -30,7 +30,7 @@ export default function VerifyCertificate() {
         <span className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center">
           <Sparkles className="w-4 h-4" />
         </span>
-        AI For Everyone
+        AI Spark
       </Link>
 
       <div className="w-full max-w-md bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">

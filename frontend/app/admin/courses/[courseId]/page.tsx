@@ -36,7 +36,7 @@ export default function CourseBuilder() {
   const params = useParams<{ courseId: string }>();
   const courseId = params.courseId;
   const router = useRouter();
-  const { role } = useApp();
+  const { role, loadingUser } = useApp();
   const isPlatform = role === "platform_admin";
 
   const [tree, setTree] = useState<CourseTree | null>(null);
@@ -167,7 +167,7 @@ export default function CourseBuilder() {
     void runCourse(() => deleteLesson(l.id), "Lesson deleted.");
   };
 
-  if (!isPlatform) {
+  if (!loadingUser && !isPlatform) {
     return (
       <Shell>
         <p className="text-muted-foreground">Platform admins only.</p>

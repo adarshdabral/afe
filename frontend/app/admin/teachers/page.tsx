@@ -20,7 +20,7 @@ const selectClass =
 // Platform-admin-only teacher directory: search, status filter, pagination. The
 // API enforces requireRole("platform_admin"); this page also gates the UI.
 export default function TeachersList() {
-  const { role } = useApp();
+  const { role, loadingUser } = useApp();
   const isPlatform = role === "platform_admin";
 
   const [search, setSearch] = useState("");
@@ -49,7 +49,7 @@ export default function TeachersList() {
     setPage(1);
   }, [search, status]);
 
-  if (!isPlatform) {
+  if (!loadingUser && !isPlatform) {
     return (
       <Shell>
         <div className="bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">
