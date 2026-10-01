@@ -51,7 +51,7 @@ export default function PendingApproval() {
         <span className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center">
           <Sparkles className="w-4 h-4" />
         </span>
-        AI For Everyone
+        AI Spark
       </div>
 
       <div className="w-full max-w-md bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">
@@ -90,7 +90,6 @@ export default function PendingApproval() {
           <div className="mt-6 text-left text-sm bg-gray-50 dark:bg-gray-800/60 rounded-xl p-4 space-y-1.5">
             <Row label="School" value={request.schoolName} />
             <Row label="Teacher" value={request.teacherName} />
-            <Row label="Class" value={`Class ${request.className} · Roll ${request.rollNumber}`} />
             <Row
               label="Status"
               value={

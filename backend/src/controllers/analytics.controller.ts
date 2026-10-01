@@ -6,16 +6,15 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { getUserById } from "../services/auth.service";
-import { studentSchoolInfo, teacherSchoolIds } from "../services/registration.service";
+import { studentIdsForTeacher, studentSchoolInfo } from "../services/registration.service";
 import {
   platformAnalytics,
   recordSnapshot,
   schoolAnalytics,
-  schoolForAdmin,
   teacherAnalytics,
 } from "../services/analytics.service";
 
-const FALLBACK_SCHOOL = { schoolId: "school-1", schoolName: "Doon Public School", className: "10" };
+const FALLBACK_SCHOOL = { schoolName: "Independent", className: "10" };
 
 const syncSchema = z.object({
   lessonsCompleted: z.number().int().min(0),
@@ -38,7 +37,6 @@ export async function sync(req: Request, res: Response): Promise<void> {
   await recordSnapshot({
     studentUserId: user.id,
     studentName: principal?.name ?? "",
-    schoolId: info.schoolId,
     schoolName: info.schoolName,
     className: info.className,
     ...data,
@@ -47,16 +45,17 @@ export async function sync(req: Request, res: Response): Promise<void> {
   res.json({ data: { ok: true } });
 }
 
-/** GET /api/analytics/teacher — class performance for the teacher's school(s). */
+/** GET /api/analytics/teacher — class performance across the teacher's assigned students. */
 export async function teacher(req: Request, res: Response): Promise<void> {
-  const result = await teacherAnalytics(teacherSchoolIds(req.user!.id));
+  const studentIds = await studentIdsForTeacher(req.user!.id);
+  const result = await teacherAnalytics(studentIds);
   res.json({ data: result });
 }
 
-/** GET /api/analytics/school — participation/completion/engagement for a school. */
+/** GET /api/analytics/school — participation/completion for a school (by schoolName). */
 export async function school(req: Request, res: Response): Promise<void> {
-  const schoolId = z.string().optional().parse(req.query.schoolId) ?? schoolForAdmin(req.user!.id);
-  const result = await schoolAnalytics(schoolId);
+  const schoolName = z.string().optional().parse(req.query.schoolName) ?? "";
+  const result = await schoolAnalytics(schoolName);
   res.json({ data: result });
 }
 

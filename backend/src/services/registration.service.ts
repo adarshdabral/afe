@@ -1,9 +1,10 @@
-// Registration service (SRS FR-01 / FR-02) — Mongo-backed port of
-// src/lib/auth/registrations.server.ts. The school + teacher directory is a small
-// fixed directory kept here as constants; the registration REQUESTS and per-user
-// NOTIFICATIONS are persisted (Mongoose) so a teacher sees a student's request
-// across sessions. The student User account is created by the controller via
-// auth.service.createStudentUser before createRegistration is called.
+// Registration service (SRS FR-01 / FR-02). Students self-register and pick a
+// teacher directly (selectedTeacherId); that teacher — or a platform admin —
+// approves/rejects. There is NO School entity: the teacher directory is derived
+// from real teacher User accounts, and `schoolName` is stored as free text only.
+//
+// Ownership: a teacher may only see/decide requests assigned to them
+// (teacherId === their user id). A platform admin sees/decides everything.
 
 import {
   RegistrationRequest,
@@ -12,25 +13,42 @@ import {
 } from "../models/RegistrationRequest";
 import { Notification, toNotification, type NotificationView } from "../models/Notification";
 import { User } from "../models/User";
-import type { RegistrationStatus } from "../shared/access";
-import type { School, TeacherDirectoryEntry } from "../models/School";
+import { requireTeacherApproval } from "../config/env";
+import type { RegistrationStatus, Role } from "../shared/access";
 
-// The directory. Entries reference the seeded teacher account `u-teacher`
-// (Dr Sudhanshu Joshi) — the approver who can actually log in. Approval is scoped
-// by school, so any teacher of a school sees that school's pending requests
-// regardless of which teacher the student selected.
-export const SCHOOLS: School[] = [
-  { id: "school-1", name: "Doon Public School" },
-  { id: "school-2", name: "St. Joseph's Academy" },
-];
+export interface TeacherDirectoryEntry {
+  id: string; // matches a User id so the teacher can log in to approve
+  name: string;
+  designation: string;
+  organization: string;
+  specialization: string;
+  profilePhoto: string;
+}
 
-export const TEACHERS: TeacherDirectoryEntry[] = [
-  { id: "u-teacher", name: "Dr Sudhanshu Joshi", schoolId: "school-1" },
-  { id: "u-teacher", name: "Dr Sudhanshu Joshi", schoolId: "school-2" },
-];
+export type StatusFilter = RegistrationStatus | "all";
+
+export interface ListInput {
+  actor: { id: string; role: Role };
+  status: StatusFilter;
+  page: number;
+  pageSize: number;
+  search?: string;
+}
+
+export interface ListResult {
+  requests: RegistrationRequestView[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function notify(
@@ -46,57 +64,89 @@ async function notify(
   });
 }
 
-export function getDirectory(): { schools: School[]; teachers: TeacherDirectoryEntry[] } {
-  return { schools: SCHOOLS, teachers: TEACHERS };
+/** Public teacher directory for the registration dropdown (active teachers). */
+export async function getTeacherDirectory(): Promise<{ teachers: TeacherDirectoryEntry[] }> {
+  const docs = await User.find({ role: "teacher", active: { $ne: false } }).sort({ name: 1 });
+  return {
+    teachers: docs.map((d) => {
+      const t = d as {
+        designation?: string;
+        organization?: string;
+        specialization?: string;
+        profilePhoto?: string;
+      };
+      return {
+        id: String(d._id),
+        name: d.name,
+        designation: t.designation ?? "",
+        organization: t.organization ?? "",
+        specialization: t.specialization ?? "",
+        profilePhoto: t.profilePhoto ?? "",
+      };
+    }),
+  };
 }
 
-export function teacherSchoolIds(teacherUserId: string): string[] {
-  return TEACHERS.filter((t) => t.id === teacherUserId).map((t) => t.schoolId);
+/** The email of the default teacher every new student is auto-assigned to. */
+export const DEFAULT_TEACHER_EMAIL = "teacher@afe.edu";
+
+/** Resolve the active default teacher (Dr Sudhanshu Joshi), or null if missing. */
+export async function getDefaultTeacher(): Promise<{ id: string; name: string } | null> {
+  const t = await User.findOne({
+    email: DEFAULT_TEACHER_EMAIL,
+    role: "teacher",
+    active: { $ne: false },
+  }).catch(() => null);
+  return t ? { id: String(t._id), name: t.name } : null;
 }
 
 export interface RegisterInput {
   studentUserId: string;
-  name: string;
-  className: string;
-  rollNumber: string;
-  schoolId: string;
+  studentName: string;
+  schoolName: string;
   teacherId: string;
+  teacherName: string;
   email?: string;
   mobile: string;
 }
 
 /**
  * FR-01: create the registration request for an already-created (pending) student
- * account and notify the student of the pending status. The student User account
- * is created by the controller via auth.service.createStudentUser.
+ * account, assigned to the chosen teacher, and notify the student. Validates the
+ * teacher is a real, active teacher account.
  */
 export async function createRegistration(
   input: RegisterInput,
 ): Promise<{ request: RegistrationRequestView }> {
-  const school = SCHOOLS.find((s) => s.id === input.schoolId);
-  if (!school) throw new Error("Please select a valid school.");
-  const teacher = TEACHERS.find((t) => t.id === input.teacherId && t.schoolId === input.schoolId);
-  if (!teacher) throw new Error("Please select a teacher from your school.");
-
+  // Default: auto-approve (no teacher approval required). When
+  // REQUIRE_TEACHER_APPROVAL=true, the request stays pending for the teacher.
+  const approvalRequired = requireTeacherApproval();
+  const now = nowIso();
   const doc = await RegistrationRequest.create({
     studentUserId: input.studentUserId,
-    studentName: input.name,
-    className: input.className,
-    rollNumber: input.rollNumber,
-    schoolId: school.id,
-    schoolName: school.name,
-    teacherId: teacher.id,
-    teacherName: teacher.name,
+    studentName: input.studentName,
+    schoolName: input.schoolName,
+    teacherId: input.teacherId, // auto-assigned default teacher (no user choice)
+    teacherName: input.teacherName,
     email: input.email ?? "",
     mobile: input.mobile,
-    status: "pending",
-    requestedAt: nowIso(),
+    status: approvalRequired ? "pending" : "approved",
+    requestedAt: now,
+    ...(approvalRequired ? {} : { decidedAt: now, decidedBy: "system" }),
   });
 
-  await notify(input.studentUserId, {
-    type: "registration_pending",
-    message: `Your registration was submitted to ${teacher.name} (${school.name}) and is awaiting approval.`,
-  });
+  await notify(
+    input.studentUserId,
+    approvalRequired
+      ? {
+          type: "registration_pending",
+          message: `Your registration was submitted to ${input.teacherName} and is awaiting approval.`,
+        }
+      : {
+          type: "registration_approved",
+          message: `Your registration is complete — you have full course access.`,
+        },
+  );
 
   return { request: toRegistrationRequest(doc) };
 }
@@ -117,52 +167,68 @@ export async function getStudentRegistration(
   };
 }
 
-/** School the student registered under (for certificates), or null if unknown. */
-export async function studentSchoolName(studentUserId: string): Promise<string | null> {
-  const r = await latestRequestDoc(studentUserId);
-  return r?.schoolName ?? null;
-}
+/**
+ * FR-02 queue: registrations the actor may manage.
+ *  - teacher        → only requests assigned to them (ownership).
+ *  - platform_admin → all requests (visibility).
+ * Supports status filter + search + pagination.
+ */
+export async function listRegistrations(input: ListInput): Promise<ListResult> {
+  const page = Math.max(1, input.page);
+  const pageSize = Math.min(100, Math.max(1, input.pageSize));
 
-/** School + class the student registered under (for analytics), or null. */
-export async function studentSchoolInfo(
-  studentUserId: string,
-): Promise<{ schoolId: string; schoolName: string; className: string } | null> {
-  const r = await latestRequestDoc(studentUserId);
-  return r ? { schoolId: r.schoolId, schoolName: r.schoolName, className: r.className } : null;
-}
+  const filter: Record<string, unknown> = {};
+  if (input.actor.role === "teacher") filter.teacherId = input.actor.id; // ownership
+  if (input.status !== "all") filter.status = input.status;
 
-/** Pending requests visible to a teacher, scoped to the teacher's school(s). */
-export async function listPendingForTeacher(
-  teacherUserId: string,
-): Promise<RegistrationRequestView[]> {
-  const schools = teacherSchoolIds(teacherUserId);
-  const docs = await RegistrationRequest.find({
-    status: "pending",
-    schoolId: { $in: schools },
-  }).sort({ requestedAt: -1 });
-  return docs.map(toRegistrationRequest);
+  const search = input.search?.trim();
+  if (search) {
+    const rx = new RegExp(escapeRegex(search), "i");
+    filter.$or = [
+      { studentName: rx },
+      { email: rx },
+      { mobile: rx },
+      { rollNumber: rx },
+      { schoolName: rx },
+    ];
+  }
+
+  const total = await RegistrationRequest.countDocuments(filter);
+  const docs = await RegistrationRequest.find(filter)
+    .sort({ requestedAt: -1 })
+    .skip((page - 1) * pageSize)
+    .limit(pageSize);
+
+  return {
+    requests: docs.map(toRegistrationRequest),
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  };
 }
 
 /**
- * FR-02: a teacher approves or rejects a request. Authorization is enforced by
- * school scope. Updates the student's account status and notifies the student.
+ * FR-02: approve/reject a request. Ownership: a teacher may only decide their own
+ * assigned requests; a platform admin may decide any. Updates the student's
+ * account status and notifies the student.
  */
 export async function decideRegistration(input: {
   requestId: string;
-  teacherUserId: string;
+  actor: { id: string; role: Role };
   decision: "approved" | "rejected";
   reason?: string;
 }): Promise<RegistrationRequestView> {
   const request = await RegistrationRequest.findById(input.requestId).catch(() => null);
   if (!request) throw new Error("Registration request not found.");
   if (request.status !== "pending") throw new Error("This request has already been decided.");
-  if (!teacherSchoolIds(input.teacherUserId).includes(request.schoolId)) {
+  if (input.actor.role === "teacher" && request.teacherId !== input.actor.id) {
     throw new Error("You are not authorized to decide this request.");
   }
 
   request.status = input.decision;
   request.decidedAt = nowIso();
-  request.decidedBy = input.teacherUserId;
+  request.decidedBy = input.actor.id;
   request.reason = input.reason;
   await request.save();
 
@@ -185,4 +251,24 @@ export async function decideRegistration(input: {
   );
 
   return toRegistrationRequest(request);
+}
+
+/** Approved student ids assigned to a teacher (used to scope teacher analytics). */
+export async function studentIdsForTeacher(teacherUserId: string): Promise<string[]> {
+  const docs = await RegistrationRequest.find({
+    teacherId: teacherUserId,
+    status: "approved",
+  }).select("studentUserId");
+  return docs.map((d) => d.studentUserId);
+}
+
+/** School the student registered under (for analytics). schoolName is free text
+ *  and is the analytics grouping key (there is no School entity). Class is no
+ *  longer collected at registration, so it is reported as empty. */
+export async function studentSchoolInfo(
+  studentUserId: string,
+): Promise<{ schoolName: string; className: string } | null> {
+  const r = await latestRequestDoc(studentUserId);
+  if (!r) return null;
+  return { schoolName: r.schoolName ?? "", className: "" };
 }

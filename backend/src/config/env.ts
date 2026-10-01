@@ -19,3 +19,13 @@ export const env = {
   corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
   isProd: (process.env.NODE_ENV ?? "development") === "production",
 };
+
+/**
+ * Whether new student self-registrations require teacher approval before they
+ * can access course content. Default OFF — students are approved immediately.
+ * Set `REQUIRE_TEACHER_APPROVAL=true` in the environment to enable the approval
+ * workflow. Read dynamically (not cached) so it can be toggled per environment.
+ */
+export function requireTeacherApproval(): boolean {
+  return String(process.env.REQUIRE_TEACHER_APPROVAL ?? "false").toLowerCase() === "true";
+}

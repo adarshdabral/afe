@@ -75,9 +75,9 @@ export async function teacherAnalytics(): Promise<TeacherAnalytics> {
   return data.data;
 }
 
-export async function schoolAnalytics(schoolId?: string): Promise<SchoolAnalytics> {
+export async function schoolAnalytics(schoolName?: string): Promise<SchoolAnalytics> {
   const { data } = await api.get<{ data: SchoolAnalytics }>("/analytics/school", {
-    params: schoolId ? { schoolId } : undefined,
+    params: schoolName ? { schoolName } : undefined,
   });
   return data.data;
 }

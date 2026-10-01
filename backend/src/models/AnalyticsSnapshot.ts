@@ -7,8 +7,7 @@ import { Schema, model, type InferSchemaType, type HydratedDocument } from "mong
 export interface StudentSnapshot {
   studentUserId: string;
   studentName: string;
-  schoolId: string;
-  schoolName: string;
+  schoolName: string; // free-text; also the analytics grouping key (no School entity)
   className: string;
   lessonsCompleted: number;
   lessonsTotal: number;
@@ -26,8 +25,7 @@ const analyticsSnapshotSchema = new Schema(
   {
     studentUserId: { type: String, required: true, unique: true, index: true },
     studentName: { type: String, required: true },
-    schoolId: { type: String, required: true, index: true },
-    schoolName: { type: String, required: true },
+    schoolName: { type: String, required: true, index: true }, // grouping key
     className: { type: String, required: true },
     lessonsCompleted: { type: Number, required: true },
     lessonsTotal: { type: Number, required: true },
@@ -60,7 +58,6 @@ export function toSnapshot(doc: AnalyticsSnapshotDoc): StudentSnapshot {
   return {
     studentUserId: doc.studentUserId,
     studentName: doc.studentName,
-    schoolId: doc.schoolId,
     schoolName: doc.schoolName,
     className: doc.className,
     lessonsCompleted: doc.lessonsCompleted,

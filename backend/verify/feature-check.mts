@@ -1,5 +1,7 @@
-// Verifies the new features: Moocs@admin login, role-selection signup, and the
-// renamed teacher in the registration directory.
+// Verifies core auth rules: seeded Moocs@admin identity, teacher directory names,
+// and that no self-service account creation exists for staff (the old role-select
+// signup route is gone; teacher provisioning lives in /api/admin/teachers, which
+// teacher-check.mts covers).
 import { MongoMemoryServer } from "mongodb-memory-server";
 
 const PORT = 4098;
@@ -39,14 +41,16 @@ await import("../src/index.ts");
 if (!(await waitForHealth())) { console.error("not healthy"); process.exit(1); }
 
 console.log("[Feature checks]");
-// 1. Admin login with Moocs@admin / Admin@123
+
+// 1. Seeded platform admin login + identity.
 {
   const c = client();
   const r = await c.post("/auth/login", { login: "Moocs@admin", password: "Admin@123" });
   check("login Moocs@admin / Admin@123 → platform_admin", r.status === 200 && r.json?.data?.role === "platform_admin", r.json?.data);
   check("admin name is 'Dr Sudhanshu Joshi'", r.json?.data?.name === "Dr Sudhanshu Joshi", r.json?.data?.name);
 }
-// 2. Teacher seed name + directory name
+
+// 2. Teacher seed name + directory name.
 {
   const c = client();
   const t = await c.post("/auth/login", { login: "teacher@afe.edu", password: "Teacher@123" });
@@ -55,27 +59,23 @@ console.log("[Feature checks]");
   const names = (dir.json?.data?.teachers ?? []).map((x: any) => x.name);
   check("directory teachers all named 'Dr Sudhanshu Joshi'", names.length > 0 && names.every((n: string) => n === "Dr Sudhanshu Joshi"), names);
 }
-// 3. Role-selection signup — teacher
+
+// 3. No staff self-registration — the old role-select signup route is gone.
 {
   const c = client();
-  const r = await c.post("/auth/signup", { role: "teacher", name: "New Teacher", username: "newteach", password: "Passw0rd!" });
-  check("signup role=teacher → 201 active teacher", r.status === 201 && r.json?.data?.role === "teacher", r.json);
-  const me = await c.get("/auth/me");
-  check("signed-up teacher session resolves", me.json?.data?.role === "teacher", me.json?.data);
+  const r = await c.post("/auth/signup", { role: "teacher", name: "X", username: "x", password: "Passw0rd!" });
+  check("POST /auth/signup removed (self-signup blocked) → 404", r.status === 404, r.status);
 }
-// 4. Role-selection signup — platform_admin, then login
+
+// 4. Student self-registration (no teacher/class/roll) → approved by default and
+//    auto-assigned to the default teacher.
 {
   const c = client();
-  const r = await c.post("/auth/signup", { role: "platform_admin", name: "New Admin", email: "newadmin@x.io", password: "Passw0rd!" });
-  check("signup role=platform_admin → 201", r.status === 201 && r.json?.data?.role === "platform_admin", r.json?.data?.role);
-  const login = await client().post("/auth/login", { login: "newadmin@x.io", password: "Passw0rd!" });
-  check("new platform_admin can log in", login.status === 200 && login.json?.data?.role === "platform_admin", login.json?.data?.role);
-}
-// 5. Duplicate identifier rejected
-{
-  const c = client();
-  const r = await c.post("/auth/signup", { role: "teacher", name: "Dup", email: "teacher@afe.edu", password: "Passw0rd!" });
-  check("signup with existing email → 409", r.status === 409, r.status);
+  const r = await c.post("/registrations", {
+    fullName: "Self Student", schoolName: "Some School",
+    email: "self.student@example.com", mobileNumber: "9990001111", password: "Passw0rd!",
+  });
+  check("student self-register → 201 approved (default: no teacher approval)", r.status === 201 && r.json?.data?.registrationStatus === "approved", r.json?.data);
 }
 
 console.log(`\nFEATURE CHECKS: ${pass} passed, ${fail} failed`);

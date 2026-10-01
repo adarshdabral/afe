@@ -13,7 +13,7 @@ import {
 import { formatDuration } from "@/lib/progress";
 
 export default function AdminAnalytics() {
-  const { role } = useApp();
+  const { role, loadingUser } = useApp();
   const isPlatform = role === "platform_admin";
 
   return (
@@ -21,7 +21,7 @@ export default function AdminAnalytics() {
       <AdminSidebar />
       <main className="flex-1 min-w-0">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-          {isPlatform ? <PlatformView /> : <SchoolView />}
+          {loadingUser ? null : isPlatform ? <PlatformView /> : <SchoolView />}
         </div>
       </main>
     </div>

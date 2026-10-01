@@ -4,12 +4,20 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  /* San Francisco on Apple devices; graceful system fallbacks elsewhere. */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", "Inter",
+    system-ui, sans-serif;
+
+  /* Unified radius scale (16 → 24px): premium, Apple-soft corners. */
+  --radius: 1rem;
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 16px);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -29,67 +37,264 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-violet-50: #f5f3ff;
-  --color-violet-100: #ede9fe;
-  --color-violet-500: #6C63FF;
-  --color-violet-600: #6C63FF;
-  --color-violet-700: #5a52e0;
-  --color-emerald-500: #10B981;
+
+  /* Accent — Apple system blue. Drives every `violet-*` utility in the app so the
+     whole platform shifts to one refined blue without touching components. */
+  --color-violet-50: #eef5ff;
+  --color-violet-100: #dbeafe;
+  --color-violet-200: #cfe2ff;
+  --color-violet-300: #93bbf9;
+  --color-violet-400: #4a9bf0;
+  --color-violet-500: #0071e3;
+  --color-violet-600: #0071e3;
+  --color-violet-700: #0061c3;
+  --color-violet-800: #0a4a94;
+  /* Success — Apple green (reserved for status only). */
+  --color-emerald-500: #34c759;
 }
 
 :root {
-  --radius: 0.75rem;
-  --background: #F9FAFB;
-  --foreground: #111827;
+  --radius: 1rem;
+  --background: #f5f5f7;
+  --foreground: #1d1d1f;
   --card: #ffffff;
-  --card-foreground: #111827;
+  --card-foreground: #1d1d1f;
   --popover: #ffffff;
-  --popover-foreground: #111827;
-  --primary: #6C63FF;
+  --popover-foreground: #1d1d1f;
+  --primary: #0071e3;
   --primary-foreground: #ffffff;
-  --secondary: #f3f4f6;
-  --secondary-foreground: #111827;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
-  --accent: #10B981;
+  --secondary: #ececef;
+  --secondary-foreground: #1d1d1f;
+  --muted: #f0f0f3;
+  --muted-foreground: #6e6e73;
+  --accent: #34c759;
   --accent-foreground: #ffffff;
-  --destructive: #ef4444;
+  --destructive: #ff3b30;
   --destructive-foreground: #ffffff;
-  --border: #f3f4f6;
-  --input: #e5e7eb;
-  --ring: #6C63FF;
+  --border: #e4e4e9;
+  --input: #d2d2d7;
+  --ring: #0071e3;
 }
 
 .dark {
-  --background: #0f172a;
-  --foreground: #f9fafb;
-  --card: #1f2937;
-  --card-foreground: #f9fafb;
-  --popover: #1f2937;
-  --popover-foreground: #f9fafb;
-  --primary: #6C63FF;
+  --background: #000000;
+  --foreground: #f5f5f7;
+  --card: #1c1c1e;
+  --card-foreground: #f5f5f7;
+  --popover: #1c1c1e;
+  --popover-foreground: #f5f5f7;
+  --primary: #0a84ff;
   --primary-foreground: #ffffff;
-  --secondary: #374151;
-  --secondary-foreground: #f9fafb;
-  --muted: #374151;
-  --muted-foreground: #9ca3af;
-  --accent: #10B981;
+  --secondary: #2c2c2e;
+  --secondary-foreground: #f5f5f7;
+  --muted: #2c2c2e;
+  --muted-foreground: #98989d;
+  --accent: #30d158;
   --accent-foreground: #ffffff;
-  --destructive: #ef4444;
+  --destructive: #ff453a;
   --destructive-foreground: #ffffff;
-  --border: #374151;
-  --input: #374151;
-  --ring: #6C63FF;
+  --border: #2b2b2e;
+  --input: #3a3a3c;
+  --ring: #0a84ff;
 }
 
 @layer base {
   * {
     border-color: var(--color-border);
   }
-  html, body {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  html,
+  body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.01em;
   }
+  /* Apple-tight display tracking on headings. */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.021em;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* Thin, quiet scrollbars — Arc/Linear feel. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--foreground) 20%, transparent) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--foreground) 16%, transparent);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--foreground) 30%, transparent);
+    background-clip: content-box;
+  }
+}
+
+/* ── Premium primitives (always emitted; used across pages) ───────────────── */
+
+/* Frosted glass for navigation and sticky bars. */
+.glass {
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+.dark .glass {
+  background: color-mix(in srgb, var(--card) 60%, transparent);
+}
+
+/* Soft, lightweight card shadow (barely-there depth). */
+.shadow-soft {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 10px 30px -18px rgba(20, 20, 43, 0.16);
+}
+.dark .shadow-soft {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 12px 34px -18px rgba(0, 0, 0, 0.6);
+}
+
+/* Hover elevation — subtle lift on interactive cards. */
+.elevate {
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.32s ease;
+}
+.elevate:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 40px -20px rgba(20, 20, 43, 0.22);
+}
+.dark .elevate:hover {
+  box-shadow: 0 18px 44px -20px rgba(0, 0, 0, 0.7);
+}
+
+/* Entrance animations. */
+.animate-fade-up {
+  animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease both;
+}
+
+/* Shimmering skeleton (nicer than a flat pulse). */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--muted);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--card) 70%, transparent),
+    transparent
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Course landing (AI for Everyone) ─────────────────────────────────────── */
+
+/* Faint engineering grid, faded at the edges — hero backdrop. */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--foreground) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--foreground) 6%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 40%, transparent 100%);
+}
+
+/* Hero network: a very slow orbit and a soft node pulse (both disabled by the
+   prefers-reduced-motion rule above). */
+.hv-orbit {
+  transform-box: view-box;
+  transform-origin: 200px 200px;
+  animation: hvSpin 140s linear infinite;
+}
+.hv-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hvPulse 3.2s ease-in-out infinite;
+}
+@keyframes hvSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes hvPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+/* Anchor targets clear the sticky navbar. */
+[id] {
+  scroll-margin-top: 7rem;
 }

@@ -1,77 +1,90 @@
-// Certificate controllers (SRS FR-11) — ported from src/lib/certificates/
-// certificate.functions.ts. Issuance re-validates eligibility server-side with
-// the shared progress aggregation. Verification is PUBLIC.
+// Certificate controllers. Issuance is automatic (progress.service) — the
+// student endpoint only re-checks eligibility for an on-demand claim. Verification
+// is PUBLIC (students/teachers/anyone); listing all + revoke are platform-admin.
 
 import type { Request, Response } from "express";
 import { z } from "zod";
-import { buildCourseProgress } from "../lib/progress";
-import { AI_COURSE } from "../data/curriculum";
-import type { AssessmentResult } from "../data/assessments";
-import { issueCertificate, getCertificate, getCertificateByToken } from "../services/certificate.service";
-import { getUserById } from "../services/auth.service";
-import type { CertificateView } from "../models/Certificate";
+import { toPublicCertificate, Certificate, type CertificateStatus } from "../models/Certificate";
+import {
+  generateCertificatePdf,
+  getByCertificateId,
+  getStudentCertificates,
+  issueCertificate,
+  listAllCertificates,
+  revokeCertificate,
+} from "../services/certificate.service";
+import { getProgress } from "../services/progress.service";
 
-export interface PublicCertificate {
-  certificateCode: string;
-  studentName: string;
-  schoolName: string;
-  courseTitle: string;
-  issuedAt: string;
+const idSchema = z.string().min(1);
+
+/** GET /api/certificates/mine — the student's certificates. */
+export async function mine(req: Request, res: Response): Promise<void> {
+  res.json({ data: await getStudentCertificates(req.user!.id) });
 }
 
-function toPublic(c: CertificateView): PublicCertificate {
-  return {
-    certificateCode: c.certificateCode,
-    studentName: c.studentName,
-    schoolName: c.schoolName,
-    courseTitle: c.courseTitle,
-    issuedAt: c.issuedAt,
-  };
-}
-
-const issueSchema = z.object({
-  completedLessons: z.record(z.boolean()),
-  assessmentScores: z.record(z.object({ scorePct: z.number(), passed: z.boolean() })),
-});
-
-/** POST /api/certificates/issue — FR-11 idempotent issue once eligible. Student only. */
-export async function issue(req: Request, res: Response): Promise<void> {
-  const data = issueSchema.parse(req.body);
-  const user = req.user!;
-  const progress = buildCourseProgress({
-    completedLessons: data.completedLessons,
-    assessmentScores: data.assessmentScores as unknown as Record<string, AssessmentResult>,
-    timeSpent: {},
-  });
-  if (progress.modulesCompleted < progress.modulesTotal) {
-    res.status(400).json({
-      error: { message: "Complete all modules and pass every assessment to earn your certificate." },
+/**
+ * POST /api/certificates/issue — student claims a certificate for a course they
+ * have completed. Idempotent; 403 if not yet certificate-eligible. (Certificates
+ * are normally auto-issued the moment progress becomes eligible.)
+ */
+export async function claim(req: Request, res: Response): Promise<void> {
+  const { courseId } = z.object({ courseId: z.string().min(1) }).parse(req.body);
+  const { progress } = await getProgress(req.user!.id, courseId);
+  if (!progress.certificateEligible) {
+    res.status(403).json({
+      error: { message: "Complete all lessons and pass every assessment to earn your certificate." },
     });
     return;
   }
-  // School-name enrichment belongs to the registrations feature (not yet
-  // migrated); fall back to the same default the original used.
-  const principal = await getUserById(user.id);
-  const cert = await issueCertificate({
-    studentUserId: user.id,
-    studentName: principal?.name ?? "",
-    schoolName: "Independent Learner",
-    courseId: AI_COURSE.id,
-    courseTitle: AI_COURSE.title,
-  });
-  res.json({ data: cert });
+  const cert = await issueCertificate(req.user!.id, courseId);
+  res.status(201).json({ data: cert });
 }
 
-/** GET /api/certificates/mine — the student's AI-course certificate, or null. */
-export async function mine(req: Request, res: Response): Promise<void> {
-  const cert = await getCertificate(req.user!.id, AI_COURSE.id);
-  res.json({ data: cert });
-}
-
-/** GET /api/certificates/verify/:token — PUBLIC verification by opaque token. */
+/** GET /api/certificates/verify/:certificateId — PUBLIC verification. */
 export async function verify(req: Request, res: Response): Promise<void> {
-  const token = z.string().min(1).parse(req.params.token);
-  const cert = await getCertificateByToken(token);
-  const valid = !!cert && cert.status === "valid";
-  res.json({ data: { valid, certificate: cert ? toPublic(cert) : null } });
+  const certificateId = idSchema.parse(req.params.certificateId);
+  const doc = await Certificate.findOne({ certificateId });
+  const valid = !!doc && doc.status === "active";
+  res.json({
+    data: { valid, certificate: doc ? toPublicCertificate(doc) : null },
+  });
+}
+
+/** GET /api/certificates/:certificateId/download — PDF (owner or platform admin). */
+export async function download(req: Request, res: Response): Promise<void> {
+  const certificateId = idSchema.parse(req.params.certificateId);
+  const cert = await getByCertificateId(certificateId);
+  if (!cert) {
+    res.status(404).json({ error: { message: "Certificate not found." } });
+    return;
+  }
+  const isOwner = req.user?.id === cert.studentId;
+  const isAdmin = req.user?.role === "platform_admin";
+  if (!isOwner && !isAdmin) {
+    res.status(403).json({ error: { message: "Not authorized to download this certificate." } });
+    return;
+  }
+  const bytes = await generateCertificatePdf(cert);
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${cert.certificateId}.pdf"`);
+  res.send(Buffer.from(bytes));
+}
+
+/** GET /api/certificates — list all (platform admin). Optional ?status filter. */
+export async function listAll(req: Request, res: Response): Promise<void> {
+  const status = z.enum(["active", "revoked"]).optional().parse(req.query.status);
+  let certs = await listAllCertificates();
+  if (status) certs = certs.filter((c) => c.status === (status as CertificateStatus));
+  res.json({ data: certs });
+}
+
+/** POST /api/certificates/:certificateId/revoke — platform admin. */
+export async function revoke(req: Request, res: Response): Promise<void> {
+  const certificateId = idSchema.parse(req.params.certificateId);
+  const cert = await revokeCertificate(certificateId);
+  if (!cert) {
+    res.status(404).json({ error: { message: "Certificate not found." } });
+    return;
+  }
+  res.json({ data: cert });
 }

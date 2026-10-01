@@ -14,67 +14,70 @@ import {
   LogOut,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
+import { FLAGSHIP_SLUG } from "@/lib/course";
 
 const links = [
   { to: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/student/curriculum", label: "AI Course", icon: GraduationCap },
-  { to: "/student/progress", label: "Progress", icon: Activity },
+  { to: `/learn/${FLAGSHIP_SLUG}`, label: "My course", icon: BookOpen },
+  { to: "/student/certificates", label: "Certificates", icon: Award },
   { to: "/student/forum", label: "Forum", icon: MessageSquare },
-  { to: "/courses", label: "My Courses", icon: BookOpen },
-  { to: "/student/certificate", label: "Certificate", icon: Award },
-  { to: "#", label: "Settings", icon: Settings },
 ] as const;
 
+function initials(name?: string): string {
+  if (!name) return "AS";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "AS";
+}
+
 export function StudentSidebar() {
-  const { currentUser, authUser, logout } = useApp();
+  const { authUser, logout } = useApp();
   const pathname = usePathname();
 
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <div className="px-6 h-16 flex items-center gap-2 border-b border-gray-100 dark:border-gray-800">
-          <span className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center">
+      <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-border bg-card">
+        <div className="px-5 h-16 flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-[10px] bg-violet-600 text-white flex items-center justify-center shadow-sm">
             <Sparkles className="w-4 h-4" />
           </span>
-          <span className="font-semibold text-foreground">AI For Everyone</span>
+          <span className="font-semibold text-foreground tracking-tight">AI Spark</span>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-3 space-y-0.5">
           {links.map((l, i) => {
-            const active = l.to !== "#" && pathname === l.to;
+            const active = pathname === l.to;
             const Icon = l.icon;
             return (
               <Link
                 key={i}
                 href={l.to}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors border-l-2 ${
+                aria-current={active ? "page" : undefined}
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-[14px] transition-colors ${
                   active
-                    ? "bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-600"
-                    : "text-muted-foreground hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-foreground border-transparent"
+                    ? "bg-violet-600/10 text-violet-700 dark:text-violet-300 font-medium"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className={`w-[18px] h-[18px] ${active ? "text-violet-600" : ""}`} />
                 <span>{l.label}</span>
               </Link>
             );
           })}
         </nav>
-        <div className="border-t border-gray-100 dark:border-gray-800 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-violet-600 text-white flex items-center justify-center text-sm font-semibold">
-            AS
+        <div className="m-3 rounded-2xl bg-secondary/60 p-2.5 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-violet-600 text-white flex items-center justify-center text-[13px] font-semibold shrink-0">
+            {initials(authUser?.name)}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-foreground truncate">
-              {authUser?.name ?? currentUser.name}
+            <div className="text-[13px] font-medium text-foreground truncate">
+              {authUser?.name ?? "Student"}
             </div>
-            <span className="text-xs bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded">
-              Student
-            </span>
+            <div className="text-[11px] text-muted-foreground">Student</div>
           </div>
           <button
             onClick={logout}
             aria-label="Sign out"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-foreground"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -82,16 +85,17 @@ export function StudentSidebar() {
       </aside>
 
       {/* Mobile bottom tab bar */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex justify-around py-2">
+      <nav className="glass lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border flex justify-around py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {links.map((l, i) => {
-          const active = l.to !== "#" && pathname === l.to;
+          const active = pathname === l.to;
           const Icon = l.icon;
           return (
             <Link
               key={i}
               href={l.to}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 text-xs ${
-                active ? "text-violet-600" : "text-muted-foreground"
+              aria-current={active ? "page" : undefined}
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] transition-colors ${
+                active ? "text-violet-600 font-medium" : "text-muted-foreground"
               }`}
             >
               <Icon className="w-5 h-5" />
