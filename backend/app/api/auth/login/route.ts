@@ -1,0 +1,5 @@
+// /api/auth/login — auth, RBAC and error mapping via handle() in server/http/handle.ts.
+import { handle } from "@/server/http/handle";
+import * as auth from "@/server/controllers/auth.controller";
+
+export const POST = handle(auth.login);

@@ -1,0 +1,41 @@
+# Render Blueprint for the ai-spark BACKEND (Next.js API app in backend/).
+# Render → New → Blueprint → pick this repo. The frontend deploys separately on
+# Vercel (Root Directory: frontend). See DEPLOY.md.
+services:
+  - type: web
+    name: ai-spark-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start            # next start — listens on Render's $PORT
+    healthCheckPath: /api/health
+    # Uploaded lesson files (PDFs, slides, videos) must survive deploys/restarts,
+    # which needs a Persistent Disk — only available on paid instance types.
+    # On the free plan, remove `disk` + UPLOAD_DIR: uploads will then be LOST on
+    # every deploy/restart/spin-down (and free instances sleep after ~15 min idle).
+    plan: starter
+    disk:
+      name: uploads
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: MONGODB_URI
+        sync: false                    # set in the dashboard (Atlas SRV string)
+      - key: JWT_SECRET
+        generateValue: true            # random secret (≥32 chars)
+      - key: APP_PUBLIC_URL
+        sync: false                    # the frontend URL, e.g. https://ai-spark.vercel.app
+      - key: CORS_ORIGIN
+        sync: false                    # same frontend URL (comma-separate several)
+      - key: REQUIRE_TEACHER_APPROVAL
+        value: "false"
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: SEED_STUDENT_PASSWORD
+        sync: false
+      - key: SEED_TEACHER_PASSWORD
+        sync: false
+      - key: SEED_PLATFORM_ADMIN_PASSWORD
+        sync: false
