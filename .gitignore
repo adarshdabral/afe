@@ -22,7 +22,6 @@ dist-ssr
 
 # Confidential / incidental — keep out of the repo
 SRS.pdf
-package-lock.json
 
 # Editor directories and files
 .vscode/*
