@@ -44,6 +44,10 @@ process.env.PORT = String(PORT);
 process.env.NODE_ENV = "test";
 process.env.CORS_ORIGIN = "http://localhost:3000";
 delete process.env.REQUIRE_TEACHER_APPROVAL; // default → approved immediately
+// Hosts like Render can create these variables with EMPTY values — blank must
+// fall back to the documented defaults (otherwise seeded logins silently break).
+process.env.SEED_TEACHER_PASSWORD = "";
+process.env.SEED_PLATFORM_ADMIN_PASSWORD = "   ";
 await (await import("./_server.mts")).startServer();
 if (!(await waitForHealth())) { console.error("not healthy"); process.exit(1); }
 

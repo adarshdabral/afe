@@ -8,6 +8,17 @@ import { User } from "../models/User";
 import { hashPassword } from "../utils/password";
 import type { Role, RegistrationStatus } from "../shared/access";
 
+/**
+ * Seed password from the environment, falling back to the documented default when
+ * the variable is unset OR blank. (Hosts like Render can create a variable with an
+ * empty value; `??` alone would then set the account's password to "" and the
+ * documented credentials would never work.)
+ */
+function seedPassword(envKey: string, fallback: string): string {
+  const v = process.env[envKey]?.trim();
+  return v ? v : fallback;
+}
+
 interface SeedUser {
   id: string;
   role: Role;
@@ -27,7 +38,7 @@ const seedUsers: SeedUser[] = [
     name: "Aarav Singh",
     email: "student@afe.edu",
     username: "aarav",
-    password: process.env.SEED_STUDENT_PASSWORD ?? "Student@123",
+    password: seedPassword("SEED_STUDENT_PASSWORD", "Student@123"),
     registrationStatus: "approved",
   },
   {
@@ -36,7 +47,7 @@ const seedUsers: SeedUser[] = [
     name: "Dr Sudhanshu Joshi",
     email: "teacher@afe.edu",
     username: "dsj",
-    password: process.env.SEED_TEACHER_PASSWORD ?? "Teacher@123",
+    password: seedPassword("SEED_TEACHER_PASSWORD", "Teacher@123"),
   },
   {
     id: "u-platform-admin",
@@ -44,7 +55,7 @@ const seedUsers: SeedUser[] = [
     name: "Dr Sudhanshu Joshi",
     email: "admin@afe.edu",
     username: "Moocs@admin",
-    password: process.env.SEED_PLATFORM_ADMIN_PASSWORD ?? "Admin@123",
+    password: seedPassword("SEED_PLATFORM_ADMIN_PASSWORD", "Admin@123"),
   },
 ];
 
