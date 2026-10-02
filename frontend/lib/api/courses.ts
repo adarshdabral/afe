@@ -203,6 +203,23 @@ export interface UpdateSectionInput extends ContentInput {
 
 const ADMIN = "/admin/courses";
 
+/**
+ * Guarantee the tree's arrays exist (sections, modules → lessons → topics), so a
+ * backend on an older version — or a partially-built course — can never crash a
+ * page that iterates them.
+ */
+function normalizeTree(tree: CourseTree): CourseTree {
+  return {
+    ...tree,
+    sections: tree.sections ?? [],
+    modules: (tree.modules ?? []).map((m) => ({
+      ...m,
+      learningObjectives: m.learningObjectives ?? [],
+      lessons: (m.lessons ?? []).map((l) => ({ ...l, topics: l.topics ?? [] })),
+    })),
+  };
+}
+
 // ---- Admin: courses ----
 export async function adminListCourses(params: CourseListParams): Promise<CourseListResult> {
   const { data } = await api.get<{ data: CourseListResult }>(ADMIN, { params });
@@ -210,7 +227,7 @@ export async function adminListCourses(params: CourseListParams): Promise<Course
 }
 export async function adminGetCourse(courseId: string): Promise<CourseTree> {
   const { data } = await api.get<{ data: CourseTree }>(`${ADMIN}/${courseId}`);
-  return data.data;
+  return normalizeTree(data.data);
 }
 export async function createCourse(input: CreateCourseInput): Promise<Course> {
   const { data } = await api.post<{ data: Course }>(ADMIN, input);
@@ -307,5 +324,5 @@ export async function listPublicCourses(params: CourseListParams): Promise<Cours
 }
 export async function getPublicCourse(slug: string): Promise<CourseTree> {
   const { data } = await api.get<{ data: CourseTree }>(`/courses/${encodeURIComponent(slug)}`);
-  return data.data;
+  return normalizeTree(data.data);
 }

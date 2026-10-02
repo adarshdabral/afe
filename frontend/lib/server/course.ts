@@ -25,7 +25,14 @@ async function getJson<T>(path: string): Promise<T | null> {
 /** The outline for `slug` (deduplicated per request between page + metadata). */
 export const getCourseOutline = cache(async (slug: string): Promise<CourseOutline | null> => {
   const tree = await getJson<CourseTree>(`/courses/${encodeURIComponent(slug)}`);
-  return tree ? toCourseOutline(tree) : null;
+  if (!tree) return null;
+  try {
+    return toCourseOutline(tree);
+  } catch (err) {
+    // Never let an unexpected backend payload crash server rendering.
+    console.error("[course] could not read course outline:", err);
+    return null;
+  }
 });
 
 /**

@@ -61,6 +61,11 @@ export interface CourseOutline {
   modules: ModuleOutline[];
 }
 
+/**
+ * Defensive by design: it must never throw on an unexpected payload (e.g. a backend
+ * still on an older version without `sections` / `topics`), because a throw here
+ * crashes the server-rendered landing pages.
+ */
 export function toCourseOutline(tree: CourseTree): CourseOutline {
   return {
     id: tree.id,
@@ -74,7 +79,7 @@ export function toCourseOutline(tree: CourseTree): CourseOutline {
     learningObjectives: tree.learningObjectives ?? [],
     prerequisites: tree.prerequisites ?? [],
     tags: tree.tags ?? [],
-    sections: tree.sections.map((section) => ({
+    sections: (tree.sections ?? []).map((section) => ({
       id: section.id,
       kind: section.kind,
       title: section.title,
@@ -86,18 +91,18 @@ export function toCourseOutline(tree: CourseTree): CourseOutline {
       videoUrl: section.videoUrl,
       subtitleUrl: section.subtitleUrl,
     })),
-    modules: tree.modules.map((m) => ({
+    modules: (tree.modules ?? []).map((m) => ({
       id: m.id,
       title: m.title,
       description: m.description,
       learningObjectives: m.learningObjectives ?? [],
       estimatedDurationMinutes: m.estimatedDurationMinutes,
       hasAssessment: !!m.assessmentId,
-      lessons: m.lessons.map((l) => ({
+      lessons: (m.lessons ?? []).map((l) => ({
         id: l.id,
         title: l.title,
         description: l.description,
-        topics: l.topics.map((t) => ({
+        topics: (l.topics ?? []).map((t) => ({
           id: t.id,
           title: t.title,
           contentType: t.contentType,
