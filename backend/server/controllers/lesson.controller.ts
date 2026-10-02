@@ -1,48 +1,21 @@
-// Lesson controllers (Course CMS). All mounted behind requireRole("platform_admin").
+// Lesson controllers (Course CMS) — lessons are CONTAINERS that group Topics in a
+// Module (name + optional description). All mounted behind requireRole("platform_admin").
 
-import type { ApiRequest as Request, ApiResponse as Response } from "../http/types";
 import { z } from "zod";
-import { LESSON_CONTENT_TYPES } from "../models/Lesson";
-import {
-  createLesson,
-  deleteLesson,
-  reorderLessons,
-  updateLesson,
-} from "../services/lesson.service";
-
-const urlish = z.string().max(2000).optional().or(z.literal(""));
-
-const baseFields = {
-  description: z.string().max(5000).optional(),
-  videoUrl: urlish,
-  documentUrl: urlish,
-  content: z.string().max(200000).optional(), // serialized markdown / rich content
-  estimatedDurationMinutes: z.coerce.number().int().min(0).max(100000).optional(),
-  isPreview: z.boolean().optional(),
-};
+import type { ApiRequest as Request, ApiResponse as Response } from "../http/types";
+import { createLesson, deleteLesson, reorderLessons, updateLesson } from "../services/lesson.service";
+import { idSchema, reorderSchema } from "./content.schema";
 
 const createSchema = z.object({
-  title: z.string().min(1).max(200),
-  contentType: z.enum(LESSON_CONTENT_TYPES),
-  ...baseFields,
+  title: z.string().trim().min(1, "Lesson name is required.").max(200),
+  description: z.string().max(5000).optional(),
 });
-
-const updateSchema = z
-  .object({
-    title: z.string().min(1).max(200).optional(),
-    contentType: z.enum(LESSON_CONTENT_TYPES).optional(),
-    ...baseFields,
-  })
-  .refine((v) => Object.keys(v).length > 0, { message: "No fields to update." });
-
-const reorderSchema = z.object({ orderedIds: z.array(z.string().min(1)).min(1) });
-const idSchema = z.string().min(1);
+const updateSchema = createSchema.partial().refine((v) => Object.keys(v).length > 0, { message: "No fields to update." });
 
 /** POST /api/admin/courses/modules/:moduleId/lessons */
 export async function create(req: Request, res: Response): Promise<void> {
   const moduleId = idSchema.parse(req.params.moduleId);
-  const data = createSchema.parse(req.body);
-  const lesson = await createLesson(moduleId, data);
+  const lesson = await createLesson(moduleId, createSchema.parse(req.body));
   if (!lesson) {
     res.status(404).json({ error: { message: "Module not found." } });
     return;
@@ -53,8 +26,7 @@ export async function create(req: Request, res: Response): Promise<void> {
 /** PATCH /api/admin/courses/lessons/:lessonId */
 export async function update(req: Request, res: Response): Promise<void> {
   const lessonId = idSchema.parse(req.params.lessonId);
-  const patch = updateSchema.parse(req.body);
-  const lesson = await updateLesson(lessonId, patch);
+  const lesson = await updateLesson(lessonId, updateSchema.parse(req.body));
   if (!lesson) {
     res.status(404).json({ error: { message: "Lesson not found." } });
     return;
@@ -62,10 +34,9 @@ export async function update(req: Request, res: Response): Promise<void> {
   res.json({ data: lesson });
 }
 
-/** DELETE /api/admin/courses/lessons/:lessonId */
+/** DELETE /api/admin/courses/lessons/:lessonId — also deletes its topics. */
 export async function remove(req: Request, res: Response): Promise<void> {
-  const lessonId = idSchema.parse(req.params.lessonId);
-  const ok = await deleteLesson(lessonId);
+  const ok = await deleteLesson(idSchema.parse(req.params.lessonId));
   if (!ok) {
     res.status(404).json({ error: { message: "Lesson not found." } });
     return;

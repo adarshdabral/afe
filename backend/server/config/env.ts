@@ -13,7 +13,11 @@ function resolveJwtSecret(): string {
 
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
-  mongoUri: process.env.MONGODB_URI ?? "mongodb://localhost:27017/ai-spark",
+  /** Read when connecting (not at import), so it can't be captured before the
+   *  environment is set (e.g. by a test that imports server code first). */
+  get mongoUri(): string {
+    return process.env.MONGODB_URI?.trim() || "mongodb://localhost:27017/ai-spark";
+  },
   /** Resolved on first use (not at import) so `next build` doesn't need runtime
    *  secrets; ensureServerReady() touches it at startup to fail fast in production. */
   get jwtSecret(): string {

@@ -196,7 +196,7 @@ async function main() {
   console.log("\n[Task 1] Analytics / Certificates / Forum routes");
   {
     const sync = await student.post("/analytics/progress", {
-      lessonsCompleted: 5, lessonsTotal: 32, modulesCompleted: 1, modulesTotal: 8,
+      topicsCompleted: 5, topicsTotal: 32, modulesCompleted: 1, modulesTotal: 8,
       assessmentsPassed: 1, avgScorePct: 80, totalTimeSec: 1200,
       moduleScores: { m1: 80 }, certificateIssued: false,
     });

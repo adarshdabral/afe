@@ -5,7 +5,7 @@
 // engagement (school admin), and national totals (platform admin). The pure
 // aggregation helpers are ported verbatim; the snapshot reads hit Mongo.
 
-import { AI_COURSE, flattenLessons } from "../data/curriculum";
+import { AI_COURSE, flattenTopics } from "../data/curriculum";
 import {
   AnalyticsSnapshot,
   toSnapshot,
@@ -21,8 +21,8 @@ export async function recordSnapshot(s: StudentSnapshot): Promise<void> {
         studentName: s.studentName,
         schoolName: s.schoolName,
         className: s.className,
-        lessonsCompleted: s.lessonsCompleted,
-        lessonsTotal: s.lessonsTotal,
+        topicsCompleted: s.topicsCompleted,
+        topicsTotal: s.topicsTotal,
         modulesCompleted: s.modulesCompleted,
         modulesTotal: s.modulesTotal,
         assessmentsPassed: s.assessmentsPassed,
@@ -77,7 +77,7 @@ function classBreakdown(students: StudentSnapshot[]) {
   return [...byClass.entries()].map(([name, arr]) => ({
     name,
     students: arr.length,
-    avgProgressPct: avg(arr.map((s) => pct(s.lessonsCompleted, s.lessonsTotal))),
+    avgProgressPct: avg(arr.map((s) => pct(s.topicsCompleted, s.topicsTotal))),
     avgScorePct: avgDefined(arr.map((s) => s.avgScorePct)),
     completionRate: rate(arr, isComplete),
   }));
@@ -106,7 +106,7 @@ export async function teacherAnalytics(studentUserIds: string[]) {
       .map((s) => ({
         name: s.studentName,
         className: s.className,
-        progressPct: pct(s.lessonsCompleted, s.lessonsTotal),
+        progressPct: pct(s.topicsCompleted, s.topicsTotal),
         avgScorePct: s.avgScorePct,
         complete: isComplete(s),
       }))
@@ -120,7 +120,7 @@ export async function schoolAnalytics(schoolName: string) {
   return {
     schoolName: resolvedName,
     totalStudents: students.length,
-    participationRate: rate(students, (s) => s.lessonsCompleted > 0 || s.totalTimeSec > 0),
+    participationRate: rate(students, (s) => s.topicsCompleted > 0 || s.totalTimeSec > 0),
     completionRate: rate(students, isComplete),
     avgScorePct: avgDefined(students.map((s) => s.avgScorePct)),
     avgTimeSec: avg(students.map((s) => s.totalTimeSec)),

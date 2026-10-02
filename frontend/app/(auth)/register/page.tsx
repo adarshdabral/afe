@@ -96,7 +96,7 @@ export default function Register() {
         </Link>
         <div className="relative z-10 max-w-sm">
           <p className="text-[1.75rem] leading-snug font-semibold tracking-tight text-white">
-            Start AI for Everyone.
+            Start  Demystifying AI for Everyone.
           </p>
           <p className="mt-4 text-sm text-white/60 leading-relaxed">
             Create your account to begin the course with Dr. Sudhanshu Joshi — self-paced, with
@@ -111,7 +111,7 @@ export default function Register() {
             Create your account
           </h1>
           <p className="text-muted-foreground mt-2">
-            Join AI Spark to start AI for Everyone.
+            Join AI Spark to start  Demystifying AI for Everyone.
           </p>
 
           <form onSubmit={submit} className="mt-6 space-y-4" noValidate>

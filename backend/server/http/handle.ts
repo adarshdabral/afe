@@ -30,6 +30,9 @@ export interface HandleOptions {
   upload?: UploadKind;
   /** Rename route params for the controller (e.g. { slug: "courseId" }). */
   params?: Record<string, string>;
+  /** Allow cross-origin calls from CORS_ORIGIN (direct uploads from the frontend).
+   *  Pair with `export const OPTIONS = preflight;` in the route file. Never with cookies. */
+  cors?: boolean;
 }
 
 /** Common option sets. */
@@ -41,6 +44,37 @@ export const STAFF: HandleOptions = { roles: ["teacher", "platform_admin"] };
 export const roles = (...r: Role[]): HandleOptions => ({ roles: r });
 
 type RouteContext = { params: Promise<Record<string, string | string[]>> };
+
+// CORS lives here (not in middleware.ts) on purpose: Next.js buffers — and truncates
+// at 10 MB — any request body that passes through middleware, which broke large
+// video uploads.
+function allowedOrigin(origin: string | null): string | null {
+  if (!origin) return null;
+  const list = (process.env.CORS_ORIGIN?.trim() || "http://localhost:3000")
+    .split(",")
+    .map((o) => o.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+  return list.includes(origin) ? origin : null;
+}
+
+function corsHeaders(request: Request): Record<string, string> {
+  const origin = allowedOrigin(request.headers.get("origin"));
+  return origin
+    ? {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type",
+        "Access-Control-Max-Age": "600",
+        Vary: "Origin",
+      }
+    : {};
+}
+
+/** CORS preflight for routes created with `cors: true` (export as OPTIONS). */
+export function preflight(request: Request): Response {
+  const headers = corsHeaders(request);
+  return new Response(null, { status: headers["Access-Control-Allow-Origin"] ? 204 : 403, headers });
+}
 
 // API responses are per-user: never let a CDN/proxy (e.g. the frontend's /api
 // rewrite on Vercel) cache them.
@@ -121,6 +155,12 @@ export function handle(controller: Controller, options: HandleOptions = {}) {
   const auth = options.roles ? "required" : options.auth;
 
   return async function routeHandler(request: NextRequest, context: RouteContext): Promise<Response> {
+    const response = await run(request, context);
+    if (options.cors) for (const [k, v] of Object.entries(corsHeaders(request))) response.headers.set(k, v);
+    return response;
+  };
+
+  async function run(request: NextRequest, context: RouteContext): Promise<Response> {
     try {
       await ensureServerReady();
 
@@ -178,5 +218,5 @@ export function handle(controller: Controller, options: HandleOptions = {}) {
     } catch (err) {
       return toErrorResponse(err);
     }
-  };
+  }
 }

@@ -1,6 +1,6 @@
 // END-TO-END platform-admin journey: teacher management (CRUD + activate/
 // deactivate + reset password) → course management (create/update/publish/
-// archive) → module management (create/edit/reorder) → lesson management
+// archive) → module management (create/edit/reorder) → lesson/topic management
 // (create/edit/reorder) → assessment management (create/publish/edit) →
 // certificate management (list/revoke) → analytics endpoints load.
 import { MongoMemoryServer } from "mongodb-memory-server";
@@ -88,23 +88,34 @@ const mods: string[] = [];
 {
   for (const t of ["A", "B", "C"]) mods.push((await admin.post(`/admin/courses/${courseId}/modules`, { title: `Mod ${t}` })).json.data.id);
   check("create 3 modules", mods.every(Boolean), mods);
-  const e = await admin.patch(`/admin/courses/modules/${mods[0]}`, { title: "Mod A (edited)", isPublished: true });
-  check("edit module → 200", e.json?.data?.title === "Mod A (edited)", e.json?.data);
+  const e = await admin.patch(`/admin/courses/modules/${mods[0]}`, {
+    title: "Mod A (edited)",
+    description: "What Mod A covers.",
+    learningObjectives: ["Explain the core idea of Mod A.", "Apply it to an example."],
+  });
+  check("edit module (title, description, learning objectives) → 200", e.json?.data?.title === "Mod A (edited)" && e.json?.data?.learningObjectives?.length === 2, e.json?.data);
+  const early = await admin.patch(`/admin/courses/modules/${mods[0]}`, { isPublished: true });
+  check("publish module before it has an assessment → 409 naming what's missing", early.status === 409 && /module assessment/.test(early.json?.error?.message ?? ""), early.json);
   const re = await admin.post(`/admin/courses/${courseId}/modules/reorder`, { orderedIds: [mods[2], mods[0], mods[1]] });
   const order = (re.json?.data ?? []).map((m: any) => m.id);
   check("reorder modules persists", order[0] === mods[2] && order[1] === mods[0], order);
 }
 
-// ---- 5. Lesson management ----
-console.log("[5] Lesson management");
+// ---- 5. Lesson and topic management ----
+console.log("[5] Lesson and topic management");
 const lessons: string[] = [];
+const topics: string[] = [];
 {
-  for (const t of ["L1", "L2", "L3"]) lessons.push((await admin.post(`/admin/courses/modules/${mods[0]}/lessons`, { title: t, contentType: "rich_text", content: "x" })).json.data.id);
-  check("create 3 lessons", lessons.every(Boolean), lessons);
-  const e = await admin.patch(`/admin/courses/lessons/${lessons[0]}`, { title: "L1 (edited)", content: "# Updated" });
-  check("edit lesson → 200", e.json?.data?.title === "L1 (edited)", e.json?.data);
+  for (const t of ["L1", "L2", "L3"]) {
+    const lesson = await admin.post(`/admin/courses/modules/${mods[0]}/lessons`, { title: `${t} lesson` });
+    lessons.push(lesson.json.data.id);
+    topics.push((await admin.post(`/admin/courses/lessons/${lesson.json.data.id}/topics`, { title: t, contentType: "rich_text", content: "x" })).json.data.id);
+  }
+  check("create 3 lesson containers and 3 topics", lessons.every(Boolean) && topics.every(Boolean), { lessons, topics });
+  const e = await admin.patch(`/admin/courses/topics/${topics[0]}`, { title: "L1 (edited)", content: "# Updated" });
+  check("edit topic → 200", e.json?.data?.title === "L1 (edited)", e.json?.data);
   const re = await admin.post(`/admin/courses/modules/${mods[0]}/lessons/reorder`, { orderedIds: [lessons[2], lessons[0], lessons[1]] });
-  const order = (re.json?.data ?? []).map((l: any) => l.id);
+  const order = (re.json?.data ?? []).map((lesson: any) => lesson.id);
   check("reorder lessons persists", order[0] === lessons[2], order);
 }
 
@@ -121,6 +132,12 @@ let aId = "";
   check("edit assessment (passingScore) → 200", e.json?.data?.passingScore === 70, e.json?.data);
   const p = await admin.post(`/admin/assessments/${aId}/publish`);
   check("publish assessment → isPublished true", p.json?.data?.isPublished === true, p.json?.data);
+  const pm = await admin.patch(`/admin/courses/modules/${mods[0]}`, { isPublished: true });
+  check("publish module (description + objectives + assessment) → 200", pm.status === 200 && pm.json?.data?.isPublished === true, pm.json);
+  const tree = (await admin.get(`/admin/courses/${courseId}`)).json?.data;
+  const modA = tree?.modules?.find((m: any) => m.id === mods[0]);
+  const modB = tree?.modules?.find((m: any) => m.id === mods[1]);
+  check("admin tree reports readiness (A ready, B missing items)", modA?.readiness?.ready === true && modB?.readiness?.ready === false && modB?.readiness?.missing?.length === 3, { a: modA?.readiness, b: modB?.readiness });
 }
 
 // ---- 7. Certificate management ----
@@ -129,10 +146,10 @@ console.log("[7] Certificate management");
   // Manufacture a certificate: a student completes this course.
   const student = client();
   await student.post("/registrations", { fullName: "Cert Student", email: "certstu@qa.io", password: "Passw0rd!", mobileNumber: "9007007007", schoolName: "QA" });
-  // Complete the (single published) module's lessons in order, pass the quiz.
+  // Complete the (single published) module's topics in order, pass the quiz.
   const tree = (await student.get("/courses/admin-qa")).json.data;
-  const seq = tree.modules.flatMap((m: any) => m.lessons.map((l: any) => l.id));
-  for (const lid of seq) await student.post(`/progress/${courseId}/lessons/${lid}/complete`);
+  const seq = tree.modules.flatMap((m: any) => m.lessons.flatMap((l: any) => l.topics.map((topic: any) => topic.id)));
+  for (const topicId of seq) await student.post(`/progress/${courseId}/topics/${topicId}/complete`);
   const qid = (await admin.get(`/admin/assessments/${aId}`)).json.data.questions[0].id;
   await student.post(`/assessments/${aId}/attempt`, { answers: [{ questionId: qid, answer: "A" }] });
   const list = await admin.get("/certificates");

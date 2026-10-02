@@ -1,5 +1,5 @@
 // Minimal dependency-free markdown renderer (headings, bold/italic, lists,
-// links). Shared by the lesson renderer and the CMS content preview.
+// links). Shared by the content renderer (topics, course sections) and the CMS content preview.
 export function MarkdownView({ markdown }: { markdown: string }) {
   if (!markdown?.trim()) return <p className="text-muted-foreground">No content.</p>;
   const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

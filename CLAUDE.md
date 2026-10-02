@@ -26,7 +26,7 @@ For a product-level list of what the platform does (and how it is operated), see
 > (Vercel + Render, primary) and **`DEPLOY_AWS.md`** (self-hosted, one EC2 box).
 
 **All domain data is server-side (MongoDB).** Auth/sessions, student
-registration+approval, the Course CMS (courses → modules → lessons), assessments &
+registration+approval, the Course CMS (courses → sections; modules → lesson containers → topics), assessments &
 attempts, per-student progress, certificates, analytics, forum, reviews/ratings, and
 uploaded lesson files are all real and owned by `backend/`. There is **no mock course
 content** any more (`frontend/data/` is empty). The only client-only state is the
@@ -45,6 +45,7 @@ npm run build        # next build
 npm run start        # next start (respects $PORT — Render sets it)
 npm run typecheck    # tsc --noEmit
 npm run seed         # demo users + standardize content to the single "AI for Everyone" course
+npm run seed:flagship # same, but leaves every other course untouched (--keep-others)
 
 # --- frontend/ (UI, http://localhost:3000) — config in frontend/.env.local ---
 npm install
@@ -57,13 +58,16 @@ npm run lint         # next lint
 
 `npm run seed` (`backend/server/seed/course.seed.ts`) is **destructive to other courses**: it
 soft-deletes every course except "AI for Everyone" and (re)builds that course's 12
-modules, lessons and assessments. It is intentionally *not* run on server startup.
+modules, lesson containers, seven topics per module and assessments. Use `npm run seed:flagship` to (re)build only the
+flagship and keep other courses. Neither is run on server startup.
 
 **There is no unit-test framework.** Verification is done with live end-to-end
 harnesses in **`backend/verify/*.mts`**, which boot an ephemeral in-memory MongoDB
 (`mongodb-memory-server`) + the **real backend app in-process** (`verify/_server.mts`:
-production build, rebuilt automatically when sources are newer than `.next/`) and
-assert against it over HTTP. Running in-process lets harnesses flip env flags (e.g.
+production build in **`.next-verify/`** — separate from `.next/` so harnesses can run
+while `npm run dev` is running — rebuilt automatically when sources are newer) and
+assert against it over HTTP. Harnesses never see your `backend/.env`: keys it defines
+that the harness doesn't set are blanked (all config treats blank as unset). Running in-process lets harnesses flip env flags (e.g.
 `REQUIRE_TEACHER_APPROVAL`) at runtime. `middleware-e2e` additionally builds and
 starts the **frontend** (`verify/_frontend.mts`) wired to that backend. Run one with
 `tsx` from `backend/`:
@@ -76,17 +80,19 @@ npx tsx verify/rbac-access-check.mts     # route guard + live API 401/403 matrix
 npx tsx verify/middleware-e2e.mts        # both apps: SSR landing, /api rewrite, login cookie, middleware redirects
 npx tsx verify/registration-check.mts    # student registration workflow (approve/reject/ownership)
 npx tsx verify/teacher-check.mts         # teacher-management CRUD (/api/admin/teachers)
-npx tsx verify/course-cms-check.mts      # Course CMS: course/module/lesson CRUD, ordering, visibility
+npx tsx verify/course-cms-check.mts      # Course CMS: course/section/module/lesson/topic CRUD, ordering, visibility
+npx tsx verify/migration-check.mts       # legacy content/progress migration and idempotent rerun
 npx tsx verify/course-content-check.mts  # seed: AI for Everyone is the only course, 12 modules, quiz mix
-npx tsx verify/upload-check.mts          # uploads: RBAC, 415/413/400, Range/206, upload tokens, CORS, lessons
-npx tsx verify/learning-engine-check.mts # catalog visibility, lesson ordering, role-scoped lesson nav
+npx tsx verify/upload-check.mts          # uploads: RBAC, 415/413/400, Range/206, upload tokens, CORS, topics
+npx tsx verify/media-check.mts           # multi-part topics, presign (local + R2), >10 MB upload, subtitles, TTS (fake Cloudflare)
+npx tsx verify/learning-engine-check.mts # catalog visibility, topic ordering, role-scoped topic nav
 npx tsx verify/assessment-check.mts      # quizzes: CRUD/publish, grading, pass/fail, answer-key hiding
-npx tsx verify/progress-check.mts        # sequential locking, module/course completion, persistence
+npx tsx verify/progress-check.mts        # topic sequential locking, module/course completion, persistence
 npx tsx verify/certificate-check.mts     # auto-issue, verify, PDF download, revoke, access control
 npx tsx verify/reviews-check.mts         # reviews & ratings
 npx tsx verify/feature-check.mts         # seed identities / self-registration rules
 npx tsx verify/e2e-student-journey.mts   # register → learn → quiz → complete → certificate → verify
-npx tsx verify/e2e-admin-journey.mts     # teachers → courses/modules/lessons → assessments → certs
+npx tsx verify/e2e-admin-journey.mts     # teachers → courses/modules/lessons/topics → assessments → certs
 npx tsx verify/serve.mts                 # backend on :3100 + ephemeral Mongo + seeded course (manual probing)
 ```
 
@@ -138,48 +144,94 @@ Consistent per-feature layering under `backend/` — follow it for new features:
 | `/api/auth` | public / any | login (email **or** username), register, `me`, logout |
 | `/api/registrations` | public + teacher/admin | teacher directory, self-registration, approval queue, decide |
 | `/api/admin/teachers` | platform_admin | teacher CRUD, activate/deactivate, reset password |
-| `/api/admin/courses` | platform_admin | course/module/lesson CRUD, reorder, publish/unpublish/archive |
+| `/api/admin/courses` | platform_admin | course/module/lesson-container/topic CRUD, ordering, publish/unpublish/archive |
+| `/api/admin/courses/:courseId/sections/:kind` | platform_admin | edit Introduction, Overview and Instructor course sections |
+| `/api/admin/courses/lessons/:lessonId/topics` | platform_admin | topic CRUD and ordering within lesson containers |
 | `/api/admin/assessments` | platform_admin | assessment + question CRUD, reorder, publish |
-| `/api/admin/uploads` | platform_admin | `/token` (15-min upload-only token); multipart upload (`file` field) of lesson materials; `/video` for videos |
+| `/api/admin/uploads` | platform_admin | `/presign` (R2 URL or local target), `/config`, `/token`; local multipart upload (`file` field) at `/`, `/video`, `/audio`, `/subtitle` |
+| `/api/admin/tts` | platform_admin | text-to-speech narration → MP3 URL |
 | `/api/uploads/<file>` | public, read-only | `app/api/uploads/[...path]` streams from `UPLOAD_DIR` (Range/206) |
-| `/api/courses` | public (optional auth) | published catalog, course tree by slug, lesson by id |
+| `/api/courses` | public (optional auth) | published catalog and course tree (sections, modules, lesson containers and topics) |
+| `/api/courses/:slug/topics/:topicId` | public (optional auth) | role-scoped topic content |
 | `/api/assessments` | auth; attempts = student | answer-key-stripped quiz, submit attempt, my attempts |
-| `/api/progress` | student | per-course progress, complete lesson, visit, time tracking |
+| `/api/progress` | student | per-course progress, complete topic, visit and time tracking |
 | `/api/certificates` | public verify; student; admin | verify, mine, claim, PDF download, list/revoke |
 | `/api/analytics` | student push; teacher/admin read | progress snapshot sync, teacher/school/platform aggregates |
 | `/api/forum` | auth; moderation = teacher/admin | threads, replies, moderate thread/post |
 | `/api/courses/:id/reviews`, `/api/reviews/:id` | public read; auth write | reviews + rating aggregate |
 
 ### Domain rules worth knowing
-- **Course hierarchy**: Course → Module → Lesson, each sequenced by `order`; lessons
-  denormalize `courseId`. Course `status` is `draft | published | archived`; courses
+- **Course hierarchy**: Course → three CourseSections (Introduction, Overview,
+  Instructor) and Modules → Lesson containers → Topics. Modules, lessons and topics
+  are sequenced by `order`; lessons and topics denormalize their parent ids. A lesson
+  is a name with an optional description; a topic owns the learning content. Course
+  `status` is `draft | published | archived`; courses
   are **soft-deleted** (`deletedAt`). `slug` is unique and the public lookup key.
   Students only ever see published content (role-scoped in `course.service.ts`).
-- **Lesson content types** (`LESSON_CONTENT_TYPES`, duplicated in
-  `backend/server/models/Lesson.ts` and `frontend/lib/api/courses.ts` — keep in sync):
-  `video`, `pdf`, `presentation`, `rich_text`, `infographic`, `case_study`,
-  `reflection`, `activity`. Rendered by `frontend/components/learn/LessonRenderer.tsx`,
-  edited by `frontend/components/course/LessonEditor.tsx`.
-- **Uploads** (`backend/server/utils/storage.ts`): multipart bodies are **streamed to
-  disk with busboy** (never buffered — videos are large) into `UPLOAD_DIR` (default
-  `backend/uploads/`, git-ignored — **must persist across deploys**; on Render a
-  Persistent Disk), random
-  filenames, single `file` field. Documents: PDF/PPT/PPTX/PNG/JPG/GIF/WEBP/SVG
-  (ext **and** MIME), 25 MB → `POST /api/admin/uploads`, URL stored as a lesson's
-  `documentUrl`. **Lesson videos**: MP4/M4V/WebM/MOV, `UPLOAD_VIDEO_MAX_BYTES`
-  (500 MB) → `POST /api/admin/uploads/video`, URL stored as `videoUrl`. Wrong type →
-  415, too large → 413 (partial file deleted), no file → 400. **The browser uploads
-  straight to the backend** (`frontend/lib/api/uploads.ts`): it fetches an
-  upload-scoped JWT from `POST /api/admin/uploads/token` (via the `/api` proxy), then
-  posts to `NEXT_PUBLIC_BACKEND_URL` with `Authorization: Bearer`. `handle()` rejects
-  upload-scoped tokens on every non-upload endpoint. Stored URLs stay root-relative
-  (`/api/uploads/…`); `resolveUploadUrl()` points them at the backend origin.
+- **Every module has a description, learning objectives (`learningObjectives:
+  string[]`, 1–20, ≤300 chars each) and exactly ONE module assessment** (tests are per
+  module, never per lesson — `Assessment.moduleId` is unique). **Publishing a module
+  requires all three** (assessment published with ≥1 question): enforced in
+  `module.service.ts` (`moduleReadiness`/`readinessFrom`, 409 listing what's
+  missing; a module can't be created already-published). A published module can't
+  lose them: clearing its description/objectives → 409; unpublishing/deleting its
+  assessment, or deleting its last question → 409 (hide the module first). ADDING
+  content to a published module is always allowed (older modules were published
+  before objectives existed). `defineModel` re-registers a model whose schema fields
+  changed, so `next dev` hot-reload never keeps a stale model that drops new fields. The admin
+  course tree carries `modules[].readiness`; the CMS shows a publish checklist.
+  Verify harnesses publish modules via `verify/_fixtures.mts` (`publishModule`).
+  Existing data: `npm run backfill:objectives` fills seeded objectives by module
+  title without rebuilding the course.
+- **Topics and course sections are multi-part content**: any combination of `content` (markdown text),
+  `audioUrl` (narration — uploaded, or generated from the text via text-to-speech),
+  `documentUrl` (PDF/PPT or image) and `videoUrl` + `subtitleUrl` (WebVTT captions;
+  the admin UI converts `.srt` → `.vtt` in the browser, `srtToVtt()`). `contentType`
+  (`CONTENT_TYPES`, duplicated in `backend/server/models/content.ts` and
+  `frontend/lib/api/courses.ts` — keep in sync: `video`, `pdf`, `presentation`,
+  `rich_text`, `infographic`, `case_study`, `reflection`, `activity`) is only the
+  primary-format label. `frontend/components/learn/ContentRenderer.tsx` renders every
+  part present (video+captions → audio → text → document; .pptx at an https URL via
+  the Office web viewer); `frontend/components/course/TopicEditor.tsx` edits topics,
+  while `ContentEditor.tsx` is shared with course sections.
+- **Lesson media storage** — **Cloudflare R2** when `R2_*` is configured
+  (`backend/server/utils/r2.ts`), else the backend's disk
+  (`backend/server/utils/storage.ts`). One flow for every kind (`document`, `video`,
+  `audio`, `subtitle` — per-kind ext **and** MIME allow-list + size cap):
+  `frontend/lib/api/uploads.ts` → `POST /api/admin/uploads/presign {kind, filename,
+  contentType, size}` (415/413 checked first) →
+  - **R2 mode**: a 1-hour presigned PUT URL bound to Content-Type + Content-Length
+    (path-style `https://<acct>.r2.cloudflarestorage.com/<bucket>/<kind>/yyyy/mm/<random>`);
+    the browser PUTs straight to R2 and the lesson stores the public URL
+    (`R2_PUBLIC_URL/<key>`). The bucket needs CORS (`npm run r2:cors`).
+  - **Local mode**: `{uploadPath, token}` — the browser POSTs multipart straight to
+    the backend (`/api/admin/uploads[/video|/audio|/subtitle]`) with the upload-scoped
+    JWT (`handle()` rejects it on every non-upload endpoint); busboy streams it to
+    `UPLOAD_DIR` (on Render a Persistent Disk); served by `/api/uploads/*` (Range,
+    `Access-Control-Allow-Origin: *`). `resolveUploadUrl()` points `/api/uploads/…`
+    at the backend origin.
+  - **CORS for those direct calls lives in `handle()` (`cors: true` + `export const
+    OPTIONS = preflight`) — never add a backend `middleware.ts` on upload paths:**
+    Next.js buffers and truncates middleware request bodies at 10 MB (this broke
+    video uploads once; `verify/media-check.mts` uploads 12 MB as a regression test).
+- **Text-to-speech** (`backend/server/services/tts.service.ts`, `POST /api/admin/tts`):
+  Cloudflare Workers AI REST (`CLOUDFLARE_AI_TOKEN`; default **`@cf/deepgram/aura-2-en`**
+  `{text, speaker}` → MP3, default voice `TTS_VOICE`=`orion` (male); the editor offers
+  `VOICE_CHOICES` and the API validates against `AURA_SPEAKERS`. `TTS_MODEL=@cf/myshell-ai/melotts`
+  → `{prompt, lang}` → **WAV** (base64 in a JSON envelope), single voice). Neither model
+  has a speed setting — `components/learn/NarrationPlayer.tsx` plays at 0.9× by default
+  with a speed menu (pitch preserved; choice remembered per device).
+  Markdown is stripped, text split into ≤800-char chunks synthesized in order, then
+  joined by format (`joinAudio`: WAV merged under one rebuilt RIFF header, MP3
+  concatenated) and stored in R2 (or locally). WAV is ~5 MB/min of speech.
+  Max 30,000 characters. 503 when not configured (the editor disables the button via
+  `GET /api/admin/uploads/config`).
 - **Assessments**: one per module. Question types are `mcq | reflection | scenario`
   (True/False is modelled as a two-option `mcq`). MCQ is auto-graded; open-ended
   (reflection/scenario) earns full marks for a non-empty answer. Pass = % ≥
   `passingScore`. The student fetch strips answer keys.
 - **Progress** (`progress.service.ts`): one doc per (student, course). Enforces
-  **sequential locking** (lesson N requires N-1), derives module/course completion
+  **sequential locking** (topic N requires N-1), derives module/course completion
   and `certificateEligible`, and **auto-issues the certificate** when eligible.
 - **Certificates**: idempotent per (student, course), ids `AFE-YYYY-XXXXXXXX`,
   branded PDF via `pdf-lib` with a QR code pointing at `/certificate/verify/<id>`
@@ -238,7 +290,7 @@ Consistent per-feature layering under `backend/` — follow it for new features:
   the role is known without a refresh. Role-gated pages must check `loadingUser`
   before rendering an "access denied" state (`if (!loadingUser && !isPlatform)`), or
   they flash/deny during session load.
-- **`LearningContext`** owns the active course's learning state (completed lessons,
+- **`LearningContext`** owns the active course's learning state (completed topics,
   current lesson, progress) backed by the progress API.
 - **Single-course product**: public pages present one flagship course ("AI for
   Everyone", `FLAGSHIP_SLUG` in `frontend/lib/course.ts`, mirrors
@@ -249,7 +301,7 @@ Consistent per-feature layering under `backend/` — follow it for new features:
   flagship. Platform brand is "AI Spark"; the course is "AI for Everyone".
 - Route map: public `/`, `/courses` (redirect), `/courses/[slug]`, `/certificate/verify{,/[id]}`;
   auth `/login`, `/register`, `/forgot-password` (UI only — no reset backend);
-  learner `/learn/[slug]{,/module/[moduleId],/lesson/[lessonId],/assessment/[assessmentId]}`;
+  learner `/learn/[slug]{,/section/[kind],/module/[moduleId],/topic/[topicId],/assessment/[assessmentId]}`;
   `/student/{dashboard,certificates,forum,pending}`;
   `/instructor/{dashboard,approvals,analytics,forum}`;
   `/admin/{dashboard,courses/**,teachers/**,certificates,analytics}`.
@@ -261,7 +313,7 @@ Consistent per-feature layering under `backend/` — follow it for new features:
 - Accent is violet-600; cards `bg-card rounded-3xl border border-border shadow-soft`.
 - The three surfaces — student, instructor, admin — each have a sidebar
   (`StudentSidebar`/`InstructorSidebar`/`AdminSidebar`). CMS building blocks live in
-  `components/course/` (`LessonEditor`, `AssessmentBuilder`, `Reorderable`,
+  `components/course/` (`ContentEditor`, `TopicEditor`, `AssessmentBuilder`, `Reorderable`,
   `RichContentEditor`); learner views in `components/learn/`.
 - `next.config.ts` sets `eslint.ignoreDuringBuilds: true` **on purpose** — the app
   sits inside the legacy repo whose root eslint flat config gets picked up by ESLint's
@@ -275,8 +327,12 @@ Consistent per-feature layering under `backend/` — follow it for new features:
   it; dev has an insecure fallback), `APP_PUBLIC_URL` (the **frontend** origin, used in
   certificate QR codes), `CORS_ORIGIN` (frontend origin(s) allowed to upload
   directly, comma-separated), `REQUIRE_TEACHER_APPROVAL` (default `false`),
-  `UPLOAD_DIR` (default `uploads`), `UPLOAD_MAX_BYTES` (25 MB),
-  `UPLOAD_VIDEO_MAX_BYTES` (500 MB), seed passwords `SEED_STUDENT_PASSWORD` /
+  **Cloudflare**: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+  `R2_BUCKET`, `R2_PUBLIC_URL` (all five → R2 mode), `CLOUDFLARE_AI_TOKEN`
+  (+ optional `CLOUDFLARE_ACCOUNT_ID`, `TTS_MODEL`, `TTS_VOICE`, `TTS_LANG`). Local fallback:
+  `UPLOAD_DIR` (default `uploads`), caps `UPLOAD_MAX_BYTES` (25 MB),
+  `UPLOAD_VIDEO_MAX_BYTES` (500 MB), `UPLOAD_AUDIO_MAX_BYTES` (100 MB),
+  `UPLOAD_SUBTITLE_MAX_BYTES` (2 MB) — blank env values count as unset. Seed passwords `SEED_STUDENT_PASSWORD` /
   `SEED_TEACHER_PASSWORD` / `SEED_PLATFORM_ADMIN_PASSWORD`. Don't put `PORT`/`NODE_ENV`
   in `.env`.
 - **Frontend** (`frontend/.env.local` locally; Vercel project env): only

@@ -3,10 +3,10 @@
 // - the uploaded file is served back read-only
 // - RBAC: anon → 401, student → 403
 // - wrong type → 415, too large → 413, missing file → 400
-// - a lesson can be created with contentType "presentation" pointing at the upload
+// - a topic can be created with contentType "presentation" pointing at the upload
 // - video endpoint (/admin/uploads/video): RBAC, MP4 accepted + served with Range
 //   support (206), non-video → 415, video on the document endpoint → 415, own size
-//   cap → 413, and a video lesson round-trips with the uploaded videoUrl
+//   cap → 413, and a video topic round-trips with the uploaded videoUrl
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs";
@@ -63,7 +63,7 @@ process.env.CORS_ORIGIN = "https://app.example.vercel.app";
 await (await import("./_server.mts")).startServer();
 if (!(await up())) { console.error("not healthy"); process.exit(1); }
 
-console.log("[File upload + presentation lesson checks]");
+console.log("[File upload + presentation topic checks]");
 
 const admin = client();
 await admin.post("/auth/login", { login: "Moocs@admin", password: "Admin@123" });
@@ -100,20 +100,21 @@ check("wrong type (.txt) → 415", (await uploadRaw(admin.cookie(), { bytes: "hi
 check("too large (> limit) → 413", (await uploadRaw(admin.cookie(), { bytes: "x".repeat(8000), filename: "big.pdf", type: "application/pdf" })).status === 413);
 check("no file field → 400", (await uploadRaw(admin.cookie())).status === 400);
 
-// 5. Presentation lesson round-trip using the uploaded file.
+// 5. Presentation topic round-trip using the uploaded file.
 {
   const c = (await admin.post("/admin/courses", { title: "Upload Test Course" })).json?.data;
   const m = (await admin.post(`/admin/courses/${c.id}/modules`, { title: "Module 1" })).json?.data;
-  const lr = await admin.post(`/admin/courses/modules/${m.id}/lessons`, {
+  const lesson = (await admin.post(`/admin/courses/modules/${m.id}/lessons`, { title: "Presentation" })).json?.data;
+  const tr = await admin.post(`/admin/courses/lessons/${lesson.id}/topics`, {
     title: "Intro Deck",
     contentType: "presentation",
     documentUrl: uploadedUrl,
   });
-  check("create presentation lesson → 201", lr.status === 201, lr.status);
-  check("lesson stored as presentation + keeps documentUrl", lr.json?.data?.contentType === "presentation" && lr.json?.data?.documentUrl === uploadedUrl, lr.json?.data);
+  check("create presentation topic → 201", tr.status === 201, tr.status);
+  check("topic stored as presentation + keeps documentUrl", tr.json?.data?.contentType === "presentation" && tr.json?.data?.documentUrl === uploadedUrl, tr.json?.data);
   const tree = (await admin.get(`/admin/courses/${c.id}`)).json?.data;
-  const found = tree?.modules?.[0]?.lessons?.find((l: any) => l.contentType === "presentation");
-  check("presentation lesson appears in course tree with its file", !!found && found.documentUrl === uploadedUrl, found);
+  const found = tree?.modules?.[0]?.lessons?.flatMap((l: any) => l.topics)?.find((topic: any) => topic.contentType === "presentation");
+  check("presentation topic appears in course tree with its file", !!found && found.documentUrl === uploadedUrl, found);
 }
 
 // 6. Lesson video uploads.
@@ -145,8 +146,9 @@ check("no file field → 400", (await uploadRaw(admin.cookie())).status === 400)
 
   const c = (await admin.post("/admin/courses", { title: "Video Test Course" })).json?.data;
   const m = (await admin.post(`/admin/courses/${c.id}/modules`, { title: "Module V" })).json?.data;
-  const lr = await admin.post(`/admin/courses/modules/${m.id}/lessons`, { title: "Intro Video", contentType: "video", videoUrl });
-  check("create video lesson with uploaded videoUrl → 201", lr.status === 201 && lr.json?.data?.videoUrl === videoUrl, lr.json);
+  const lesson = (await admin.post(`/admin/courses/modules/${m.id}/lessons`, { title: "Video" })).json?.data;
+  const tr = await admin.post(`/admin/courses/lessons/${lesson.id}/topics`, { title: "Intro Video", contentType: "video", videoUrl });
+  check("create video topic with uploaded videoUrl → 201", tr.status === 201 && tr.json?.data?.videoUrl === videoUrl, tr.json);
 }
 
 // 7. Direct-to-backend uploads (frontend on another origin): upload-scoped token + CORS.

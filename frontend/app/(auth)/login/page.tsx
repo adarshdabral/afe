@@ -80,7 +80,7 @@ export default function Login() {
           AI Spark
         </Link>
         <div className="relative z-10 max-w-sm">
-          <p className="text-sm font-medium text-white/60">AI for Everyone</p>
+          <p className="text-sm font-medium text-white/60"> Demystifying AI for Everyone</p>
           <p className="mt-2 text-[1.75rem] leading-snug font-semibold tracking-tight text-white">
             Understand artificial intelligence — its applications, opportunities and impact.
           </p>

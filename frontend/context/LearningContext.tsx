@@ -1,13 +1,13 @@
 "use client";
 
 // LearningContext — owns the student's *learning* state for the active course:
-// completed lessons, current lesson, and course progress. Backed by the Mongo
+// completed topics, current topic, and course progress (progress is per TOPIC). Backed by the Mongo
 // progress API (no localStorage, no mock). Auth state stays in AppContext.
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import {
   addTime,
-  completeLesson as completeLessonReq,
+  completeTopic as completeTopicReq,
   getCourseProgress,
   markVisited,
   type ProgressDetail,
@@ -20,16 +20,16 @@ interface LearningContextType {
   error: boolean;
   /** Load (or reload) progress for a course. */
   load: (courseId: string) => Promise<void>;
-  completedLessons: Set<string>;
-  /** The lesson the student should resume (last visited or next unlocked). */
-  currentLessonId: string | null;
+  completedTopics: Set<string>;
+  /** The topic the student should resume (last visited or next unlocked). */
+  currentTopicId: string | null;
   overallProgress: number;
   certificateEligible: boolean;
-  markComplete: (lessonId: string) => Promise<ProgressDetail | null>;
-  recordVisit: (lessonId: string) => Promise<void>;
+  markComplete: (topicId: string) => Promise<ProgressDetail | null>;
+  recordVisit: (topicId: string) => Promise<void>;
   addMinutes: (minutes: number) => Promise<void>;
   /** Sequential rule: unlocked if first, already done, or predecessor done. */
-  isUnlocked: (sequence: string[], lessonId: string) => boolean;
+  isUnlocked: (sequence: string[], topicId: string) => boolean;
 }
 
 const LearningContext = createContext<LearningContextType | null>(null);
@@ -53,15 +53,15 @@ export function LearningProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const completedLessons = useMemo(
-    () => new Set(detail?.progress.completedLessons ?? []),
+  const completedTopics = useMemo(
+    () => new Set(detail?.progress.completedTopics ?? []),
     [detail],
   );
 
   const markComplete = useCallback(
-    async (lessonId: string) => {
+    async (topicId: string) => {
       if (!courseId) return null;
-      const next = await completeLessonReq(courseId, lessonId);
+      const next = await completeTopicReq(courseId, topicId);
       setDetail(next);
       return next;
     },
@@ -69,10 +69,10 @@ export function LearningProvider({ children }: { children: ReactNode }) {
   );
 
   const recordVisit = useCallback(
-    async (lessonId: string) => {
+    async (topicId: string) => {
       if (!courseId) return;
       try {
-        setDetail(await markVisited(courseId, lessonId));
+        setDetail(await markVisited(courseId, topicId));
       } catch {
         /* non-fatal */
       }
@@ -93,15 +93,15 @@ export function LearningProvider({ children }: { children: ReactNode }) {
   );
 
   const isUnlocked = useCallback(
-    (sequence: string[], lessonId: string) => {
-      const idx = sequence.indexOf(lessonId);
+    (sequence: string[], topicId: string) => {
+      const idx = sequence.indexOf(topicId);
       if (idx <= 0) return true;
-      return completedLessons.has(lessonId) || completedLessons.has(sequence[idx - 1]);
+      return completedTopics.has(topicId) || completedTopics.has(sequence[idx - 1]);
     },
-    [completedLessons],
+    [completedTopics],
   );
 
-  const currentLessonId = detail?.progress.lastVisitedLessonId ?? detail?.nextLessonId ?? null;
+  const currentTopicId = detail?.progress.lastVisitedTopicId ?? detail?.nextTopicId ?? null;
 
   return (
     <LearningContext.Provider
@@ -111,8 +111,8 @@ export function LearningProvider({ children }: { children: ReactNode }) {
         loading,
         error,
         load,
-        completedLessons,
-        currentLessonId,
+        completedTopics,
+        currentTopicId,
         overallProgress: detail?.progress.overallProgress ?? 0,
         certificateEligible: detail?.progress.certificateEligible ?? false,
         markComplete,

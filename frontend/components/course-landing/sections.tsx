@@ -1,4 +1,4 @@
-// Presentational sections of the AI for Everyone course landing. Every value is
+// Presentational sections of the  Demystifying AI for Everyone course landing. Every value is
 // derived from the real course outline (see lib/course.ts) — nothing invented.
 
 import Link from "next/link";
@@ -25,11 +25,13 @@ import {
   initials,
   learningOutcomes,
   lessonCount,
+  topicCount,
   levelLabel,
   type CourseOutline,
 } from "@/lib/course";
 import { CourseCta } from "./CourseCta";
 import { VerifyCertificateForm } from "./VerifyCertificateForm";
+import { ContentRenderer } from "@/components/learn/ContentRenderer";
 
 export function SectionHeading({
   eyebrow,
@@ -67,7 +69,7 @@ export function CourseFacts({ course }: { course: CourseOutline }) {
     {
       icon: Layers,
       title: `${course.modules.length} modules`,
-      detail: `${lessons} ${lessons === 1 ? "lesson" : "lessons"}, unlocked in sequence`,
+      detail: `${lessons} lesson groups, ${topicCount(course)} topics unlocked in sequence`,
     },
     ...(assessments > 0
       ? [{ icon: ClipboardCheck, title: `${assessments} assessments`, detail: "One per module, scored instantly" }]
@@ -141,6 +143,7 @@ export function LearningOutcomes({ course }: { course: CourseOutline }) {
 
 export function InstructorSection({ course }: { course: CourseOutline }) {
   if (!course.instructor) return null;
+  const instructorSection = course.sections.find((section) => section.kind === "instructor");
   const first = course.modules[0]?.title;
   const last = course.modules[course.modules.length - 1]?.title;
   return (
@@ -165,6 +168,8 @@ export function InstructorSection({ course }: { course: CourseOutline }) {
               <span className="font-medium">{first}</span> through <span className="font-medium">{last}</span>.
             </p>
           )}
+          {instructorSection?.description && <p className="mt-4 text-[15px] text-muted-foreground leading-relaxed max-w-2xl">{instructorSection.description}</p>}
+          {instructorSection && <div className="mt-5 max-w-2xl"><ContentRenderer item={instructorSection} /></div>}
         </div>
       </div>
     </section>
@@ -179,7 +184,7 @@ export function CertificateSection({ course }: { course: CourseOutline }) {
     {
       icon: CheckCircle2,
       title: "Issued automatically",
-      text: `Complete every lesson${assessments ? " and pass every module assessment" : ""} — your certificate is issued the moment you're eligible.`,
+      text: `Complete every topic${assessments ? " and pass every module assessment" : ""} — your certificate is issued the moment you're eligible.`,
     },
     { icon: Fingerprint, title: "Unique certificate ID", text: "Every certificate carries its own ID, recorded on the platform." },
     { icon: QrCode, title: "QR verification", text: "A QR code on the certificate opens its public verification page." },
@@ -254,9 +259,9 @@ export function courseFaq(course: CourseOutline): { q: string; a: string }[] {
   const faq: { q: string; a: string }[] = [
     {
       q: "How is the course structured?",
-      a: `${course.title} has ${course.modules.length} modules and ${lessonCount(course)} lessons${
+      a: `${course.title} has ${course.modules.length} modules, ${lessonCount(course)} lesson groups and ${topicCount(course)} topics${
         assessments ? `, with an assessment at the end of ${assessments === course.modules.length ? "each module" : `${assessments} modules`}` : ""
-      }. Lessons unlock in order — each one opens when you complete the one before it.`,
+      }. Topics unlock in sequence throughout the course.`,
     },
   ];
   if (course.level === "beginner")
@@ -272,7 +277,7 @@ export function courseFaq(course: CourseOutline): { q: string; a: string }[] {
   faq.push(
     {
       q: "How do I earn the certificate?",
-      a: `Complete every lesson${assessments ? " and pass every module assessment" : ""}. The certificate is issued automatically, and you can download it as a PDF from your Certificates page.`,
+      a: `Complete every topic${assessments ? " and pass every module assessment" : ""}. The certificate is issued automatically, and you can download it as a PDF from your Certificates page.`,
     },
     {
       q: "How can someone verify my certificate?",

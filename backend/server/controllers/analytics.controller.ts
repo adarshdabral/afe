@@ -17,8 +17,8 @@ import {
 const FALLBACK_SCHOOL = { schoolName: "Independent", className: "10" };
 
 const syncSchema = z.object({
-  lessonsCompleted: z.number().int().min(0),
-  lessonsTotal: z.number().int().min(0),
+  topicsCompleted: z.number().int().min(0),
+  topicsTotal: z.number().int().min(0),
   modulesCompleted: z.number().int().min(0),
   modulesTotal: z.number().int().min(0),
   assessmentsPassed: z.number().int().min(0),

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { CourseReviews, StarRow } from "@/components/CourseReviews";
+import { ContentRenderer } from "@/components/learn/ContentRenderer";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { listReviews, type RatingAggregate } from "@/lib/api/reviews";
 import { initials, levelLabel, type CourseOutline } from "@/lib/course";
@@ -22,8 +23,8 @@ import {
 import { useCourseOutline } from "./useCourseOutline";
 
 const SECTIONS = [
-  { id: "about", label: "About" },
-  { id: "outcomes", label: "Outcomes" },
+  { id: "introduction", label: "Introduction" },
+  { id: "overview", label: "Overview" },
   { id: "curriculum", label: "Curriculum" },
   { id: "instructor", label: "Instructor" },
   { id: "certificate", label: "Certificate" },
@@ -146,14 +147,34 @@ export function CourseDetailView({ slug, initial }: { slug: string; initial: Cou
               <CourseFacts course={course} />
             </section>
 
-            {course.description && (
-              <section id="about" aria-labelledby="about-heading" className="pt-20 md:pt-24">
-                <SectionHeading id="about-heading" eyebrow="About" title="About this course" />
-                <p className="mt-5 text-[16px] md:text-[17px] text-foreground leading-[1.75] max-w-3xl whitespace-pre-line">
-                  {course.description}
-                </p>
-              </section>
-            )}
+            {(() => {
+              const introduction = course.sections.find((section) => section.kind === "introduction");
+              return introduction ? (
+                <section id="introduction" aria-labelledby="introduction-heading" className="py-16 md:py-20 border-t border-border">
+                  <SectionHeading id="introduction-heading" eyebrow="Introduction" title={introduction.title}>
+                    {introduction.description}
+                  </SectionHeading>
+                  <div className="mt-7 max-w-3xl"><ContentRenderer item={introduction} /></div>
+                </section>
+              ) : course.description ? (
+                <section id="introduction" aria-labelledby="introduction-heading" className="py-16 md:py-20 border-t border-border">
+                  <SectionHeading id="introduction-heading" eyebrow="Introduction" title="About this course" />
+                  <p className="mt-5 text-[16px] md:text-[17px] text-foreground leading-[1.75] max-w-3xl whitespace-pre-line">{course.description}</p>
+                </section>
+              ) : null;
+            })()}
+
+            {(() => {
+              const overview = course.sections.find((section) => section.kind === "overview");
+              return overview ? (
+                <section id="overview" aria-labelledby="overview-heading" className="py-16 md:py-20 border-t border-border">
+                  <SectionHeading id="overview-heading" eyebrow="Course overview" title={overview.title}>
+                    {overview.description}
+                  </SectionHeading>
+                  <div className="mt-7 max-w-3xl"><ContentRenderer item={overview} /></div>
+                </section>
+              ) : <div id="overview" />;
+            })()}
 
             <div id="outcomes">
               <LearningOutcomes course={course} />

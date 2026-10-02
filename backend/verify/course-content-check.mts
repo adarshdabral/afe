@@ -1,10 +1,11 @@
-// Verifies course-content standardization: after seeding, "AI for Everyone" is the
+// Verifies course-content standardization: after seeding, " Demystifying AI for Everyone" is the
 // ONLY course the platform returns; it has exactly the 12 required modules (ordered,
-// published), each module has a 7-section lesson and exactly ONE assessment with
+// published), each module has a lesson containing 7 topics and exactly ONE assessment with
 // 10 MCQ + 5 True/False + 2 scenario questions; and every previously-existing
 // course has been archived/removed from the catalog.
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { seedAiCourse } from "../server/seed/course.seed.ts";
+import { connectDb } from "../server/config/db.ts";
 
 const PORT = 4113;
 const BASE = `http://127.0.0.1:${PORT}/api`;
@@ -37,6 +38,7 @@ process.env.NODE_ENV = "test";
 process.env.CORS_ORIGIN = "http://localhost:3000";
 await (await import("./_server.mts")).startServer();
 if (!(await up())) { console.error("not healthy"); process.exit(1); }
+await connectDb();
 
 const REQUIRED_MODULES = [
   "Understanding Artificial Intelligence",
@@ -52,7 +54,7 @@ const REQUIRED_MODULES = [
   "Ethics, Safety and Responsible AI",
   "Future of AI and Capstone Project",
 ];
-const SECTION_HEADERS = ["## Overview", "## Key Concepts", "## Use Cases", "## Best Practices", "## Recent Developments", "## Chapter Takeaways", "## Suggested Learning Activities"];
+const TOPIC_TITLES = ["Overview", "Key Concepts", "Use Cases", "Best Practices", "Recent Developments", "Chapter Takeaways", "Suggested Learning Activities"];
 
 console.log("[Course content standardization]");
 
@@ -76,7 +78,7 @@ check("seed reports 12 modules + archived others", result.modules === 12 && resu
   const courses = list.json?.data?.courses ?? [];
   check("catalog returns exactly ONE course", courses.length === 1, courses.map((c: any) => c.slug));
   const c = courses[0];
-  check("the one course is 'AI for Everyone' (ai-for-everyone, published)", c?.slug === "ai-for-everyone" && c?.title === "AI for Everyone" && c?.status === "published", c);
+  check("the one course is ' Demystifying AI for Everyone' (ai-for-everyone, published)", c?.slug === "ai-for-everyone" && c?.title === " Demystifying AI for Everyone" && c?.status === "published", c);
   check("instructor is Dr. Sudhanshu Joshi", c?.instructor === "Dr. Sudhanshu Joshi", c?.instructor);
   check("legacy courses are not in the catalog", !courses.some((x: any) => x.slug === "legacy-one" || x.slug === "legacy-two"), courses.map((x: any) => x.slug));
 }
@@ -95,16 +97,19 @@ const tree = (await student.get("/courses/ai-for-everyone")).json?.data;
   check("course has exactly 12 modules", mods.length === 12, mods.length);
   check("modules are in ascending order 0..11", mods.every((m: any, i: number) => m.order === i), mods.map((m: any) => m.order));
   check("module titles match the required curriculum exactly", JSON.stringify(mods.map((m: any) => m.title)) === JSON.stringify(REQUIRED_MODULES), mods.map((m: any) => m.title));
-  check("every module is published & has a lesson + assessment", mods.every((m: any) => m.isPublished && m.lessons.length >= 1 && !!m.assessmentId), mods.map((m: any) => ({ p: m.isPublished, l: m.lessons.length, a: !!m.assessmentId })));
+  check("every module is published & has one lesson with 7 topics + assessment", mods.every((m: any) => m.isPublished && m.lessons.length === 1 && m.lessons[0].topics.length === 7 && !!m.assessmentId), mods.map((m: any) => ({ p: m.isPublished, l: m.lessons.length, t: m.lessons[0]?.topics?.length, a: !!m.assessmentId })));
+  check("every module has a description and ≥3 learning objectives", mods.every((m: any) => m.description?.trim() && (m.learningObjectives ?? []).length >= 3 && m.learningObjectives.every((o: string) => o.trim())), mods.map((m: any) => ({ t: m.title, d: !!m.description, o: m.learningObjectives?.length })));
+  const adminMods = (await admin.get(`/admin/courses/${tree?.id}`)).json?.data?.modules ?? [];
+  check("every seeded module meets the publish rules (admin readiness.ready)", adminMods.length === 12 && adminMods.every((m: any) => m.readiness?.ready === true), adminMods.filter((m: any) => !m.readiness?.ready).map((m: any) => ({ t: m.title, missing: m.readiness?.missing })));
 }
 
-// 4. Each module's lesson includes all seven required sections.
+// 4. Each module's lesson contains all seven required topic sections.
 {
-  const allHaveSections = (tree?.modules ?? []).every((m: any) => {
-    const content = m.lessons?.[0]?.content ?? "";
-    return SECTION_HEADERS.every((h) => content.includes(h));
+  const allHaveTopics = (tree?.modules ?? []).every((m: any) => {
+    const topics = m.lessons?.[0]?.topics ?? [];
+    return topics.length === TOPIC_TITLES.length && topics.every((topic: any, i: number) => topic.title === TOPIC_TITLES[i] && topic.content.trim().length > 0);
   });
-  check("every lesson contains the 7 required sections", allHaveSections);
+  check("every lesson contains the 7 required content topics in order", allHaveTopics, (tree?.modules ?? []).map((m: any) => m.lessons?.[0]?.topics?.map((t: any) => t.title)));
 }
 
 // 5. Each module has exactly ONE assessment with 10 MCQ + 5 True/False + 2 scenario.

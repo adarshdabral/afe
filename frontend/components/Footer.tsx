@@ -66,7 +66,7 @@ export function Footer() {
             </span>
             <span className="font-semibold tracking-tight">{PLATFORM_NAME}</span>
           </Link>
-          <p className="mt-4 text-[15px] font-medium text-foreground">AI for Everyone</p>
+          <p className="mt-4 text-[15px] font-medium text-foreground"> Demystifying AI for Everyone</p>
           <p className="mt-1 text-[14px] text-muted-foreground leading-relaxed max-w-xs">
             A self-paced course on artificial intelligence with Dr. Sudhanshu Joshi — ending in a
             verifiable certificate.

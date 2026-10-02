@@ -10,8 +10,8 @@ export interface StudentSnapshot {
   studentName: string;
   schoolName: string; // free-text; also the analytics grouping key (no School entity)
   className: string;
-  lessonsCompleted: number;
-  lessonsTotal: number;
+  topicsCompleted: number;
+  topicsTotal: number;
   modulesCompleted: number;
   modulesTotal: number;
   assessmentsPassed: number;
@@ -28,8 +28,8 @@ const analyticsSnapshotSchema = new Schema(
     studentName: { type: String, required: true },
     schoolName: { type: String, required: true, index: true }, // grouping key
     className: { type: String, required: true },
-    lessonsCompleted: { type: Number, required: true },
-    lessonsTotal: { type: Number, required: true },
+    topicsCompleted: { type: Number, required: true },
+    topicsTotal: { type: Number, required: true },
     modulesCompleted: { type: Number, required: true },
     modulesTotal: { type: Number, required: true },
     assessmentsPassed: { type: Number, required: true },
@@ -61,8 +61,8 @@ export function toSnapshot(doc: AnalyticsSnapshotDoc): StudentSnapshot {
     studentName: doc.studentName,
     schoolName: doc.schoolName,
     className: doc.className,
-    lessonsCompleted: doc.lessonsCompleted,
-    lessonsTotal: doc.lessonsTotal,
+    topicsCompleted: doc.topicsCompleted,
+    topicsTotal: doc.topicsTotal,
     modulesCompleted: doc.modulesCompleted,
     modulesTotal: doc.modulesTotal,
     assessmentsPassed: doc.assessmentsPassed,

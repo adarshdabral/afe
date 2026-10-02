@@ -12,7 +12,7 @@ import { studentSchoolInfo } from "./registration.service";
 /** Public app origin used to build the QR verification URL. (CORS_ORIGIN is a
  *  legacy fallback from the old split deployment.) */
 function appUrl(): string {
-  return process.env.APP_PUBLIC_URL ?? process.env.CORS_ORIGIN ?? "http://localhost:3000";
+  return process.env.APP_PUBLIC_URL?.trim() || process.env.CORS_ORIGIN?.split(",")[0]?.trim() || "http://localhost:3000";
 }
 
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -133,7 +133,7 @@ export async function generateCertificatePdf(cert: CertificateView): Promise<Uin
     page.drawText(text, { x: (width - w) / 2, y, size, font, color });
   };
 
-  center("AI FOR EVERYONE", height - 90, 16, serifBold, violet);
+  center(" Demystifying AI for Everyone", height - 90, 16, serifBold, violet);
   center("Certificate of Completion", height - 140, 30, serifBold, dark);
   center("This is proudly presented to", height - 185, 13, serif, grey);
   center(cert.studentName, height - 235, 34, serifBold, dark);
@@ -168,7 +168,7 @@ export async function generateCertificatePdf(cert: CertificateView): Promise<Uin
   page.drawText("Programme Director", { x: 60, y: 122, size: 9, font: serif, color: grey });
 
   page.drawLine({ start: { x: 300, y: 150 }, end: { x: 470, y: 150 }, thickness: 1, color: grey });
-  page.drawText("AI For Everyone", { x: 300, y: 135, size: 11, font: serifBold, color: dark });
+  page.drawText(" Demystifying AI for Everyone", { x: 300, y: 135, size: 11, font: serifBold, color: dark });
   page.drawText("Platform Authority", { x: 300, y: 122, size: 9, font: serif, color: grey });
 
   if (cert.status === "revoked") center("— REVOKED —", height / 2, 60, serifBold, rgb(0.9, 0.2, 0.2));

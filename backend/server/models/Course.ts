@@ -1,5 +1,5 @@
-// Course model (Course CMS). Top of the content hierarchy: Course → Module →
-// Lesson. Only a platform admin mutates courses. Courses are SOFT-deleted
+// Course model (Course CMS). Top of the content hierarchy: Course → (Introduction,
+// Overview, Meet the Instructor sections) + Module → Lesson → Topic. Only a platform admin mutates courses. Courses are SOFT-deleted
 // (`deletedAt`) so content is never destroyed. `slug` is unique and is the public
 // lookup key.
 

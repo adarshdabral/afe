@@ -1,10 +1,10 @@
-// Curriculum content for the single standardized course "AI for Everyone".
+// Curriculum content for the single standardized course " Demystifying AI for Everyone".
 //
 // NOTE: No separate curriculum document was present in the repository, so this
 // content was authored strictly ON-TOPIC to the 12 module titles supplied in the
 // standardization spec (well-established AI-literacy material — no unrelated
 // topics). Each module ships one lesson (the chapter) whose content is organized
-// into the seven required sections, plus exactly one assessment with 10 MCQs,
+// into the seven required sections (seeded as seven topics), plus exactly one assessment with 10 MCQs,
 // 5 True/False, and 2 scenario questions generated from that module's content.
 
 export interface LessonSections {
@@ -792,13 +792,80 @@ export const AI_FOR_EVERYONE_MODULES: SeedModule[] = [
 ];
 
 export const AI_COURSE_META = {
-  title: "AI for Everyone",
+  title: " Demystifying AI for Everyone",
   slug: "ai-for-everyone",
   instructor: "Dr. Sudhanshu Joshi",
   shortDescription:
     "A complete AI-literacy course — from what AI is to building responsible AI projects — in 12 modules.",
   description:
-    "AI for Everyone is a 12-module journey through artificial intelligence for a general audience: understanding AI, data, how AI learns, everyday and industry applications, careers, economics, the future of work, ethics and safety, and a capstone project. Taught by Dr. Sudhanshu Joshi.",
+    " Demystifying AI for Everyone is a 12-module journey through artificial intelligence for a general audience: understanding AI, data, how AI learns, everyday and industry applications, careers, economics, the future of work, ethics and safety, and a capstone project. Taught by Dr. Sudhanshu Joshi.",
   level: "beginner" as const,
   tags: ["ai", "ai-literacy", "machine-learning", "ethics"],
+};
+
+/**
+ * Learning objectives per module (by module title). Each one restates that
+ * module's own key concepts / takeaways as something the learner can do.
+ */
+export const MODULE_LEARNING_OBJECTIVES: Record<string, string[]> = {
+  "Understanding Artificial Intelligence": [
+    "Explain what artificial intelligence is and distinguish today's narrow AI from general AI.",
+    "Describe how AI, machine learning and deep learning relate to one another.",
+    "Recognize milestones such as the Turing Test and the 'AI winters'.",
+  ],
+  "Data: The Foundation of AI": [
+    "Distinguish structured from unstructured data, and labeled from unlabeled data.",
+    "Explain why training, validation and test splits are needed to judge a model fairly.",
+    "Describe how data quality and bias shape what an AI system can do ('garbage in, garbage out').",
+  ],
+  "How AI Learns": [
+    "Compare supervised, unsupervised and reinforcement learning.",
+    "Distinguish training a model from using it for inference.",
+    "Explain overfitting and underfitting, and why generalization is the real goal.",
+  ],
+  "AI in Everyday Life": [
+    "Identify AI in everyday products such as recommendations, assistants, translation and face unlock.",
+    "Explain how natural language processing and computer vision power these tools.",
+    "Weigh personalization and convenience against privacy, autonomy and filter bubbles.",
+  ],
+  "AI Across Industries and Public Systems": [
+    "Describe how prediction, computer vision and optimization create value across industries.",
+    "Give examples of AI in healthcare, finance, agriculture, transport and government services.",
+    "Explain why public-sector AI must meet higher standards of fairness, transparency and accountability.",
+  ],
+  "AI in Education, Research and Creativity": [
+    "Describe how adaptive learning and generative AI support teaching, research and creative work.",
+    "Explain why AI-generated output needs human verification.",
+    "Apply principles of academic integrity and attribution when using AI tools.",
+  ],
+  "Building AI Projects": [
+    "Frame an AI problem by defining the task, its users and a success metric.",
+    "Outline the project lifecycle: data, baseline, modeling, evaluation and deployment.",
+    "Explain why deployed models must be monitored for drift and failure.",
+  ],
+  "AI Careers and Organizations": [
+    "Describe the main roles in AI teams, including non-coding roles.",
+    "Explain why cross-functional teams and a clear AI strategy drive success.",
+    "Identify ways you can contribute to AI work without being a programmer.",
+  ],
+  "AI and the Economy": [
+    "Explain why AI is considered a general-purpose technology.",
+    "Describe how automation can raise productivity while displacing some tasks.",
+    "Discuss how complementary investment and policy shape who benefits from AI.",
+  ],
+  "AI and the Future of Work": [
+    "Explain why AI changes tasks within jobs rather than whole jobs uniformly.",
+    "Describe human–AI collaboration as the dominant near-term pattern of work.",
+    "Identify durable human skills — judgment, empathy, creativity, communication — and the role of continuous learning.",
+  ],
+  "Ethics, Safety and Responsible AI": [
+    "Identify how bias can enter AI systems through data, design and deployment.",
+    "Explain the principles of privacy, explainability, accountability and safety.",
+    "Treat responsible AI as a practice across the whole lifecycle, not a one-time check.",
+  ],
+  "Future of AI and Capstone Project": [
+    "Describe emerging AI trends: multimodal models, autonomous agents, on-device AI and stronger governance.",
+    "Plan a capstone project that applies problem framing, data, ethics and evaluation together.",
+    "Explain which responsible-innovation principles stay relevant as AI changes.",
+  ],
 };

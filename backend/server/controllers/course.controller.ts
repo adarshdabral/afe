@@ -11,7 +11,7 @@ import {
   getCourse,
   getCourseBySlug,
   getCourseTreeById,
-  getLessonInCourse,
+  getTopicInCourse,
   listCourses,
   setCourseStatus,
   slugTaken,
@@ -159,13 +159,13 @@ export async function publicGetBySlug(req: Request, res: Response): Promise<void
   res.json({ data: tree });
 }
 
-/** GET /api/courses/:slug/lessons/:lessonId — a visible lesson + prev/next. */
-export async function publicGetLesson(req: Request, res: Response): Promise<void> {
+/** GET /api/courses/:slug/topics/:topicId — a visible topic + prev/next. */
+export async function publicGetTopic(req: Request, res: Response): Promise<void> {
   const slug = z.string().min(1).parse(req.params.slug);
-  const lessonId = z.string().min(1).parse(req.params.lessonId);
-  const result = await getLessonInCourse(slug, lessonId, req.user?.role ?? null);
+  const topicId = z.string().min(1).parse(req.params.topicId);
+  const result = await getTopicInCourse(slug, topicId, req.user?.role ?? null);
   if (!result) {
-    res.status(404).json({ error: { message: "Lesson not found." } });
+    res.status(404).json({ error: { message: "Topic not found." } });
     return;
   }
   res.json({ data: result });

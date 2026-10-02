@@ -1,13 +1,15 @@
-// File-upload storage for the Course CMS. Uploaded lesson materials (presentation
-// decks, PDFs, images — and lesson videos) are written to a local `uploads/`
-// directory (relative to the server process cwd, override with UPLOAD_DIR) and
-// served read-only at /api/uploads/<filename> (app/api/uploads/[...path]). The
-// dir is git-ignored and excluded from deploy syncs so files persist across releases.
+// Media storage for the Course CMS (topic and course-section content).
 //
-// Multipart bodies are STREAMED to disk with busboy (never buffered in memory), so
-// 500 MB videos don't blow the process memory cap. Same rules multer enforced:
-// a single `file` field, extension AND MIME allow-list (415), size cap (413, the
-// partial file is deleted), random server-side filenames.
+// PRIMARY: Cloudflare R2 (when the R2_* env vars are set — see ./r2.ts). The
+// browser uploads straight to R2 with a short-lived presigned PUT URL, so large
+// files (videos, audio, decks) never pass through this server; topics store the
+// object's public URL. Generated audio (text-to-speech) is written to R2 server-side.
+//
+// FALLBACK (no R2 configured — local dev, verify harnesses, self-hosted): files are
+// written to UPLOAD_DIR on this server and served at /api/uploads/<file>.
+// Multipart bodies are STREAMED to disk with busboy (never buffered in memory).
+// Same rules everywhere: per-kind extension AND MIME allow-list (415), size cap
+// (413), random server-side names.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -19,26 +21,32 @@ import busboy from "busboy";
 import { HttpError } from "../http/errors";
 import type { UploadedFile } from "../http/types";
 
-export const UPLOAD_DIR = path.resolve(process.cwd(), process.env.UPLOAD_DIR ?? "uploads");
+export const UPLOAD_DIR = path.resolve(process.cwd(), process.env.UPLOAD_DIR?.trim() || "uploads");
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-/** 25 MB default; overridable (used by the verify harness to exercise the limit). */
-export const MAX_UPLOAD_BYTES = Number(process.env.UPLOAD_MAX_BYTES ?? 25 * 1024 * 1024);
+const MB = 1024 * 1024;
+const envBytes = (key: string, fallback: number) => Number(process.env[key] || fallback);
 
-/** Video lessons are much larger than documents: 500 MB default, overridable. */
-export const MAX_VIDEO_UPLOAD_BYTES = Number(
-  process.env.UPLOAD_VIDEO_MAX_BYTES ?? 500 * 1024 * 1024,
-);
+/** Size caps (overridable — the verify harness uses small values). */
+export const MAX_UPLOAD_BYTES = envBytes("UPLOAD_MAX_BYTES", 25 * MB);
+export const MAX_VIDEO_UPLOAD_BYTES = envBytes("UPLOAD_VIDEO_MAX_BYTES", 500 * MB);
+export const MAX_AUDIO_UPLOAD_BYTES = envBytes("UPLOAD_AUDIO_MAX_BYTES", 100 * MB);
+export const MAX_SUBTITLE_UPLOAD_BYTES = envBytes("UPLOAD_SUBTITLE_MAX_BYTES", 2 * MB);
+
+export const UPLOAD_KIND_NAMES = ["document", "video", "audio", "subtitle"] as const;
+export type UploadKindName = (typeof UPLOAD_KIND_NAMES)[number];
 
 export interface UploadKind {
+  name: UploadKindName;
   maxBytes: number;
   ext: Set<string>;
   mime: Set<string>;
   rejectMessage: string;
 }
 
-// Presentations, documents, and images.
+// PDF / PowerPoint decks and images.
 export const DOCUMENT_UPLOAD: UploadKind = {
+  name: "document",
   maxBytes: MAX_UPLOAD_BYTES,
   ext: new Set([".pdf", ".ppt", ".pptx", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"]),
   mime: new Set([
@@ -56,11 +64,65 @@ export const DOCUMENT_UPLOAD: UploadKind = {
 
 // Browser-playable video containers. MP4 (H.264/AAC) is the most compatible.
 export const VIDEO_UPLOAD: UploadKind = {
+  name: "video",
   maxBytes: MAX_VIDEO_UPLOAD_BYTES,
   ext: new Set([".mp4", ".m4v", ".webm", ".mov"]),
   mime: new Set(["video/mp4", "video/x-m4v", "video/webm", "video/quicktime"]),
   rejectMessage: "Unsupported video type. Upload an MP4, WebM, or MOV file.",
 };
+
+// Narration audio.
+export const AUDIO_UPLOAD: UploadKind = {
+  name: "audio",
+  maxBytes: MAX_AUDIO_UPLOAD_BYTES,
+  ext: new Set([".mp3", ".m4a", ".aac", ".wav", ".ogg", ".oga", ".webm"]),
+  mime: new Set([
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/mp4",
+    "audio/x-m4a",
+    "audio/aac",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/wave",
+    "audio/ogg",
+    "audio/webm",
+  ]),
+  rejectMessage: "Unsupported audio type. Upload an MP3, M4A, AAC, WAV, OGG or WebM file.",
+};
+
+// Video captions. Browsers only play WebVTT in <track>; the admin UI converts
+// SRT → VTT before uploading.
+export const SUBTITLE_UPLOAD: UploadKind = {
+  name: "subtitle",
+  maxBytes: MAX_SUBTITLE_UPLOAD_BYTES,
+  ext: new Set([".vtt"]),
+  mime: new Set(["text/vtt"]),
+  rejectMessage: "Unsupported subtitle file. Upload an .srt or .vtt file.",
+};
+
+export const UPLOAD_KINDS: Record<UploadKindName, UploadKind> = {
+  document: DOCUMENT_UPLOAD,
+  video: VIDEO_UPLOAD,
+  audio: AUDIO_UPLOAD,
+  subtitle: SUBTITLE_UPLOAD,
+};
+
+/** Validate a declared file (name + MIME + size) against a kind; throws 415/413/400. */
+export function assertAllowed(kind: UploadKind, filename: string, mimeType: string, size?: number): string {
+  const ext = path.extname(filename ?? "").toLowerCase();
+  if (!kind.ext.has(ext) || !kind.mime.has(mimeType)) throw new HttpError(415, kind.rejectMessage);
+  if (size !== undefined) {
+    if (!Number.isFinite(size) || size <= 0) throw new HttpError(400, "File is empty.");
+    if (size > kind.maxBytes) throw new HttpError(413, "File is too large.");
+  }
+  return ext;
+}
+
+/** Random, extension-only name — never trust the client's path/name. */
+export function randomName(ext: string): string {
+  return `${Date.now()}-${crypto.randomUUID()}${ext}`;
+}
 
 /** Content types used when serving stored files. */
 export const SERVE_CONTENT_TYPES: Record<string, string> = {
@@ -77,11 +139,25 @@ export const SERVE_CONTENT_TYPES: Record<string, string> = {
   ".m4v": "video/x-m4v",
   ".webm": "video/webm",
   ".mov": "video/quicktime",
+  ".mp3": "audio/mpeg",
+  ".m4a": "audio/mp4",
+  ".aac": "audio/aac",
+  ".wav": "audio/wav",
+  ".ogg": "audio/ogg",
+  ".oga": "audio/ogg",
+  ".vtt": "text/vtt; charset=utf-8",
 };
 
+/** Local fallback: write bytes (e.g. generated audio) to UPLOAD_DIR. */
+export async function saveLocal(bytes: Uint8Array, ext: string): Promise<{ url: string; filename: string }> {
+  const filename = randomName(ext);
+  await fs.promises.writeFile(path.join(UPLOAD_DIR, filename), bytes);
+  return { url: `/api/uploads/${filename}`, filename };
+}
+
 /**
- * Stream the single `file` part of a multipart request to UPLOAD_DIR.
- * Resolves with the stored file (or undefined when no `file` part was sent).
+ * Local fallback: stream the single `file` part of a multipart request to
+ * UPLOAD_DIR. Resolves with the stored file (or undefined when no `file` part).
  */
 export async function receiveUpload(request: Request, kind: UploadKind): Promise<UploadedFile | undefined> {
   const contentType = request.headers.get("content-type") ?? "";
@@ -115,14 +191,15 @@ export async function receiveUpload(request: Request, kind: UploadKind): Promise
         fail(new HttpError(400, "Unexpected field"));
         return;
       }
-      const ext = path.extname(info.filename ?? "").toLowerCase();
-      if (!kind.ext.has(ext) || !kind.mime.has(info.mimeType)) {
+      let ext: string;
+      try {
+        ext = assertAllowed(kind, info.filename, info.mimeType);
+      } catch (err) {
         stream.resume();
-        fail(new HttpError(415, kind.rejectMessage));
+        fail(err);
         return;
       }
-      // Random, extension-only filename — never trust the client's path/name on disk.
-      const filename = `${Date.now()}-${crypto.randomUUID()}${ext}`;
+      const filename = randomName(ext);
       const dest = path.join(UPLOAD_DIR, filename);
       let size = 0;
       let truncated = false;

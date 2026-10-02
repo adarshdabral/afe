@@ -2,11 +2,11 @@
 // src/lib/analytics/analytics.server.ts. Idempotent: upserts each snapshot by
 // studentUserId, so re-running leaves the same nine rows.
 
-import { AI_COURSE, flattenLessons } from "../data/curriculum";
+import { AI_COURSE, flattenTopics } from "../data/curriculum";
 import { recordSnapshot } from "../services/analytics.service";
 import type { StudentSnapshot } from "../models/AnalyticsSnapshot";
 
-const LESSONS_TOTAL = flattenLessons().length;
+const TOPICS_TOTAL = flattenTopics().length;
 const MODULES_TOTAL = AI_COURSE.modules.length;
 
 function moduleScoresFor(passed: number, avg: number): Record<string, number> {
@@ -20,7 +20,7 @@ interface SeedRow {
   name: string;
   schoolName: string;
   className: string;
-  lessons: number;
+  topics: number;
   modules: number;
   passed: number;
   avg: number;
@@ -34,8 +34,8 @@ function fromSeed(r: SeedRow): StudentSnapshot {
     studentName: r.name,
     schoolName: r.schoolName,
     className: r.className,
-    lessonsCompleted: r.lessons,
-    lessonsTotal: LESSONS_TOTAL,
+    topicsCompleted: r.topics,
+    topicsTotal: TOPICS_TOTAL,
     modulesCompleted: r.modules,
     modulesTotal: MODULES_TOTAL,
     assessmentsPassed: r.passed,
@@ -56,7 +56,7 @@ export async function seedAnalyticsCohort(): Promise<void> {
       name: "Aarav Singh",
       ...D,
       className: "10",
-      lessons: 12,
+      topics: 12,
       modules: 3,
       passed: 3,
       avg: 76,
@@ -68,7 +68,7 @@ export async function seedAnalyticsCohort(): Promise<void> {
       name: "Riya Menon",
       ...D,
       className: "9",
-      lessons: 28,
+      topics: 28,
       modules: 7,
       passed: 7,
       avg: 82,
@@ -80,7 +80,7 @@ export async function seedAnalyticsCohort(): Promise<void> {
       name: "Karan Verma",
       ...D,
       className: "9",
-      lessons: 16,
+      topics: 16,
       modules: 4,
       passed: 4,
       avg: 71,
@@ -92,7 +92,7 @@ export async function seedAnalyticsCohort(): Promise<void> {
       name: "Sneha Pillai",
       ...D,
       className: "9",
-      lessons: 8,
+      topics: 8,
       modules: 2,
       passed: 2,
       avg: 64,
@@ -104,7 +104,7 @@ export async function seedAnalyticsCohort(): Promise<void> {
       name: "Megha Shah",
       ...D,
       className: "10",
-      lessons: 32,
+      topics: 32,
       modules: 8,
       passed: 8,
       avg: 88,
@@ -116,7 +116,7 @@ export async function seedAnalyticsCohort(): Promise<void> {
       name: "Devon King",
       ...D,
       className: "10",
-      lessons: 20,
+      topics: 20,
       modules: 5,
       passed: 5,
       avg: 69,
@@ -128,7 +128,7 @@ export async function seedAnalyticsCohort(): Promise<void> {
       name: "Alex Tan",
       ...S,
       className: "11",
-      lessons: 24,
+      topics: 24,
       modules: 6,
       passed: 6,
       avg: 79,
@@ -140,7 +140,7 @@ export async function seedAnalyticsCohort(): Promise<void> {
       name: "Maya Lopez",
       ...S,
       className: "11",
-      lessons: 32,
+      topics: 32,
       modules: 8,
       passed: 8,
       avg: 91,
@@ -152,7 +152,7 @@ export async function seedAnalyticsCohort(): Promise<void> {
       name: "Tom Park",
       ...S,
       className: "11",
-      lessons: 4,
+      topics: 4,
       modules: 1,
       passed: 1,
       avg: 60,

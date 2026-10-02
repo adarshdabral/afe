@@ -37,7 +37,7 @@ export function CertificateCard({
           <span className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center">
             <Sparkles className="w-5 h-5" />
           </span>
-          <span className="font-semibold">AI For Everyone</span>
+          <span className="font-semibold"> Demystifying AI for Everyone</span>
         </div>
 
         <div className="mt-6 inline-flex items-center justify-center w-16 h-16 rounded-full bg-violet-100 text-violet-700">

@@ -19,13 +19,13 @@ import { getPublicCourse, type CourseTree } from "@/lib/api/courses";
 import { roleHome } from "@/lib/access";
 import { pad2 } from "@/lib/course";
 
-// The "AI for Everyone learning experience" home: course header, progress,
+// The " Demystifying AI for Everyone learning experience" home: course header, progress,
 // resume point, certificate status and the module map. Sequential locking and
 // completion state come from LearningContext (server-backed progress API).
 export default function LearnOverview() {
   const { slug } = useParams<{ slug: string }>();
   const { authUser } = useApp();
-  const { load, detail, completedLessons, overallProgress, certificateEligible, isUnlocked } = useLearning();
+  const { load, detail, completedTopics, overallProgress, certificateEligible, isUnlocked } = useLearning();
   const [tree, setTree] = useState<CourseTree | null>(null);
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
   const isStudent = authUser?.role === "student";
@@ -40,20 +40,20 @@ export default function LearnOverview() {
       .catch(() => setStatus("error"));
   }, [slug, load]);
 
-  const sequence = useMemo(() => (tree ? tree.modules.flatMap((m) => m.lessons.map((l) => l.id)) : []), [tree]);
-  const lessonById = useMemo(() => {
-    const map = new Map<string, { title: string; moduleIndex: number }>();
-    tree?.modules.forEach((m, i) => m.lessons.forEach((l) => map.set(l.id, { title: l.title, moduleIndex: i })));
+  const sequence = useMemo(() => (tree ? tree.modules.flatMap((module) => module.lessons.flatMap((lesson) => lesson.topics.map((topic) => topic.id))) : []), [tree]);
+  const topicById = useMemo(() => {
+    const map = new Map<string, { title: string; lessonTitle: string; moduleIndex: number }>();
+    tree?.modules.forEach((module, moduleIndex) => module.lessons.forEach((lesson) => lesson.topics.forEach((topic) => map.set(topic.id, { title: topic.title, lessonTitle: lesson.title, moduleIndex }))));
     return map;
   }, [tree]);
 
-  const resumeId = detail?.nextLessonId ?? detail?.progress.lastVisitedLessonId ?? sequence[0] ?? null;
-  const resume = resumeId ? lessonById.get(resumeId) : undefined;
+  const resumeId = detail?.nextTopicId ?? detail?.progress.lastVisitedTopicId ?? sequence[0] ?? null;
+  const resume = resumeId ? topicById.get(resumeId) : undefined;
   const scores = new Map((detail?.progress.assessmentScores ?? []).map((a) => [a.assessmentId, a]));
   const completedModules = new Set(detail?.progress.completedModules ?? []);
   const assessments = tree?.modules.filter((m) => m.assessmentId) ?? [];
   const passed = assessments.filter((m) => scores.get(m.assessmentId!)?.passed).length;
-  const allLessonsDone = sequence.length > 0 && sequence.every((id) => completedLessons.has(id));
+  const allTopicsDone = sequence.length > 0 && sequence.every((id) => completedTopics.has(id));
 
   if (status === "loading")
     return (
@@ -109,7 +109,7 @@ export default function LearnOverview() {
                   <p className="text-4xl font-semibold tabular-nums tracking-tight text-foreground">{overallProgress}%</p>
                 </div>
                 <dl className="hidden sm:flex gap-8 text-right">
-                  <Stat label="Lessons" value={`${completedLessons.size}/${sequence.length}`} />
+                  <Stat label="Topics" value={`${completedTopics.size}/${sequence.length}`} />
                   <Stat label="Modules" value={`${completedModules.size}/${tree.modules.length}`} />
                   {assessments.length > 0 && <Stat label="Assessments passed" value={`${passed}/${assessments.length}`} />}
                 </dl>
@@ -125,26 +125,26 @@ export default function LearnOverview() {
                 <div className="h-full rounded-full bg-violet-600 transition-[width] duration-700" style={{ width: `${overallProgress}%` }} />
               </div>
               <dl className="sm:hidden mt-4 grid grid-cols-3 gap-2">
-                <Stat label="Lessons" value={`${completedLessons.size}/${sequence.length}`} />
+                <Stat label="Topics" value={`${completedTopics.size}/${sequence.length}`} />
                 <Stat label="Modules" value={`${completedModules.size}/${tree.modules.length}`} />
                 {assessments.length > 0 && <Stat label="Passed" value={`${passed}/${assessments.length}`} />}
               </dl>
 
               <div className="mt-8 flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
-                {resumeId && !allLessonsDone && (
+                {resumeId && !allTopicsDone && (
                   <Link
-                    href={`/learn/${slug}/lesson/${resumeId}`}
+                    href={`/learn/${slug}/topic/${resumeId}`}
                     className="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-full bg-violet-600 hover:bg-violet-700 text-white text-[15px] font-medium shadow-sm transition-colors"
                   >
                     <PlayCircle className="w-5 h-5" aria-hidden />
-                    {completedLessons.size > 0 ? "Continue learning" : "Start the course"}
+                    {completedTopics.size > 0 ? "Continue learning" : "Start the course"}
                   </Link>
                 )}
-                {resume && !allLessonsDone && (
+                {resume && !allTopicsDone && (
                   <p className="text-[14px] text-muted-foreground min-w-0">
-                    {completedLessons.size > 0 ? "Up next" : "First lesson"}:{" "}
+                    {completedTopics.size > 0 ? "Up next" : "First topic"}: {" "}
                     <span className="text-foreground">
-                      Module {pad2(resume.moduleIndex + 1)} · {resume.title}
+                      Module {pad2(resume.moduleIndex + 1)} · {resume.lessonTitle} · {resume.title}
                     </span>
                   </p>
                 )}
@@ -161,7 +161,7 @@ export default function LearnOverview() {
           )}
         </div>
 
-        {isStudent && <CertificateStatus eligible={certificateEligible} allLessonsDone={allLessonsDone} passed={passed} total={assessments.length} />}
+        {isStudent && <CertificateStatus eligible={certificateEligible} allTopicsDone={allTopicsDone} passed={passed} total={assessments.length} />}
       </header>
 
       {/* Module map */}
@@ -169,9 +169,10 @@ export default function LearnOverview() {
       <ol className="space-y-3">
         {tree.modules.map((m, i) => {
           const done = completedModules.has(m.id);
-          const firstLesson = m.lessons[0];
-          const open = !isStudent || !firstLesson || isUnlocked(sequence, firstLesson.id);
-          const lessonsDone = m.lessons.filter((l) => completedLessons.has(l.id)).length;
+          const firstTopic = m.lessons[0]?.topics[0];
+          const open = !isStudent || !firstTopic || isUnlocked(sequence, firstTopic.id);
+          const topics = m.lessons.flatMap((lesson) => lesson.topics);
+          const topicsDone = topics.filter((topic) => completedTopics.has(topic.id)).length;
           const score = m.assessmentId ? scores.get(m.assessmentId) : undefined;
           return (
             <li key={m.id} className={`rounded-3xl border bg-card p-5 md:p-6 shadow-soft ${done ? "border-green-600/30" : "border-border"}`}>
@@ -188,29 +189,29 @@ export default function LearnOverview() {
                     {m.title}
                   </Link>
                   {m.description && <p className="mt-1 text-[14px] text-muted-foreground leading-relaxed">{m.description}</p>}
-                  <ul className="mt-3 space-y-0.5">
-                    {m.lessons.map((l) => {
-                      const lessonDone = completedLessons.has(l.id);
-                      const unlocked = !isStudent || isUnlocked(sequence, l.id);
-                      const Icon = lessonDone ? CheckCircle2 : unlocked ? PlayCircle : Lock;
-                      const row = (
-                        <span className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 -mx-2.5 text-[14px] ${unlocked ? "text-foreground hover:bg-secondary" : "text-muted-foreground"}`}>
-                          <Icon className={`w-4 h-4 shrink-0 ${lessonDone ? "text-green-600" : unlocked ? "text-violet-600" : ""}`} aria-hidden />
-                          <span className="truncate">{l.title}</span>
-                          {!unlocked && <span className="sr-only">(locked)</span>}
-                        </span>
-                      );
-                      return (
-                        <li key={l.id}>
-                          {unlocked ? <Link href={`/learn/${slug}/lesson/${l.id}`}>{row}</Link> : <div title="Complete the previous lesson to unlock">{row}</div>}
-                        </li>
-                      );
-                    })}
+                  <ul className="mt-3 space-y-3">
+                    {m.lessons.map((lesson) => (
+                      <li key={lesson.id}>
+                        <p className="text-xs font-semibold text-muted-foreground">{lesson.title}</p>
+                        <ul className="mt-1 space-y-0.5">
+                          {lesson.topics.map((topic) => {
+                            const topicDone = completedTopics.has(topic.id);
+                            const unlocked = !isStudent || isUnlocked(sequence, topic.id);
+                            const Icon = topicDone ? CheckCircle2 : unlocked ? PlayCircle : Lock;
+                            const row = <span className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 -mx-2.5 text-[14px] ${unlocked ? "text-foreground hover:bg-secondary" : "text-muted-foreground"}`}>
+                              <Icon className={`w-4 h-4 shrink-0 ${topicDone ? "text-green-600" : unlocked ? "text-violet-600" : ""}`} aria-hidden />
+                              <span className="truncate">{topic.title}</span>
+                            </span>;
+                            return <li key={topic.id}>{unlocked ? <Link href={`/learn/${slug}/topic/${topic.id}`}>{row}</Link> : <div title="Complete the previous topic to unlock">{row}</div>}</li>;
+                          })}
+                        </ul>
+                      </li>
+                    ))}
                   </ul>
                   <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
                     {isStudent && (
                       <span className="text-muted-foreground">
-                        {lessonsDone}/{m.lessons.length} lessons
+                        {topicsDone}/{topics.length} topics
                       </span>
                     )}
                     {m.assessmentId && (
@@ -235,12 +236,12 @@ export default function LearnOverview() {
 
 function CertificateStatus({
   eligible,
-  allLessonsDone,
+  allTopicsDone,
   passed,
   total,
 }: {
   eligible: boolean;
-  allLessonsDone: boolean;
+  allTopicsDone: boolean;
   passed: number;
   total: number;
 }) {
@@ -257,9 +258,9 @@ function CertificateStatus({
           <>
             <p className="font-medium text-foreground">Certificate of Completion</p>
             <p className="text-muted-foreground">
-              {allLessonsDone
-                ? `All lessons complete. Pass the remaining ${total - passed} module ${total - passed === 1 ? "assessment" : "assessments"} to earn it.`
-                : `Complete every lesson${total ? ` and pass all ${total} module assessments` : ""} — it's issued automatically.`}
+              {allTopicsDone
+                ? `All topics complete. Pass the remaining ${total - passed} module ${total - passed === 1 ? "assessment" : "assessments"} to earn it.`
+                : `Complete every topic${total ? ` and pass all ${total} module assessments` : ""} — it's issued automatically.`}
             </p>
           </>
         )}

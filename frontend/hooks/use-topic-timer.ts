@@ -3,13 +3,13 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Lesson time tracker. While `enabled`, it runs a 30-second heartbeat that reports
+ * Topic time tracker. While `enabled`, it runs a 30-second heartbeat that reports
  * newly-elapsed WHOLE minutes via `onMinutes` (so the server's minute counter stays
  * accurate — no double counting), and flushes any remaining whole minute on
  * unmount / navigation. The callback identity may change freely (kept in a ref),
  * so the timer only (re)starts when `enabled` flips.
  */
-export function useLessonTimer(enabled: boolean, onMinutes: (minutes: number) => void): void {
+export function useTopicTimer(enabled: boolean, onMinutes: (minutes: number) => void): void {
   const cb = useRef(onMinutes);
   cb.current = onMinutes;
 

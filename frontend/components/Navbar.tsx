@@ -45,13 +45,13 @@ export function Navbar() {
       }`}
     >
       <div className="max-w-6xl mx-auto h-16 px-4 sm:px-6 flex items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2.5 text-foreground min-w-0" aria-label={`${PLATFORM_NAME} — AI for Everyone home`}>
+        <Link href="/" className="flex items-center gap-2.5 text-foreground min-w-0" aria-label={`${PLATFORM_NAME} —  Demystifying AI for Everyone home`}>
           <span className="w-8 h-8 rounded-[10px] bg-violet-600 text-white flex items-center justify-center shadow-sm shrink-0">
             <Sparkles className="w-4 h-4" aria-hidden />
           </span>
           <span className="font-semibold tracking-tight text-[15px]">{PLATFORM_NAME}</span>
           <span className="hidden sm:inline h-4 w-px bg-border" aria-hidden />
-          <span className="hidden sm:inline text-[14px] text-muted-foreground truncate">AI for Everyone</span>
+          <span className="hidden sm:inline text-[14px] text-muted-foreground truncate"> Demystifying AI for Everyone</span>
         </Link>
 
         <nav aria-label="Main" className="hidden lg:flex items-center gap-7">

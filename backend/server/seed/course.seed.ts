@@ -1,36 +1,41 @@
-// Course-content standardization seed. Makes "AI for Everyone" the ONE and ONLY
-// course on the platform: it soft-deletes every other course, then (idempotently)
-// (re)builds the AI-for-Everyone course with 12 published modules — each with a
-// 7-section lesson and exactly one assessment (10 MCQ + 5 True/False + 2 scenario).
+// Course-content standardization seed. Makes " Demystifying AI for Everyone" the ONE and ONLY
+// course on the platform: it soft-deletes every other course (unless
+// `archiveOthers: false`), then (idempotently) (re)builds the AI-for-Everyone course with 12 published modules — each with a
+// lesson of 7 topics and exactly one assessment (10 MCQ + 5 True/False + 2 scenario).
 //
-// Run explicitly via `npm run seed` (users + this). It is intentionally NOT wired
+// Run explicitly via `npm run seed` (users + this), or `npm run seed:flagship` to
+// (re)build only this course and leave every other course untouched. It is
+// intentionally NOT wired
 // into app startup so test harnesses stay fast and isolated.
 
 import { Course } from "../models/Course";
 import { Module } from "../models/Module";
 import { Lesson } from "../models/Lesson";
+import { Topic } from "../models/Topic";
+import { updateSection } from "../services/section.service";
 import { Assessment } from "../models/Assessment";
 import { Question } from "../models/Question";
 import {
   AI_COURSE_META,
   AI_FOR_EVERYONE_MODULES,
+  MODULE_LEARNING_OBJECTIVES,
   type LessonSections,
 } from "./ai-course.data";
 
 const SLUG = AI_COURSE_META.slug;
 
-/** Render the seven required sections into a single markdown lesson body. */
-function buildLessonMarkdown(s: LessonSections): string {
+/** A chapter's seven sections → seven topics (title + markdown body). */
+function chapterTopics(s: LessonSections): { title: string; content: string }[] {
   const bullets = (items: string[]) => items.map((i) => `- ${i}`).join("\n");
   return [
-    `## Overview\n\n${s.overview}`,
-    `## Key Concepts\n\n${bullets(s.keyConcepts)}`,
-    `## Use Cases\n\n${bullets(s.useCases)}`,
-    `## Best Practices\n\n${bullets(s.bestPractices)}`,
-    `## Recent Developments\n\n${bullets(s.recentDevelopments)}`,
-    `## Chapter Takeaways\n\n${bullets(s.takeaways)}`,
-    `## Suggested Learning Activities\n\n${bullets(s.activities)}`,
-  ].join("\n\n");
+    { title: "Overview", content: s.overview },
+    { title: "Key Concepts", content: bullets(s.keyConcepts) },
+    { title: "Use Cases", content: bullets(s.useCases) },
+    { title: "Best Practices", content: bullets(s.bestPractices) },
+    { title: "Recent Developments", content: bullets(s.recentDevelopments) },
+    { title: "Chapter Takeaways", content: bullets(s.takeaways) },
+    { title: "Suggested Learning Activities", content: bullets(s.activities) },
+  ];
 }
 
 export interface SeedCourseResult {
@@ -40,16 +45,25 @@ export interface SeedCourseResult {
   archivedOthers: number;
 }
 
-/**
- * Standardize the platform to a single published "AI for Everyone" course.
- * @param createdBy user id recorded as the course creator (defaults to the seeded admin).
- */
-export async function seedAiCourse(createdBy = "u-platform-admin"): Promise<SeedCourseResult> {
+export interface SeedCourseOptions {
+  /** User id recorded as the course creator (defaults to the seeded admin). */
+  createdBy?: string;
+  /** Soft-delete every other course (default true). False leaves them untouched. */
+  archiveOthers?: boolean;
+}
+
+/** Standardize the platform to a single published " Demystifying AI for Everyone" course. */
+export async function seedAiCourse({
+  createdBy = "u-platform-admin",
+  archiveOthers = true,
+}: SeedCourseOptions = {}): Promise<SeedCourseResult> {
   // 1. Soft-delete (remove from every surface) every OTHER course.
-  const archived = await Course.updateMany(
-    { slug: { $ne: SLUG }, deletedAt: null },
-    { $set: { status: "archived", deletedAt: new Date() } },
-  );
+  const archived = archiveOthers
+    ? await Course.updateMany(
+        { slug: { $ne: SLUG }, deletedAt: null },
+        { $set: { status: "archived", deletedAt: new Date() } },
+      )
+    : { modifiedCount: 0 };
 
   // 2. Upsert the AI-for-Everyone course as published.
   const courseFields = {
@@ -77,35 +91,69 @@ export async function seedAiCourse(createdBy = "u-platform-admin"): Promise<Seed
   const courseId = String(course._id);
 
   // 3. Wipe this course's existing structure so re-runs are idempotent.
+  await Topic.deleteMany({ courseId });
   await Lesson.deleteMany({ courseId });
   await Question.deleteMany({ courseId });
   await Assessment.deleteMany({ courseId });
   await Module.deleteMany({ courseId });
 
-  // 4. Rebuild the 12 modules, each with a lesson + one assessment.
+  // 4. Course-level sections, built only from the course's own data.
+  await updateSection(courseId, "introduction", {
+    title: "Course Introduction",
+    contentType: "rich_text",
+    content: AI_COURSE_META.description,
+  });
+  await updateSection(courseId, "overview", {
+    title: "Course Overview",
+    contentType: "rich_text",
+    content: [
+      `${AI_COURSE_META.title} has ${AI_FOR_EVERYONE_MODULES.length} modules. Each module has a lesson made up of topics, followed by one module assessment.`,
+      "",
+      ...AI_FOR_EVERYONE_MODULES.map((m, i) => `${i + 1}. **${m.title}** — ${m.description}`),
+      "",
+      "Complete every topic and pass every module assessment to earn your Certificate of Completion.",
+    ].join("\n"),
+  });
+  await updateSection(courseId, "instructor", {
+    title: "Meet the Instructor",
+    contentType: "rich_text",
+    content: `**${AI_COURSE_META.instructor}** leads all ${AI_FOR_EVERYONE_MODULES.length} modules of ${AI_COURSE_META.title}.`,
+  });
+
+  // 5. Rebuild the 12 modules: one lesson (the chapter) with 7 topics, + one assessment.
   let moduleOrder = 0;
   for (const m of AI_FOR_EVERYONE_MODULES) {
     const module = await Module.create({
       courseId,
       title: m.title,
       description: m.description,
+      learningObjectives: MODULE_LEARNING_OBJECTIVES[m.title] ?? [],
       order: moduleOrder++,
       isPublished: true,
       estimatedDurationMinutes: 45,
     });
     const moduleId = String(module._id);
 
-    await Lesson.create({
+    const lesson = await Lesson.create({
       moduleId,
       courseId,
       title: m.lessonTitle,
       description: m.description,
       order: 0,
-      contentType: "rich_text",
-      content: buildLessonMarkdown(m.sections),
-      isPreview: false,
-      estimatedDurationMinutes: 30,
     });
+    let topicOrder = 0;
+    for (const t of chapterTopics(m.sections)) {
+      await Topic.create({
+        lessonId: String(lesson._id),
+        moduleId,
+        courseId,
+        title: t.title,
+        order: topicOrder++,
+        contentType: "rich_text",
+        content: t.content,
+        estimatedDurationMinutes: 4,
+      });
+    }
 
     const assessment = await Assessment.create({
       moduleId,

@@ -13,12 +13,12 @@ export interface Progress {
   id: string;
   studentId: string;
   courseId: string;
-  completedLessons: string[];
+  completedTopics: string[];
   completedModules: string[];
   assessmentScores: AssessmentScore[];
   timeSpentMinutes: number;
   overallProgress: number;
-  lastVisitedLessonId: string | null;
+  lastVisitedTopicId: string | null;
   certificateEligible: boolean;
   createdAt: string;
   updatedAt: string;
@@ -26,8 +26,8 @@ export interface Progress {
 
 export interface ProgressDetail {
   progress: Progress;
-  totalLessons: number;
-  nextLessonId: string | null;
+  totalTopics: number;
+  nextTopicId: string | null;
 }
 
 export async function getCourseProgress(courseId: string): Promise<ProgressDetail> {
@@ -40,20 +40,13 @@ export async function listMyProgress(): Promise<Progress[]> {
   return data.data;
 }
 
-export async function completeLesson(
-  courseId: string,
-  lessonId: string,
-): Promise<ProgressDetail> {
-  const { data } = await api.post<{ data: ProgressDetail }>(
-    `/progress/${courseId}/lessons/${lessonId}/complete`,
-  );
+export async function completeTopic(courseId: string, topicId: string): Promise<ProgressDetail> {
+  const { data } = await api.post<{ data: ProgressDetail }>(`/progress/${courseId}/topics/${topicId}/complete`);
   return data.data;
 }
 
-export async function markVisited(courseId: string, lessonId: string): Promise<ProgressDetail> {
-  const { data } = await api.post<{ data: ProgressDetail }>(`/progress/${courseId}/visit`, {
-    lessonId,
-  });
+export async function markVisited(courseId: string, topicId: string): Promise<ProgressDetail> {
+  const { data } = await api.post<{ data: ProgressDetail }>(`/progress/${courseId}/visit`, { topicId });
   return data.data;
 }
 

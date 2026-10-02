@@ -1,6 +1,6 @@
 // Progress model (Progress Tracking). One row per (student, course). Tracks
-// completed lessons/modules, best assessment scores, time spent, derived overall
-// progress %, last visited lesson, and certificate eligibility.
+// completed topics/modules, best assessment scores, time spent, derived overall
+// progress %, last visited topic, and certificate eligibility.
 
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
@@ -15,12 +15,12 @@ export interface ProgressView {
   id: string;
   studentId: string;
   courseId: string;
-  completedLessons: string[];
+  completedTopics: string[];
   completedModules: string[];
   assessmentScores: AssessmentScore[];
   timeSpentMinutes: number;
   overallProgress: number;
-  lastVisitedLessonId: string | null;
+  lastVisitedTopicId: string | null;
   certificateEligible: boolean;
   createdAt: string;
   updatedAt: string;
@@ -30,7 +30,7 @@ const progressSchema = new Schema(
   {
     studentId: { type: String, required: true, index: true },
     courseId: { type: String, required: true, index: true },
-    completedLessons: { type: [String], default: [] },
+    completedTopics: { type: [String], default: [] },
     completedModules: { type: [String], default: [] },
     assessmentScores: {
       type: [{ assessmentId: String, score: Number, passed: Boolean, _id: false }],
@@ -38,7 +38,7 @@ const progressSchema = new Schema(
     },
     timeSpentMinutes: { type: Number, default: 0 },
     overallProgress: { type: Number, default: 0 },
-    lastVisitedLessonId: { type: String, default: null },
+    lastVisitedTopicId: { type: String, default: null },
     certificateEligible: { type: Boolean, default: false },
   },
   { timestamps: true },
@@ -58,7 +58,7 @@ export function toProgress(doc: ProgressDoc): ProgressView {
     id: String(doc._id),
     studentId: doc.studentId,
     courseId: doc.courseId,
-    completedLessons: doc.completedLessons ?? [],
+    completedTopics: doc.completedTopics ?? [],
     completedModules: doc.completedModules ?? [],
     assessmentScores: (doc.assessmentScores ?? []).map((a) => ({
       assessmentId: a.assessmentId ?? "",
@@ -67,7 +67,7 @@ export function toProgress(doc: ProgressDoc): ProgressView {
     })),
     timeSpentMinutes: doc.timeSpentMinutes ?? 0,
     overallProgress: doc.overallProgress ?? 0,
-    lastVisitedLessonId: doc.lastVisitedLessonId ?? null,
+    lastVisitedTopicId: doc.lastVisitedTopicId ?? null,
     certificateEligible: doc.certificateEligible === true,
     createdAt: ts.createdAt?.toISOString() ?? new Date(0).toISOString(),
     updatedAt: ts.updatedAt?.toISOString() ?? new Date(0).toISOString(),

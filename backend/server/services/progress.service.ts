@@ -1,9 +1,12 @@
 // Progress service (Progress Tracking). Persists per-(student,course) progress
-// and derives module/course completion + certificate eligibility. Enforces the
-// sequential rule: lesson N can only be completed once lesson N-1 is complete.
+// and derives module/course completion + certificate eligibility. Progress is
+// tracked per TOPIC — the learning unit in Course → Module → Lesson → Topic. The
+// sequence is every topic in module order → lesson order → topic order, and the
+// sequential rule applies to it: topic N can only be completed once topic N-1 is.
 
 import { Module } from "../models/Module";
 import { Lesson } from "../models/Lesson";
+import { Topic } from "../models/Topic";
 import { Progress, toProgress, type ProgressView } from "../models/Progress";
 import { publishedAssessmentIds } from "./assessment.service";
 import { issueCertificate } from "./certificate.service";
@@ -20,22 +23,29 @@ async function maybeIssueCertificate(doc: { certificateEligible?: boolean; stude
 
 interface Structure {
   moduleIds: string[];
-  byModule: Map<string, string[]>; // moduleId → ordered lessonIds
-  sequence: string[]; // flat ordered lessonIds (module order → lesson order)
+  byModule: Map<string, string[]>; // moduleId → ordered topicIds
+  sequence: string[]; // flat ordered topicIds (module → lesson → topic order)
 }
 
 async function courseStructure(courseId: string): Promise<Structure> {
-  const modules = await Module.find({ courseId }).sort({ order: 1, createdAt: 1 });
-  const lessons = await Lesson.find({ courseId }).sort({ order: 1, createdAt: 1 });
+  const [modules, lessons, topics] = await Promise.all([
+    Module.find({ courseId }).sort({ order: 1, createdAt: 1 }),
+    Lesson.find({ courseId }).sort({ order: 1, createdAt: 1 }),
+    Topic.find({ courseId }).sort({ order: 1, createdAt: 1 }),
+  ]);
   const byModule = new Map<string, string[]>();
   const sequence: string[] = [];
   const moduleIds: string[] = [];
   for (const m of modules) {
     const mid = String(m._id);
     moduleIds.push(mid);
-    const ls = lessons.filter((l) => l.moduleId === mid).map((l) => String(l._id));
-    byModule.set(mid, ls);
-    sequence.push(...ls);
+    const ids: string[] = [];
+    for (const l of lessons.filter((x) => x.moduleId === mid)) {
+      const lid = String(l._id);
+      ids.push(...topics.filter((t) => t.lessonId === lid).map((t) => String(t._id)));
+    }
+    byModule.set(mid, ids);
+    sequence.push(...ids);
   }
   return { moduleIds, byModule, sequence };
 }
@@ -51,13 +61,13 @@ async function recompute(
   doc: Awaited<ReturnType<typeof getOrCreate>>,
   struct: Structure,
 ): Promise<void> {
-  const completed = new Set(doc.completedLessons ?? []);
+  const completed = new Set(doc.completedTopics ?? []);
   doc.completedModules = struct.moduleIds.filter((mid) => {
-    const ls = struct.byModule.get(mid) ?? [];
-    return ls.length > 0 && ls.every((l) => completed.has(l));
+    const ts = struct.byModule.get(mid) ?? [];
+    return ts.length > 0 && ts.every((t) => completed.has(t));
   });
   const total = struct.sequence.length;
-  const done = struct.sequence.filter((l) => completed.has(l)).length;
+  const done = struct.sequence.filter((t) => completed.has(t)).length;
   doc.overallProgress = total > 0 ? Math.round((done / total) * 100) : 0;
 
   const mandatory = await publishedAssessmentIds(doc.courseId);
@@ -68,21 +78,21 @@ async function recompute(
 
 export interface ProgressDetail {
   progress: ProgressView;
-  totalLessons: number;
-  /** First not-yet-completed lesson the student may access (null = all done). */
-  nextLessonId: string | null;
+  totalTopics: number;
+  /** First not-yet-completed topic the student may access (null = all done). */
+  nextTopicId: string | null;
 }
 
 async function detail(
   doc: Awaited<ReturnType<typeof getOrCreate>>,
   struct: Structure,
 ): Promise<ProgressDetail> {
-  const completed = new Set(doc.completedLessons ?? []);
-  const nextLessonId = struct.sequence.find((l) => !completed.has(l)) ?? null;
-  return { progress: toProgress(doc), totalLessons: struct.sequence.length, nextLessonId };
+  const completed = new Set(doc.completedTopics ?? []);
+  const nextTopicId = struct.sequence.find((t) => !completed.has(t)) ?? null;
+  return { progress: toProgress(doc), totalTopics: struct.sequence.length, nextTopicId };
 }
 
-/** Read (creating an empty record if needed) — includes next unlocked lesson. */
+/** Read (creating an empty record if needed) — includes the next unlocked topic. */
 export async function getProgress(studentId: string, courseId: string): Promise<ProgressDetail> {
   const doc = await getOrCreate(studentId, courseId);
   const struct = await courseStructure(courseId);
@@ -94,27 +104,26 @@ export type CompleteResult =
   | { ok: false; reason: "not_found" | "locked" };
 
 /**
- * Mark a lesson complete. Sequential rule: the immediately-preceding lesson in
- * the flat course sequence must already be complete. Idempotent.
+ * Mark a topic complete. Sequential rule: the immediately-preceding topic in the
+ * flat course sequence must already be complete. Idempotent.
  */
-export async function markLessonComplete(
+export async function markTopicComplete(
   studentId: string,
   courseId: string,
-  lessonId: string,
+  topicId: string,
 ): Promise<CompleteResult> {
   const struct = await courseStructure(courseId);
-  const idx = struct.sequence.indexOf(lessonId);
+  const idx = struct.sequence.indexOf(topicId);
   if (idx === -1) return { ok: false, reason: "not_found" };
-
   const doc = await getOrCreate(studentId, courseId);
-  const completed = new Set(doc.completedLessons ?? []);
+  const completed = new Set(doc.completedTopics ?? []);
   if (idx > 0 && !completed.has(struct.sequence[idx - 1])) {
     return { ok: false, reason: "locked" };
   }
-  if (!completed.has(lessonId)) {
-    doc.completedLessons = [...(doc.completedLessons ?? []), lessonId];
+  if (!completed.has(topicId)) {
+    doc.completedTopics = [...(doc.completedTopics ?? []), topicId];
   }
-  doc.lastVisitedLessonId = lessonId;
+  doc.lastVisitedTopicId = topicId;
   await recompute(doc, struct);
   await doc.save();
   await maybeIssueCertificate(doc);
@@ -152,10 +161,10 @@ export async function applyAssessmentResult(
 export async function setLastVisited(
   studentId: string,
   courseId: string,
-  lessonId: string,
+  topicId: string,
 ): Promise<ProgressDetail> {
   const doc = await getOrCreate(studentId, courseId);
-  doc.lastVisitedLessonId = lessonId;
+  doc.lastVisitedTopicId = topicId;
   await doc.save();
   return getProgress(studentId, courseId);
 }

@@ -4,8 +4,8 @@
 import { api } from "./axios";
 
 export interface SyncInput {
-  lessonsCompleted: number;
-  lessonsTotal: number;
+  topicsCompleted: number;
+  topicsTotal: number;
   modulesCompleted: number;
   modulesTotal: number;
   assessmentsPassed: number;

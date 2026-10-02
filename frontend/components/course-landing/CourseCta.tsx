@@ -32,7 +32,7 @@ export function useCourseCta(slug: string = FLAGSHIP_SLUG, courseId?: string): C
     listMyProgress()
       .then((ps) => {
         if (!cancelled)
-          setStarted(ps.some((p) => p.courseId === courseId && p.completedLessons.length > 0));
+          setStarted(ps.some((p) => p.courseId === courseId && p.completedTopics.length > 0));
       })
       .catch(() => {});
     return () => {

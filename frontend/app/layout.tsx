@@ -7,13 +7,13 @@ import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: {
-    default: "AI for Everyone — Learn Artificial Intelligence | AI Spark",
+    default: " Demystifying AI for Everyone | AI on Wheels",
     template: "%s",
   },
   description:
-    "AI Spark presents AI for Everyone by Dr. Sudhanshu Joshi — a self-paced course on artificial intelligence, its applications and its impact, with module assessments and a verifiable certificate.",
-  applicationName: "AI Spark",
-  openGraph: { siteName: "AI Spark", type: "website" },
+    "AI on Wheels presents Demystifying AI by Dr. Sudhanshu Joshi — a self-paced course on artificial intelligence, its applications and its impact, with module assessments and a verifiable certificate.",
+  applicationName: "Demystifying AI",
+  openGraph: { siteName: "Demystifying AI", type: "website" },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

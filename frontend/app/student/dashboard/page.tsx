@@ -21,7 +21,7 @@ import { myCertificates, type Certificate } from "@/lib/api/certificates";
 import { FLAGSHIP_SLUG, pad2 } from "@/lib/course";
 import { formatDuration } from "@/lib/progress";
 
-// Student dashboard — built around the platform's one course, AI for Everyone.
+// Student dashboard — built around the platform's flagship course.
 // Data: the progress, course and certificate APIs (role-scoped to published
 // content). Any other published course is listed compactly so nothing is hidden.
 export default function StudentDashboard() {
@@ -125,8 +125,8 @@ function CourseHome({
   progress?: Progress;
   certificate?: Certificate;
 }) {
-  const sequence = useMemo(() => tree.modules.flatMap((m) => m.lessons.map((l) => ({ ...l, moduleIndex: tree.modules.indexOf(m) }))), [tree]);
-  const completed = new Set(progress?.completedLessons ?? []);
+  const sequence = useMemo(() => tree.modules.flatMap((module, moduleIndex) => module.lessons.flatMap((lesson) => lesson.topics.map((topic) => ({ ...topic, moduleIndex, lessonTitle: lesson.title })))), [tree]);
+  const completed = new Set(progress?.completedTopics ?? []);
   const doneModules = new Set(progress?.completedModules ?? []);
   const scores = new Map((progress?.assessmentScores ?? []).map((a) => [a.assessmentId, a]));
   const assessmentModules = tree.modules.filter((m) => m.assessmentId);
@@ -135,14 +135,14 @@ function CourseHome({
   const avgScore = attemptedScores.length ? Math.round(attemptedScores.reduce((a, b) => a + b, 0) / attemptedScores.length) : null;
   const pct = progress?.overallProgress ?? 0;
 
-  // Current lesson: first incomplete lesson in sequence (sequential unlocking).
-  const next = sequence.find((l) => !completed.has(l.id));
+  // Current topic: first incomplete topic in sequence (sequential unlocking).
+  const next = sequence.find((topic) => !completed.has(topic.id));
   const started = completed.size > 0;
-  const allLessonsDone = sequence.length > 0 && !next;
+  const allTopicsDone = sequence.length > 0 && !next;
   const pendingAssessment = assessmentModules.find((m) => !scores.get(m.assessmentId!)?.passed);
 
   const cta = next
-    ? { href: `/learn/${tree.slug}/lesson/${next.id}`, label: started ? "Continue learning" : "Start the course" }
+    ? { href: `/learn/${tree.slug}/topic/${next.id}`, label: started ? "Continue learning" : "Start the course" }
     : pendingAssessment
       ? { href: `/learn/${tree.slug}/assessment/${pendingAssessment.assessmentId}`, label: "Take the next assessment" }
       : { href: `/learn/${tree.slug}`, label: "Review the course" };
@@ -182,7 +182,7 @@ function CourseHome({
             <span className="text-[15px] font-semibold text-foreground tabular-nums w-12 text-right">{pct}%</span>
           </div>
           <p className="mt-2 text-[13px] text-muted-foreground">
-            {completed.size} of {sequence.length} lessons complete
+            {completed.size} of {sequence.length} topics complete
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-4">
@@ -194,14 +194,14 @@ function CourseHome({
             </Link>
             {next && (
               <p className="text-[14px] text-muted-foreground min-w-0">
-                {started ? "Up next" : "First lesson"}:{" "}
+                {started ? "Up next" : "First topic"}: {" "}
                 <span className="text-foreground">
-                  Module {pad2(next.moduleIndex + 1)} · {next.title}
+                  Module {pad2(next.moduleIndex + 1)} · {next.lessonTitle} · {next.title}
                 </span>
               </p>
             )}
-            {allLessonsDone && pendingAssessment && (
-              <p className="text-[14px] text-muted-foreground">All lessons done — pass the remaining assessments to finish.</p>
+            {allTopicsDone && pendingAssessment && (
+              <p className="text-[14px] text-muted-foreground">All topics complete — pass the remaining assessments to finish.</p>
             )}
           </div>
         </div>
@@ -245,7 +245,7 @@ function CourseHome({
             <>
               <p className="font-semibold text-foreground">Certificate of Completion</p>
               <p className="text-muted-foreground">
-                Complete all {sequence.length} lessons
+                Complete all {sequence.length} topics
                 {assessmentModules.length ? ` and pass all ${assessmentModules.length} module assessments` : ""} to earn it
                 — it&apos;s issued automatically.
               </p>

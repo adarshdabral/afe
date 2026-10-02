@@ -3,6 +3,7 @@
 // pass/fail at 60%, open-ended participation credit, explanation review, and
 // unauthorized access.
 import { MongoMemoryServer } from "mongodb-memory-server";
+import { MODULE_CONTENT } from "./_fixtures.mts";
 
 const PORT = 4103;
 const BASE = `http://127.0.0.1:${PORT}/api`;
@@ -48,10 +49,10 @@ await student.post("/auth/login", { login: "student@afe.edu", password: "Student
 const teacher = client();
 await teacher.post("/auth/login", { login: "teacher@afe.edu", password: "Teacher@123" });
 
-// Seed course + published module.
+// Seed course + a (draft) module with its description + objectives. The module is
+// published once its assessment exists (step 5b) — that's the rule for modules.
 const courseId = (await admin.post("/admin/courses", { title: "Quiz Course", slug: "quiz-course" })).json.data.id;
-const moduleId = (await admin.post(`/admin/courses/${courseId}/modules`, { title: "M1" })).json.data.id;
-await admin.patch(`/admin/courses/modules/${moduleId}`, { isPublished: true });
+const moduleId = (await admin.post(`/admin/courses/${courseId}/modules`, { title: "M1", ...MODULE_CONTENT })).json.data.id;
 await admin.post(`/admin/courses/${courseId}/publish`);
 
 // 1. RBAC — only platform admins create assessments.
@@ -99,6 +100,12 @@ let q1 = "", q2 = "";
   check("answer key hidden from students", qs.every((q: any) => q.correctAnswer === undefined && q.explanation === undefined), qs[0]);
 }
 
+// 5b. With its assessment published, the module can be published.
+{
+  const r = await admin.patch(`/admin/courses/modules/${moduleId}`, { isPublished: true });
+  check("publish module once its assessment is ready → 200", r.status === 200 && r.json?.data?.isPublished === true, r.json);
+}
+
 // 6. Passing attempt (both correct/answered) → 100%, passed, review has explanations.
 {
   const r = await student.post(`/assessments/${assessmentId}/attempt`, {
@@ -133,7 +140,17 @@ let q1 = "", q2 = "";
   check("teacher cannot attempt (student-only) → 403", (await teacher.post(`/assessments/${assessmentId}/attempt`, { answers: [] })).status === 403);
 }
 
-// 10. Delete assessment removes it.
+// 10. A published module keeps its assessment: unpublish/delete refused until the module is hidden.
+{
+  const un = await admin.post(`/admin/assessments/${assessmentId}/unpublish`);
+  check("unpublish assessment of a published module → 409", un.status === 409 && /module is published/i.test(un.json?.error?.message ?? ""), un.json);
+  const delBlocked = await admin.del(`/admin/assessments/${assessmentId}`);
+  check("delete assessment of a published module → 409", delBlocked.status === 409, delBlocked.status);
+  const hide = await admin.patch(`/admin/courses/modules/${moduleId}`, { isPublished: false });
+  check("hide module → 200", hide.status === 200 && hide.json?.data?.isPublished === false);
+}
+
+// 11. Delete assessment removes it (module hidden).
 {
   const del = await admin.del(`/admin/assessments/${assessmentId}`);
   check("delete assessment → 200", del.status === 200, del.status);

@@ -32,7 +32,7 @@ export async function claim(req: Request, res: Response): Promise<void> {
   const { progress } = await getProgress(req.user!.id, courseId);
   if (!progress.certificateEligible) {
     res.status(403).json({
-      error: { message: "Complete all lessons and pass every assessment to earn your certificate." },
+      error: { message: "Complete all topics and pass every module assessment to earn your certificate." },
     });
     return;
   }

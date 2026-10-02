@@ -92,7 +92,7 @@ export default function CreateCourse() {
           </Link>
           <h1 className="text-3xl font-bold text-foreground">New course</h1>
           <p className="text-muted-foreground mt-1">
-            Courses start as a draft. You can add modules and lessons after creating it.
+            Courses start as a draft. After creating it, add its Introduction, Overview and Instructor sections, then modules → lessons → topics.
           </p>
 
           {!loadingUser && !isPlatform ? (

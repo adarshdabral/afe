@@ -24,7 +24,9 @@ const selectClass = "h-10 px-3 rounded-xl border border-input bg-card text-sm te
 
 // Assessment Builder — CMS-integrated. One optional assessment per module, with
 // MCQ / reflection / scenario questions. Explicit actions (no auto-save).
-export function AssessmentBuilder({ moduleId }: { moduleId: string }) {
+// Each module has exactly ONE assessment (tests are per module, not per lesson).
+// `onChange` lets the module page refresh its publish checklist after edits.
+export function AssessmentBuilder({ moduleId, onChange }: { moduleId: string; onChange?: () => void }) {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,7 @@ export function AssessmentBuilder({ moduleId }: { moduleId: string }) {
       await fn();
       toast.success(msg);
       refresh();
+      onChange?.();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Action failed");
     } finally {
@@ -135,7 +138,7 @@ export function AssessmentBuilder({ moduleId }: { moduleId: string }) {
         {questions.length === 0 && <p className="text-sm text-muted-foreground">No questions yet.</p>}
       </ul>
 
-      <AddQuestion assessmentId={assessment.id} onAdded={refresh} busy={busy} setBusy={setBusy} />
+      <AddQuestion assessmentId={assessment.id} onAdded={() => { refresh(); onChange?.(); }} busy={busy} setBusy={setBusy} />
     </div>
   );
 }

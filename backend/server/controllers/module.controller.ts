@@ -9,9 +9,14 @@ import {
   updateModule,
 } from "../services/module.service";
 
+const objectives = z
+  .array(z.string().trim().min(1, "Learning objectives can't be blank.").max(300))
+  .max(20);
+
 const createSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(5000).optional(),
+  learningObjectives: objectives.optional(),
   estimatedDurationMinutes: z.coerce.number().int().min(0).max(100000).optional(),
   isPublished: z.boolean().optional(),
 });
@@ -20,6 +25,7 @@ const updateSchema = z
   .object({
     title: z.string().min(1).max(200).optional(),
     description: z.string().max(5000).optional(),
+    learningObjectives: objectives.optional(),
     estimatedDurationMinutes: z.coerce.number().int().min(0).max(100000).optional(),
     isPublished: z.boolean().optional(),
   })
@@ -52,7 +58,7 @@ export async function update(req: Request, res: Response): Promise<void> {
   res.json({ data: module });
 }
 
-/** DELETE /api/admin/courses/modules/:moduleId — cascades to lessons. */
+/** DELETE /api/admin/courses/modules/:moduleId — cascades to its lessons and topics. */
 export async function remove(req: Request, res: Response): Promise<void> {
   const moduleId = idSchema.parse(req.params.moduleId);
   const ok = await deleteModule(moduleId);

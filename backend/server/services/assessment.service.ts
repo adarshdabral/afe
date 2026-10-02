@@ -15,6 +15,7 @@ import {
 } from "../models/Question";
 import { Attempt, toAttempt, type AttemptView } from "../models/Attempt";
 import { Module } from "../models/Module";
+import { HttpError } from "../http/errors";
 
 export interface CreateAssessmentInput {
   moduleId: string;
@@ -66,12 +67,24 @@ export async function updateAssessment(
   return toAssessment(doc);
 }
 
+/** A published module must keep a published assessment with questions. */
+async function assertModuleNotPublished(moduleId: string, action: string): Promise<void> {
+  const m = await Module.findById(moduleId).catch(() => null);
+  if (m?.isPublished) {
+    throw new HttpError(409, `Can't ${action}: its module is published, and every published module needs its assessment. Hide the module first.`);
+  }
+}
+
 export async function setAssessmentPublished(
   id: string,
   isPublished: boolean,
 ): Promise<AssessmentView | null> {
   const doc = await Assessment.findById(id).catch(() => null);
   if (!doc) return null;
+  if (!isPublished && doc.isPublished) await assertModuleNotPublished(doc.moduleId, "unpublish this assessment");
+  if (isPublished && (await Question.countDocuments({ assessmentId: id })) === 0) {
+    throw new HttpError(409, "Add at least one question before publishing the assessment.");
+  }
   doc.isPublished = isPublished;
   await doc.save();
   return toAssessment(doc);
@@ -80,6 +93,7 @@ export async function setAssessmentPublished(
 export async function deleteAssessment(id: string): Promise<boolean> {
   const doc = await Assessment.findById(id).catch(() => null);
   if (!doc) return false;
+  await assertModuleNotPublished(doc.moduleId, "delete this assessment");
   await Question.deleteMany({ assessmentId: id });
   await Attempt.deleteMany({ assessmentId: id });
   await doc.deleteOne();
@@ -137,6 +151,10 @@ export async function updateQuestion(
 export async function deleteQuestion(questionId: string): Promise<boolean> {
   const doc = await Question.findById(questionId).catch(() => null);
   if (!doc) return false;
+  const assessment = await Assessment.findById(doc.assessmentId).catch(() => null);
+  if (assessment?.isPublished && (await Question.countDocuments({ assessmentId: doc.assessmentId })) <= 1) {
+    throw new HttpError(409, "A published assessment needs at least one question. Add another question first, or unpublish the assessment.");
+  }
   await doc.deleteOne();
   return true;
 }

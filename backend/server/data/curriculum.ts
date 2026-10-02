@@ -1,7 +1,7 @@
-// The "Demystifying AI for Everyone" curriculum (SRS FR-05 / FR-06): one course,
-// eight modules, multi-format lessons. This is seed data — the DB seam for the
-// future `courses`/`modules`/`lessons` tables. Content types are a discriminated
-// union so the lesson player can render each format type-safely.
+// The " Demystifying AI for Everyone" curriculum (SRS FR-05 / FR-06): one course,
+// eight modules, multi-format topics. This is seed data — the DB seam for the
+// future `courses`/`modules`/`topics` tables. Content types are a discriminated
+// union so the topic player can render each format type-safely.
 
 export type ContentKind =
   | "video"
@@ -62,7 +62,7 @@ export interface ReflectionContent {
   minWords: number;
 }
 
-export type LessonContent =
+export type TopicContent =
   | VideoContent
   | PdfContent
   | InfographicContent
@@ -70,11 +70,11 @@ export type LessonContent =
   | CaseStudyContent
   | ReflectionContent;
 
-export interface Lesson {
+export interface Topic {
   id: string; // globally unique, e.g. "m1-l1"
   title: string;
   durationMin: number;
-  content: LessonContent;
+  content: TopicContent;
 }
 
 export interface Module {
@@ -82,8 +82,8 @@ export interface Module {
   order: number;
   title: string;
   description: string;
-  topics: string[]; // SRS key topics
-  lessons: Lesson[];
+  keyTopics: string[]; // SRS key topics
+  topics: Topic[];
 }
 
 export interface Course {
@@ -95,7 +95,7 @@ export interface Course {
 
 export const AI_COURSE: Course = {
   id: "ai-literacy",
-  title: "Demystifying AI for Everyone",
+  title: " Demystifying AI for Everyone",
   subtitle: "An eight-module journey into AI literacy for school students.",
   modules: [
     {
@@ -103,7 +103,7 @@ export const AI_COURSE: Course = {
       order: 1,
       title: "Understanding Artificial Intelligence",
       description: "What AI is (and isn't), its types, and how it already shapes daily life.",
-      topics: [
+      keyTopics: [
         "What is AI",
         "AI myths vs reality",
         "Automation vs AI vs robots",
@@ -111,7 +111,7 @@ export const AI_COURSE: Course = {
         "Evolution of AI",
         "AI in daily life",
       ],
-      lessons: [
+      topics: [
         {
           id: "m1-l1",
           title: "What is AI? Myths vs Reality",
@@ -202,7 +202,7 @@ export const AI_COURSE: Course = {
       order: 2,
       title: "How AI Learns",
       description: "Data, machine learning, deep learning, and why bias and overfitting matter.",
-      topics: [
+      keyTopics: [
         "Data fundamentals",
         "Datasets",
         "Machine learning",
@@ -210,7 +210,7 @@ export const AI_COURSE: Course = {
         "Model evaluation",
         "Bias and overfitting",
       ],
-      lessons: [
+      topics: [
         {
           id: "m2-l1",
           title: "From Data to Learning",
@@ -300,7 +300,7 @@ export const AI_COURSE: Course = {
       order: 3,
       title: "AI in Everyday Life",
       description: "The AI already running in your phone, feeds, maps, and home.",
-      topics: [
+      keyTopics: [
         "Smartphones",
         "Social media algorithms",
         "Navigation systems",
@@ -308,7 +308,7 @@ export const AI_COURSE: Course = {
         "Voice assistants",
         "Smart homes",
       ],
-      lessons: [
+      topics: [
         {
           id: "m3-l1",
           title: "AI in Your Pocket",
@@ -392,7 +392,7 @@ export const AI_COURSE: Course = {
       order: 4,
       title: "AI Across Industries & Public Systems",
       description: "How AI is used in agriculture, healthcare, banking, government, and cities.",
-      topics: [
+      keyTopics: [
         "Agriculture",
         "Manufacturing",
         "Healthcare",
@@ -401,7 +401,7 @@ export const AI_COURSE: Course = {
         "Government",
         "Smart cities",
       ],
-      lessons: [
+      topics: [
         {
           id: "m4-l1",
           title: "AI at Work Across Sectors",
@@ -481,14 +481,14 @@ export const AI_COURSE: Course = {
       order: 5,
       title: "AI and the Economy",
       description: "Productivity, business strategy, supply chains, growth, and inequality.",
-      topics: [
+      keyTopics: [
         "Productivity",
         "Business strategy",
         "Supply chains",
         "Economic growth",
         "AI and inequality",
       ],
-      lessons: [
+      topics: [
         {
           id: "m5-l1",
           title: "AI, Productivity & Growth",
@@ -568,8 +568,8 @@ export const AI_COURSE: Course = {
       order: 6,
       title: "AI and the Future of Work",
       description: "Tasks vs jobs, emerging careers, AI skills, and human–AI collaboration.",
-      topics: ["Tasks vs jobs", "Emerging AI careers", "AI skills", "Human–AI collaboration"],
-      lessons: [
+      keyTopics: ["Tasks vs jobs", "Emerging AI careers", "AI skills", "Human–AI collaboration"],
+      topics: [
         {
           id: "m6-l1",
           title: "Tasks vs Jobs",
@@ -653,7 +653,7 @@ export const AI_COURSE: Course = {
       order: 7,
       title: "AI Projects and AI Tools",
       description: "The AI project lifecycle and using tools like ChatGPT and Perplexity well.",
-      topics: [
+      keyTopics: [
         "AI project lifecycle",
         "Data preparation",
         "Model training",
@@ -663,7 +663,7 @@ export const AI_COURSE: Course = {
         "Productivity tools",
         "Mini project",
       ],
-      lessons: [
+      topics: [
         {
           id: "m7-l1",
           title: "The AI Project Lifecycle",
@@ -749,7 +749,7 @@ export const AI_COURSE: Course = {
       order: 8,
       title: "Ethics, Responsibility & Future",
       description: "Hype vs reality, bias, privacy, deepfakes, governance, and what comes next.",
-      topics: [
+      keyTopics: [
         "AI hype vs reality",
         "Bias and fairness",
         "Privacy",
@@ -757,7 +757,7 @@ export const AI_COURSE: Course = {
         "Governance",
         "Future of AI",
       ],
-      lessons: [
+      topics: [
         {
           id: "m8-l1",
           title: "Hype, Bias & Responsibility",
@@ -835,66 +835,66 @@ export const AI_COURSE: Course = {
 
 // ---- Derived helpers (pure; safe on client and server) ---------------------
 
-export interface FlatLesson {
-  lesson: Lesson;
+export interface FlatTopic {
+  topic: Topic;
   module: Module;
   index: number; // position in the flattened list
 }
 
-export function flattenLessons(course: Course = AI_COURSE): FlatLesson[] {
-  const out: FlatLesson[] = [];
+export function flattenTopics(course: Course = AI_COURSE): FlatTopic[] {
+  const out: FlatTopic[] = [];
   for (const module of course.modules) {
-    for (const lesson of module.lessons) out.push({ lesson, module, index: out.length });
+    for (const topic of module.topics) out.push({ topic, module, index: out.length });
   }
   return out;
 }
 
-export interface LessonContextInfo extends FlatLesson {
+export interface TopicContextInfo extends FlatTopic {
   prevId: string | null;
   nextId: string | null;
   total: number;
 }
 
-export function findLessonContext(
-  lessonId: string,
+export function findTopicContext(
+  topicId: string,
   course: Course = AI_COURSE,
-): LessonContextInfo | null {
-  const flat = flattenLessons(course);
-  const i = flat.findIndex((f) => f.lesson.id === lessonId);
+): TopicContextInfo | null {
+  const flat = flattenTopics(course);
+  const i = flat.findIndex((f) => f.topic.id === topicId);
   if (i === -1) return null;
   return {
     ...flat[i],
-    prevId: i > 0 ? flat[i - 1].lesson.id : null,
-    nextId: i < flat.length - 1 ? flat[i + 1].lesson.id : null,
+    prevId: i > 0 ? flat[i - 1].topic.id : null,
+    nextId: i < flat.length - 1 ? flat[i + 1].topic.id : null,
     total: flat.length,
   };
 }
 
 export function moduleProgress(module: Module, completed: Record<string, boolean>) {
-  const total = module.lessons.length;
-  const done = module.lessons.filter((l) => completed[l.id]).length;
+  const total = module.topics.length;
+  const done = module.topics.filter((l) => completed[l.id]).length;
   return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
 }
 
 export function courseStats(completed: Record<string, boolean>, course: Course = AI_COURSE) {
-  const lessons = flattenLessons(course);
-  const lessonsCompleted = lessons.filter((f) => completed[f.lesson.id]).length;
+  const topics = flattenTopics(course);
+  const topicsCompleted = topics.filter((f) => completed[f.topic.id]).length;
   const modulesCompleted = course.modules.filter(
     (m) => moduleProgress(m, completed).pct === 100,
   ).length;
   return {
-    lessonsCompleted,
-    lessonsTotal: lessons.length,
+    topicsCompleted,
+    topicsTotal: topics.length,
     modulesCompleted,
     modulesTotal: course.modules.length,
-    pct: lessons.length ? Math.round((lessonsCompleted / lessons.length) * 100) : 0,
+    pct: topics.length ? Math.round((topicsCompleted / topics.length) * 100) : 0,
   };
 }
 
-export function firstIncompleteLessonId(
+export function firstIncompleteTopicId(
   completed: Record<string, boolean>,
   course: Course = AI_COURSE,
 ): string {
-  const flat = flattenLessons(course);
-  return (flat.find((f) => !completed[f.lesson.id]) ?? flat[0]).lesson.id;
+  const flat = flattenTopics(course);
+  return (flat.find((f) => !completed[f.topic.id]) ?? flat[0]).topic.id;
 }

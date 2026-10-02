@@ -9,10 +9,11 @@ services:
     buildCommand: npm ci && npm run build
     startCommand: npm start            # next start — listens on Render's $PORT
     healthCheckPath: /api/health
-    # Uploaded lesson files (PDFs, slides, videos) must survive deploys/restarts,
-    # which needs a Persistent Disk — only available on paid instance types.
-    # On the free plan, remove `disk` + UPLOAD_DIR: uploads will then be LOST on
-    # every deploy/restart/spin-down (and free instances sleep after ~15 min idle).
+    # Lesson media (videos, audio, PDFs/PPTs, subtitles) is stored in Cloudflare R2
+    # once the R2_* variables below are set — then the disk is only a fallback and
+    # can be removed (download anything already on it first), and the free plan
+    # works too (but free instances sleep after ~15 min idle).
+    # Without R2, the Persistent Disk (paid instances only) keeps uploads across deploys.
     plan: starter
     disk:
       name: uploads
@@ -33,6 +34,20 @@ services:
         value: "false"
       - key: UPLOAD_DIR
         value: /var/data/uploads
+      # Cloudflare R2 (lesson media) — see DEPLOY.md "Cloudflare R2 + Workers AI".
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_PUBLIC_URL
+        sync: false                    # https://pub-xxxx.r2.dev or your custom media domain
+      # Cloudflare Workers AI (text-to-speech narration)
+      - key: CLOUDFLARE_AI_TOKEN
+        sync: false
       # Demo-account passwords. Leave blank to use the documented defaults
       # (Student@123 / Teacher@123 / Admin@123); set strong values for production.
       - key: SEED_STUDENT_PASSWORD

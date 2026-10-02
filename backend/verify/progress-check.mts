@@ -1,8 +1,9 @@
-// Verifies Progress Tracking (Step 3): persistence, sequential lesson locking,
+// Verifies Progress Tracking (Step 3): persistence, sequential topic locking,
 // module completion, overall %, assessment → progress wiring, course completion
-// (100% lessons + assessments passed → certificateEligible), time tracking, and
+// (100% topics + assessments passed → certificateEligible), time tracking, and
 // unauthorized access.
 import { MongoMemoryServer } from "mongodb-memory-server";
+import { publishModule } from "./_fixtures.mts";
 
 const PORT = 4104;
 const BASE = `http://127.0.0.1:${PORT}/api`;
@@ -48,69 +49,79 @@ await student.login("student@afe.edu", "Student@123");
 const teacher = client();
 await teacher.login("teacher@afe.edu", "Teacher@123");
 
-// Seed: course, 2 published modules (M1: L1,L2 · M2: L3,L4), published assessment on M1.
+// Seed: course, 2 published modules (M1: L1,L2 · M2: L3,L4), each with its module
+// assessment (M1's "M1 Quiz" below; M2 gets the fixture quiz, answer "Yes").
 const courseId = (await admin.post("/admin/courses", { title: "Progress Course", slug: "progress-course" })).json.data.id;
 const m1 = (await admin.post(`/admin/courses/${courseId}/modules`, { title: "M1" })).json.data.id;
 const m2 = (await admin.post(`/admin/courses/${courseId}/modules`, { title: "M2" })).json.data.id;
-await admin.patch(`/admin/courses/modules/${m1}`, { isPublished: true });
-await admin.patch(`/admin/courses/modules/${m2}`, { isPublished: true });
-const L1 = (await admin.post(`/admin/courses/modules/${m1}/lessons`, { title: "L1", contentType: "rich_text", content: "a" })).json.data.id;
-const L2 = (await admin.post(`/admin/courses/modules/${m1}/lessons`, { title: "L2", contentType: "rich_text", content: "b" })).json.data.id;
-const L3 = (await admin.post(`/admin/courses/modules/${m2}/lessons`, { title: "L3", contentType: "rich_text", content: "c" })).json.data.id;
-const L4 = (await admin.post(`/admin/courses/modules/${m2}/lessons`, { title: "L4", contentType: "rich_text", content: "d" })).json.data.id;
+async function createTopic(moduleId: string, title: string, content: string) {
+  const lesson = await admin.post(`/admin/courses/modules/${moduleId}/lessons`, { title: `${title} lesson` });
+  return (await admin.post(`/admin/courses/lessons/${lesson.json.data.id}/topics`, { title, contentType: "rich_text", content })).json.data.id;
+}
+const L1 = await createTopic(m1, "L1", "a");
+const L2 = await createTopic(m1, "L2", "b");
+const L3 = await createTopic(m2, "L3", "c");
+const L4 = await createTopic(m2, "L4", "d");
 await admin.post(`/admin/courses/${courseId}/publish`);
 const assessmentId = (await admin.post("/admin/assessments", { moduleId: m1, title: "M1 Quiz" })).json.data.id;
 const q = (await admin.post(`/admin/assessments/${assessmentId}/questions`, { type: "mcq", question: "?", options: ["A", "B"], correctAnswer: "A", marks: 1 })).json.data.id;
 await admin.post(`/admin/assessments/${assessmentId}/publish`);
+await publishModule(admin, m1); // reuses "M1 Quiz"
+const m2AssessmentId = await publishModule(admin, m2); // fixture quiz
+const m2Question = (await admin.get(`/admin/assessments/module/${m2}`)).json.data.questions[0].id;
 
 const cp = (path: string, body?: unknown) => student.post(`/progress/${courseId}${path}`, body);
 
 // 1. Initial progress + unauthorized.
 {
   const g = await student.get(`/progress/${courseId}`);
-  check("initial progress → overall 0, next L1", g.status === 200 && g.json?.data?.progress?.overallProgress === 0 && g.json?.data?.nextLessonId === L1, g.json?.data);
+  check("initial progress → overall 0, next topic L1", g.status === 200 && g.json?.data?.progress?.overallProgress === 0 && g.json?.data?.nextTopicId === L1, g.json?.data);
   check("teacher GET progress → 403", (await teacher.get(`/progress/${courseId}`)).status === 403);
   check("anon GET progress → 401", (await client().get(`/progress/${courseId}`)).status === 401);
 }
 
 // 2. Sequential locking.
 {
-  const locked = await cp(`/lessons/${L2}/complete`);
-  check("complete L2 before L1 → 409 locked", locked.status === 409, locked.status);
-  const bad = await cp(`/lessons/not-a-lesson/complete`);
-  check("complete unknown lesson → 404", bad.status === 404, bad.status);
+  const locked = await cp(`/topics/${L2}/complete`);
+  check("complete topic L2 before L1 → 409 locked", locked.status === 409, locked.status);
+  const bad = await cp(`/topics/not-a-topic/complete`);
+  check("complete unknown topic → 404", bad.status === 404, bad.status);
 }
 
 // 3. Complete L1 → 25%, module not yet complete.
 {
-  const r = await cp(`/lessons/${L1}/complete`);
+  const r = await cp(`/topics/${L1}/complete`);
   check("complete L1 → 200, overall 25", r.status === 200 && r.json?.data?.progress?.overallProgress === 25, r.json?.data?.progress);
-  check("L1 lastVisited + next=L2", r.json?.data?.progress?.lastVisitedLessonId === L1 && r.json?.data?.nextLessonId === L2, r.json?.data);
+  check("L1 lastVisited + next=L2", r.json?.data?.progress?.lastVisitedTopicId === L1 && r.json?.data?.nextTopicId === L2, r.json?.data);
   check("M1 not complete yet", !(r.json?.data?.progress?.completedModules ?? []).includes(m1), r.json?.data?.progress?.completedModules);
 }
 
 // 4. Complete L2 → M1 complete, 50%.
 {
-  const r = await cp(`/lessons/${L2}/complete`);
+  const r = await cp(`/topics/${L2}/complete`);
   check("complete L2 → overall 50, M1 complete", r.json?.data?.progress?.overallProgress === 50 && (r.json?.data?.progress?.completedModules ?? []).includes(m1), r.json?.data?.progress);
 }
 
 // 5. Complete L3, L4 → 100% lessons, both modules complete.
 {
-  await cp(`/lessons/${L3}/complete`);
-  const r = await cp(`/lessons/${L4}/complete`);
+  await cp(`/topics/${L3}/complete`);
+  const r = await cp(`/topics/${L4}/complete`);
   const p = r.json?.data?.progress;
-  check("all lessons complete → overall 100", p?.overallProgress === 100 && r.json?.data?.nextLessonId === null, p);
+  check("all topics complete → overall 100", p?.overallProgress === 100 && r.json?.data?.nextTopicId === null, p);
   check("both modules complete", (p?.completedModules ?? []).includes(m1) && (p?.completedModules ?? []).includes(m2), p?.completedModules);
   check("NOT certificate-eligible yet (assessment unpassed)", p?.certificateEligible === false, p);
 }
 
-// 6. Pass the mandatory assessment → certificate eligible.
+// 6. Pass every module's assessment → certificate eligible.
 {
   const a = await student.post(`/assessments/${assessmentId}/attempt`, { answers: [{ questionId: q, answer: "A" }] });
   check("assessment passed", a.json?.data?.attempt?.passed === true, a.json?.data?.attempt);
+  const mid = await student.get(`/progress/${courseId}`);
+  check("still NOT eligible while M2's module assessment is unpassed", mid.json?.data?.progress?.certificateEligible === false, mid.json?.data?.progress);
+  const a2 = await student.post(`/assessments/${m2AssessmentId}/attempt`, { answers: [{ questionId: m2Question, answer: "Yes" }] });
+  check("M2 module assessment passed", a2.json?.data?.attempt?.passed === true, a2.json?.data?.attempt);
   const g = await student.get(`/progress/${courseId}`);
-  check("100% lessons + assessment passed → certificateEligible true", g.json?.data?.progress?.certificateEligible === true, g.json?.data?.progress);
+  check("100% topics + every module assessment passed → certificateEligible true", g.json?.data?.progress?.certificateEligible === true, g.json?.data?.progress);
   check("assessment score recorded in progress", (g.json?.data?.progress?.assessmentScores ?? []).some((s: any) => s.assessmentId === assessmentId && s.passed), g.json?.data?.progress?.assessmentScores);
 }
 

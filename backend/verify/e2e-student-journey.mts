@@ -1,8 +1,9 @@
 // END-TO-END student journey (as a real user): registration → login (email+
-// session) → dashboard APIs → course discovery → ordered learning → sequential
+// session) → dashboard APIs → course discovery → ordered topic learning → sequential
 // unlocking → assessment scoring → progress tracking → course completion →
 // auto-issued certificate → download PDF → public verification.
 import { MongoMemoryServer } from "mongodb-memory-server";
+import { publishModule } from "./_fixtures.mts";
 
 const PORT = 4110;
 const BASE = `http://127.0.0.1:${PORT}/api`;
@@ -45,18 +46,22 @@ if (!(await up())) { console.error("not healthy"); process.exit(1); }
 
 console.log("[E2E student journey]");
 
-// ---- Setup: admin builds a published course (1 module, 3 lessons, 1 quiz) + a draft ----
+// ---- Setup: admin builds a published course (1 module, 3 topics, 1 quiz) + a draft ----
 const admin = client();
 await admin.post("/auth/login", { login: "Moocs@admin", password: "Admin@123" });
 const courseId = (await admin.post("/admin/courses", { title: "QA Course", slug: "qa-course", shortDescription: "For QA" })).json.data.id;
 const m1 = (await admin.post(`/admin/courses/${courseId}/modules`, { title: "Module 1" })).json.data.id;
-await admin.patch(`/admin/courses/modules/${m1}`, { isPublished: true });
-const L1 = (await admin.post(`/admin/courses/modules/${m1}/lessons`, { title: "Lesson 1", contentType: "rich_text", content: "# Intro" })).json.data.id;
-const L2 = (await admin.post(`/admin/courses/modules/${m1}/lessons`, { title: "Lesson 2", contentType: "video", videoUrl: "https://x/v.mp4" })).json.data.id;
-const L3 = (await admin.post(`/admin/courses/modules/${m1}/lessons`, { title: "Lesson 3", contentType: "pdf", documentUrl: "https://x/d.pdf" })).json.data.id;
+async function createTopic(title: string, contentType: string, contentFields: Record<string, string>) {
+  const lesson = await admin.post(`/admin/courses/modules/${m1}/lessons`, { title: `${title} lesson` });
+  return (await admin.post(`/admin/courses/lessons/${lesson.json.data.id}/topics`, { title, contentType, ...contentFields })).json.data.id;
+}
+const L1 = await createTopic("Topic 1", "rich_text", { content: "# Intro" });
+const L2 = await createTopic("Topic 2", "video", { videoUrl: "https://x/v.mp4" });
+const L3 = await createTopic("Topic 3", "pdf", { documentUrl: "https://x/d.pdf" });
 const aId = (await admin.post("/admin/assessments", { moduleId: m1, title: "M1 Quiz" })).json.data.id;
 const q1 = (await admin.post(`/admin/assessments/${aId}/questions`, { type: "mcq", question: "2+2?", options: ["3","4"], correctAnswer: "4", explanation: "Maths.", marks: 1 })).json.data.id;
 await admin.post(`/admin/assessments/${aId}/publish`);
+await publishModule(admin, m1); // description + objectives; reuses the M1 Quiz above
 await admin.post(`/admin/courses/${courseId}/publish`);
 const draftId = (await admin.post("/admin/courses", { title: "Draft QA", slug: "draft-qa" })).json.data.id;
 const teacherId = (await admin.get("/registrations/directory")).json.data.teachers[0].id;
@@ -99,28 +104,28 @@ console.log("[4] Course discovery");
   const search = await s.get("/courses?search=QA");
   check("search finds the course", (search.json?.data?.courses ?? []).some((c: any) => c.slug === "qa-course"), search.json?.data?.total);
   const detail = await s.get("/courses/qa-course");
-  check("open course details → tree with 1 module, 3 lessons", detail.status === 200 && (detail.json?.data?.modules?.[0]?.lessons?.length === 3), detail.json?.data?.modules?.length);
+  check("open course details → tree with 1 module and 3 nested topics", detail.status === 200 && detail.json?.data?.modules?.[0]?.lessons?.length === 3 && detail.json?.data?.modules?.[0]?.lessons?.every((lesson: any) => lesson.topics.length === 1), detail.json?.data?.modules?.[0]?.lessons);
 }
 
-// ---- 5. Learning flow (ordering + locking) ----
-console.log("[5] Learning flow");
+// ---- 5. Topic learning flow (ordering + locking) ----
+console.log("[5] Topic learning flow");
 {
-  const first = await s.get(`/courses/qa-course/lessons/${L1}`);
-  check("open first lesson → prev=null next=L2", first.json?.data?.prevLessonId === null && first.json?.data?.nextLessonId === L2, first.json?.data);
-  check("flat lesson order is L1,L2,L3", JSON.stringify(first.json?.data?.sequence) === JSON.stringify([L1, L2, L3]), first.json?.data?.sequence);
-  const lockedComplete = await s.post(`/progress/${courseId}/lessons/${L2}/complete`);
-  check("next lesson locked until previous complete → 409", lockedComplete.status === 409, lockedComplete.status);
+  const first = await s.get(`/courses/qa-course/topics/${L1}`);
+  check("open first topic → prev=null next=L2", first.status === 200 && first.json?.data?.prevTopicId === null && first.json?.data?.nextTopicId === L2 && first.json?.data?.topic?.id === L1, first.json?.data);
+  check("flat topic order is L1,L2,L3", JSON.stringify(first.json?.data?.sequence) === JSON.stringify([L1, L2, L3]), first.json?.data?.sequence);
+  const lockedComplete = await s.post(`/progress/${courseId}/topics/${L2}/complete`);
+  check("next topic locked until previous complete → 409", lockedComplete.status === 409, lockedComplete.status);
 }
 
 // ---- 6. Sequential learning ----
 console.log("[6] Sequential learning");
 {
-  const c1 = await s.post(`/progress/${courseId}/lessons/${L1}/complete`);
-  check("complete L1 → 200, next unlocks to L2", c1.status === 200 && c1.json?.data?.nextLessonId === L2, c1.json?.data);
-  const c2 = await s.post(`/progress/${courseId}/lessons/${L2}/complete`);
-  check("complete L2 → next L3", c2.json?.data?.nextLessonId === L3, c2.json?.data);
-  const c3 = await s.post(`/progress/${courseId}/lessons/${L3}/complete`);
-  check("complete L3 → module lessons done (next=null)", c3.json?.data?.nextLessonId === null, c3.json?.data);
+  const c1 = await s.post(`/progress/${courseId}/topics/${L1}/complete`);
+  check("complete L1 → 200, next unlocks to L2", c1.status === 200 && c1.json?.data?.nextTopicId === L2, c1.json?.data);
+  const c2 = await s.post(`/progress/${courseId}/topics/${L2}/complete`);
+  check("complete L2 → next L3", c2.json?.data?.nextTopicId === L3, c2.json?.data);
+  const c3 = await s.post(`/progress/${courseId}/topics/${L3}/complete`);
+  check("complete L3 → module topics done (next=null)", c3.json?.data?.nextTopicId === null, c3.json?.data);
   check("module marked complete", (c3.json?.data?.progress?.completedModules ?? []).includes(m1), c3.json?.data?.progress?.completedModules);
 }
 
@@ -140,10 +145,10 @@ console.log("[7] Assessment");
 console.log("[8] Progress tracking");
 {
   const p = (await s.get(`/progress/${courseId}`)).json?.data?.progress;
-  check("completedLessons updated (3)", (p?.completedLessons ?? []).length === 3, p?.completedLessons);
+  check("completedTopics updated (3)", (p?.completedTopics ?? []).length === 3, p?.completedTopics);
   check("completedModules updated (1)", (p?.completedModules ?? []).includes(m1), p?.completedModules);
   check("overallProgress = 100", p?.overallProgress === 100, p?.overallProgress);
-  check("lastVisitedLessonId set", p?.lastVisitedLessonId === L3, p?.lastVisitedLessonId);
+  check("lastVisitedTopicId set", p?.lastVisitedTopicId === L3, p?.lastVisitedTopicId);
 }
 
 // ---- 8b. Time tracking (heartbeat persistence) ----

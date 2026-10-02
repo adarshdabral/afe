@@ -2,6 +2,7 @@
 // duplicate prevention (idempotent), AFE-YYYY-XXXXXXXX id format, public
 // verification, PDF download + access control, admin listing, and revocation.
 import { MongoMemoryServer } from "mongodb-memory-server";
+import { publishModule } from "./_fixtures.mts";
 
 const PORT = 4105;
 const BASE = `http://127.0.0.1:${PORT}/api`;
@@ -61,15 +62,16 @@ const teacher = client();
 await teacher.login("teacher@afe.edu", "Teacher@123");
 const anon = client();
 
-// Seed a small completable course: 1 published module, 1 lesson, 1 published quiz.
+// Seed a small completable course: 1 published module, 1 topic, 1 published quiz.
 const courseId = (await admin.post("/admin/courses", { title: "Certified Course", slug: "certified-course" })).json.data.id;
 const m1 = (await admin.post(`/admin/courses/${courseId}/modules`, { title: "M1" })).json.data.id;
-await admin.patch(`/admin/courses/modules/${m1}`, { isPublished: true });
-const L1 = (await admin.post(`/admin/courses/modules/${m1}/lessons`, { title: "L1", contentType: "rich_text", content: "x" })).json.data.id;
+const lesson = (await admin.post(`/admin/courses/modules/${m1}/lessons`, { title: "Lesson 1" })).json.data;
+const topicId = (await admin.post(`/admin/courses/lessons/${lesson.id}/topics`, { title: "Topic 1", contentType: "rich_text", content: "x" })).json.data.id;
 await admin.post(`/admin/courses/${courseId}/publish`);
 const assessmentId = (await admin.post("/admin/assessments", { moduleId: m1, title: "Final" })).json.data.id;
 const q = (await admin.post(`/admin/assessments/${assessmentId}/questions`, { type: "mcq", question: "?", options: ["A", "B"], correctAnswer: "A", marks: 1 })).json.data.id;
 await admin.post(`/admin/assessments/${assessmentId}/publish`);
+await publishModule(admin, m1); // description + objectives; reuses the "Final" quiz above
 
 // 1. No certificate before completion.
 {
@@ -81,7 +83,7 @@ await admin.post(`/admin/assessments/${assessmentId}/publish`);
 // 2. Complete the course → certificate auto-issued.
 let cert: any = null;
 {
-  await student.post(`/progress/${courseId}/lessons/${L1}/complete`);
+  await student.post(`/progress/${courseId}/topics/${topicId}/complete`);
   const attempt = await student.post(`/assessments/${assessmentId}/attempt`, { answers: [{ questionId: q, answer: "A" }] });
   check("assessment passed (triggers eligibility)", attempt.json?.data?.attempt?.passed === true, attempt.json?.data?.attempt);
   const mine = await student.get("/certificates/mine");

@@ -5,3 +5,5 @@ node_modules
 next-env.d.ts
 uploads
 *.tsbuildinfo
+.next-verify
+.next-verify.lock

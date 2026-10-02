@@ -8,6 +8,8 @@ const g = globalThis as typeof globalThis & { __afeDb?: Promise<typeof mongoose>
 
 export function connectDb(): Promise<typeof mongoose> {
   if (mongoose.connection.readyState === 1) return Promise.resolve(mongoose);
+  // A cached promise for a connection that has since been closed is stale.
+  if (g.__afeDb && mongoose.connection.readyState === 0) g.__afeDb = undefined;
   if (!g.__afeDb) {
     mongoose.set("strictQuery", true);
     g.__afeDb = mongoose.connect(env.mongoUri).catch((err) => {

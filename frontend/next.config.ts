@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
   // (eslint-plugin-prettier) is picked up by ESLint's upward search and fails
   // `next build` on formatting-only rules. Type-checking is still enforced.
   eslint: { ignoreDuringBuilds: true },
+  // backend/verify harnesses build the frontend into its own folder so they can
+  // run while `npm run dev` (which owns .next/) is running.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${BACKEND_URL}/api/:path*` }];
   },
