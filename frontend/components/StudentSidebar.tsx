@@ -4,17 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  GraduationCap,
-  Activity,
   MessageSquare,
   BookOpen,
   Award,
-  Settings,
-  Sparkles,
   LogOut,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { FLAGSHIP_SLUG } from "@/lib/course";
+import { BrandMark } from "@/components/BrandMark";
+import { PLATFORM_NAME } from "@/lib/course";
 
 const links = [
   { to: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -38,10 +36,8 @@ export function StudentSidebar() {
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-border bg-card">
         <div className="px-5 h-16 flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-[10px] bg-violet-600 text-white flex items-center justify-center shadow-sm">
-            <Sparkles className="w-4 h-4" />
-          </span>
-          <span className="font-semibold text-foreground tracking-tight">AI Spark</span>
+          <BrandMark />
+          <span className="font-semibold text-foreground tracking-tight">{PLATFORM_NAME}</span>
         </div>
         <nav className="flex-1 px-3 py-3 space-y-0.5">
           {links.map((l, i) => {

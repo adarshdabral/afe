@@ -1,5 +1,5 @@
 // Single-course product helpers. The platform presents ONE flagship course
-// (" Demystifying AI for Everyone"); everything shown publicly is derived from the real course
+// ("Demystifying AI for Everyone"); everything shown publicly is derived from the real course
 // tree served by the API — no hard-coded curriculum, outcomes or statistics.
 
 import type { ContentType, CourseLevel, CourseTree, SectionKind } from "@/lib/api/courses";
@@ -9,7 +9,7 @@ export const PLATFORM_NAME = "AI on Wheels";
 
 /** Slug of the flagship course. Mirrors `AI_COURSE_META.slug` in
  *  backend/server/seed/ai-course.data.ts — keep in sync. */
-export const FLAGSHIP_SLUG = "ai-for-everyone";
+export const FLAGSHIP_SLUG = "demystifying-ai-for-everyone";
 
 /** Public outline of the course: the tree minus topic bodies/media URLs. */
 export interface TopicOutline {
@@ -158,7 +158,7 @@ const FORMAT_LABEL: Record<ContentType, string> = {
 /** Distinct, human-labelled topic formats actually present in the course. */
 export function contentFormats(c: CourseOutline): string[] {
   const seen = new Set<ContentType>();
-  for (const module of c.modules) for (const lesson of module.lessons) for (const topic of lesson.topics) seen.add(topic.contentType);
+  for (const mod of c.modules) for (const lesson of mod.lessons) for (const topic of lesson.topics) seen.add(topic.contentType);
   return [...seen].map((t) => FORMAT_LABEL[t]);
 }
 

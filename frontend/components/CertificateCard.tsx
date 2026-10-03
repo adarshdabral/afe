@@ -1,4 +1,5 @@
-import { Award, Sparkles } from "lucide-react";
+import { Award } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 
 export interface CertificateData {
   studentName: string;
@@ -34,10 +35,8 @@ export function CertificateCard({
       <div className="h-2 bg-gradient-to-r from-violet-600 to-violet-400" />
       <div className="p-8 sm:p-12 text-center relative">
         <div className="flex items-center justify-center gap-2 text-violet-700">
-          <span className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center">
-            <Sparkles className="w-5 h-5" />
-          </span>
-          <span className="font-semibold"> Demystifying AI for Everyone</span>
+          <BrandMark size="md" />
+          <span className="font-semibold">Demystifying AI for Everyone</span>
         </div>
 
         <div className="mt-6 inline-flex items-center justify-center w-16 h-16 rounded-full bg-violet-100 text-violet-700">

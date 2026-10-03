@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, CheckCircle2, Circle, ClipboardCheck, ClipboardList, Lock } from "lucide-react";
+import { CheckCircle2, Circle, ClipboardCheck, ClipboardList, Lock } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { useLearning } from "@/context/LearningContext";
 import type { CourseTree, SectionKind } from "@/lib/api/courses";

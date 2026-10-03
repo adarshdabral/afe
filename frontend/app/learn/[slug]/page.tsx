@@ -21,7 +21,7 @@ import { roleHome } from "@/lib/access";
 import { pad2 } from "@/lib/course";
 import { describeRemaining, remainingWork } from "@/lib/progress";
 
-// The " Demystifying AI for Everyone learning experience" home: course header, progress,
+// The "Demystifying AI for Everyone learning experience" home: course header, progress,
 // resume point, certificate status and the module map. Sequential locking and
 // completion state come from LearningContext (server-backed progress API).
 export default function LearnOverview() {

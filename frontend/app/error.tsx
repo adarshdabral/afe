@@ -23,6 +23,8 @@ export default function Error({
           >
             Try again
           </button>
+          {/* A full page load (not <Link>) — recovers from a broken client state. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
             href="/"
             className="rounded-xl border border-input bg-background px-4 py-2 text-sm font-medium text-foreground"

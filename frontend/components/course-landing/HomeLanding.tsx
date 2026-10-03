@@ -21,7 +21,7 @@ import { useCourseOutline } from "./useCourseOutline";
 /** `/` — the landing page for the platform's one course. */
 export function HomeLanding({ slug, initial }: { slug: string; initial: CourseOutline | null }) {
   const { status, course } = useCourseOutline(slug, initial);
-  const title =  " Demystifying AI for Everyone";
+  const title = course?.title ?? "Demystifying AI for Everyone";
 
   return (
     <div className="min-h-screen bg-background overflow-x-clip">

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { registerStudent } from "@/lib/api/registrations";
 import { useApp } from "@/context/AppContext";
+import { BrandMark } from "@/components/BrandMark";
+import { PLATFORM_NAME } from "@/lib/course";
 
 // zod schema mirrors the backend registerSchema. No class / roll number, and no
 // teacher selection — every student is auto-assigned to the default teacher.
@@ -89,14 +90,12 @@ export default function Register() {
           }}
         />
         <Link href="/" className="flex items-center gap-2.5 font-semibold relative z-10 tracking-tight">
-          <span className="w-8 h-8 rounded-[10px] bg-white/10 border border-white/15 flex items-center justify-center">
-            <Sparkles className="w-4 h-4" />
-          </span>
-          AI Spark
+          <BrandMark variant="glass" />
+          {PLATFORM_NAME}
         </Link>
         <div className="relative z-10 max-w-sm">
           <p className="text-[1.75rem] leading-snug font-semibold tracking-tight text-white">
-            Start  Demystifying AI for Everyone.
+            Start Demystifying AI for Everyone.
           </p>
           <p className="mt-4 text-sm text-white/60 leading-relaxed">
             Create your account to begin the course with Dr. Sudhanshu Joshi — self-paced, with
@@ -111,7 +110,7 @@ export default function Register() {
             Create your account
           </h1>
           <p className="text-muted-foreground mt-2">
-            Join AI Spark to start  Demystifying AI for Everyone.
+            Join {PLATFORM_NAME} to start Demystifying AI for Everyone.
           </p>
 
           <form onSubmit={submit} className="mt-6 space-y-4" noValidate>

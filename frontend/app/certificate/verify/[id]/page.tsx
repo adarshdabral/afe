@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ShieldCheck, ShieldX, Sparkles, Loader2 } from "lucide-react";
+import { ShieldCheck, ShieldX, Loader2 } from "lucide-react";
 import { verifyCertificate, type PublicCertificate } from "@/lib/api/certificates";
+import { BrandMark } from "@/components/BrandMark";
+import { PLATFORM_NAME } from "@/lib/course";
 
 // PUBLIC certificate verification — no auth. Anyone (employers, teachers) can
 // confirm a certificate by its id.
@@ -27,10 +29,8 @@ export default function VerifyCertificate() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
       <Link href="/" className="flex items-center gap-2 font-semibold text-foreground mb-8">
-        <span className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center">
-          <Sparkles className="w-4 h-4" />
-        </span>
-        AI Spark
+        <BrandMark />
+        {PLATFORM_NAME}
       </Link>
 
       <div className="w-full max-w-md bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">

@@ -3,13 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Sparkles } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login, type Role } from "@/lib/api/auth";
 import { useApp } from "@/context/AppContext";
+import { BrandMark } from "@/components/BrandMark";
+import { PLATFORM_NAME } from "@/lib/course";
 
 function roleHome(role: Role): string {
   switch (role) {
@@ -74,13 +76,11 @@ export default function Login() {
           }}
         />
         <Link href="/" className="flex items-center gap-2.5 font-semibold relative z-10 tracking-tight">
-          <span className="w-8 h-8 rounded-[10px] bg-white/10 border border-white/15 flex items-center justify-center">
-            <Sparkles className="w-4 h-4" />
-          </span>
-          AI Spark
+          <BrandMark variant="glass" />
+          {PLATFORM_NAME}
         </Link>
         <div className="relative z-10 max-w-sm">
-          <p className="text-sm font-medium text-white/60"> Demystifying AI for Everyone</p>
+          <p className="text-sm font-medium text-white/60">Demystifying AI for Everyone</p>
           <p className="mt-2 text-[1.75rem] leading-snug font-semibold tracking-tight text-white">
             Understand artificial intelligence — its applications, opportunities and impact.
           </p>
@@ -91,10 +91,8 @@ export default function Login() {
       <div className="flex items-center justify-center p-6 md:p-12">
         <div className="w-full max-w-sm animate-fade-up">
           <Link href="/" className="md:hidden flex items-center gap-2 font-semibold mb-8">
-            <span className="w-8 h-8 rounded-[10px] bg-violet-600 text-white flex items-center justify-center">
-              <Sparkles className="w-4 h-4" />
-            </span>
-            AI Spark
+            <BrandMark />
+            {PLATFORM_NAME}
           </Link>
           <h1 className="text-[2rem] font-semibold text-foreground tracking-tight">Welcome back</h1>
           <p className="text-muted-foreground mt-2">Sign in to continue learning.</p>
@@ -158,7 +156,7 @@ export default function Login() {
           </form>
 
           <p className="text-sm text-muted-foreground text-center mt-6">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/register" className="text-violet-600 font-medium hover:underline">
               Sign up
             </Link>

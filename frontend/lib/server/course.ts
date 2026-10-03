@@ -36,7 +36,7 @@ export const getCourseOutline = cache(async (slug: string): Promise<CourseOutlin
 });
 
 /**
- * The flagship course's slug: "ai-for-everyone" when it is published, otherwise
+ * The flagship course's slug: "demystifying-ai-for-everyone" when it is published, otherwise
  * the first published course (e.g. if an admin renamed the slug). Falls back to
  * the canonical slug when the backend is unreachable.
  */

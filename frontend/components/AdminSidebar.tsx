@@ -4,20 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  Users,
   UserPlus,
   BookOpen,
   Award,
-  ClipboardCheck,
   BarChart2,
-  Settings,
-  Sparkles,
+  Palette,
   Menu,
   X,
   LogOut,
 } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "@/context/AppContext";
+import { BrandMark } from "@/components/BrandMark";
 
 const links = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -25,6 +23,7 @@ const links = [
   { to: "/admin/courses", label: "Courses", icon: BookOpen },
   { to: "/admin/certificates", label: "Certificates", icon: Award },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart2 },
+  { to: "/admin/branding", label: "Branding", icon: Palette },
 ] as const;
 
 function initials(name?: string): string {
@@ -41,9 +40,7 @@ export function AdminSidebar() {
   const Body = () => (
     <div className="flex flex-col h-full">
       <div className="px-5 h-16 flex items-center gap-2.5">
-        <span className="w-8 h-8 rounded-[10px] bg-violet-600 text-white flex items-center justify-center shadow-sm">
-          <Sparkles className="w-4 h-4" />
-        </span>
+        <BrandMark />
         <span className="font-semibold text-foreground tracking-tight">Admin</span>
       </div>
       <nav className="flex-1 px-3 py-3 space-y-0.5">

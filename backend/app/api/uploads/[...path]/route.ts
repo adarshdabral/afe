@@ -37,6 +37,10 @@ async function serve(request: Request, { params }: Ctx, headOnly: boolean): Prom
     "X-Content-Type-Options": "nosniff",
     "Access-Control-Allow-Origin": "*",
   });
+  // SVGs can carry scripts; if one is opened directly (not via <img>), block them.
+  if (path.extname(file).toLowerCase() === ".svg") {
+    headers.set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox");
+  }
 
   let start = 0;
   let end = stat.size - 1;

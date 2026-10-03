@@ -1,5 +1,5 @@
 // Standalone seed runner: `npm run seed`. Seeds the demo accounts, then
-// standardizes course content to the single " Demystifying AI for Everyone" course.
+// standardizes course content to the single "Demystifying AI for Everyone" course.
 // `--keep-others` (`npm run seed:flagship`) (re)builds only that course and
 // leaves every other course untouched.
 

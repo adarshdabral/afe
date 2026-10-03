@@ -1,7 +1,8 @@
-import { Award, Layers, Sparkles } from "lucide-react";
+import { Award, Layers } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 import { pad2 } from "@/lib/course";
 
-// Abstract "learning network" for the  Demystifying AI for Everyone hero: a central spark with
+// Abstract "learning network" for the Demystifying AI for Everyone hero: a central spark with
 // three orbits of connected nodes (concept → application → impact). Pure SVG +
 // CSS — no animation library; motion is disabled by prefers-reduced-motion.
 
@@ -103,14 +104,14 @@ export function HeroVisual({
 
       {/* Central spark */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <Sparkles className="w-8 h-8 text-white" />
+        <BrandMark size="lg" variant="bare" className="rounded-full" />
       </div>
 
       {/* Real course facts floating on the visual */}
       <div className="absolute left-0 top-[12%] max-w-[62%] glass rounded-2xl border border-border shadow-soft px-3.5 py-2.5">
         <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-violet-600">Module 01</p>
         <p className="text-[13px] font-medium text-foreground leading-snug line-clamp-2">
-          {firstModuleTitle ?? " Demystifying AI for Everyone"}
+          {firstModuleTitle ?? "Demystifying AI for Everyone"}
         </p>
       </div>
       <div className="absolute right-0 bottom-[14%] glass rounded-2xl border border-border shadow-soft px-3.5 py-2.5 flex items-center gap-2.5">

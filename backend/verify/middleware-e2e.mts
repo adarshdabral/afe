@@ -63,7 +63,7 @@ try {
   }
   {
     const r = await nav("/courses");
-    check("/courses → redirect /courses/ai-for-everyone", isRedirect(r, "/courses/ai-for-everyone"), r);
+    check("/courses → redirect /courses/demystifying-ai-for-everyone", isRedirect(r, "/courses/demystifying-ai-for-everyone"), r);
   }
   {
     const res = await fetch(`${ORIGIN}/api/does-not-exist`);

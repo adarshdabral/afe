@@ -1,4 +1,4 @@
-// Presentational sections of the  Demystifying AI for Everyone course landing. Every value is
+// Presentational sections of the Demystifying AI for Everyone course landing. Every value is
 // derived from the real course outline (see lib/course.ts) — nothing invented.
 
 import Link from "next/link";

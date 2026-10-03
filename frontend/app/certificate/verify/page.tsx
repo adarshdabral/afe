@@ -7,7 +7,7 @@ import { PLATFORM_NAME } from "@/lib/course";
 
 export const metadata: Metadata = {
   title: `Verify a certificate | ${PLATFORM_NAME}`,
-  description: "Check that an  Demystifying AI for Everyone certificate of completion is genuine and has not been revoked.",
+  description: "Check that a Demystifying AI for Everyone certificate of completion is genuine and has not been revoked.",
 };
 
 // Public entry point for certificate verification — hands off to the existing
@@ -22,7 +22,7 @@ export default function VerifyLookupPage() {
         </span>
         <h1 className="mt-6 text-4xl font-semibold tracking-tight text-foreground">Verify a certificate</h1>
         <p className="mt-3 text-[16px] text-muted-foreground leading-relaxed">
-          Every  Demystifying AI for Everyone certificate has a unique ID, printed on the certificate next to its QR
+          Every Demystifying AI for Everyone certificate has a unique ID, printed on the certificate next to its QR
           code. Enter it below to confirm the certificate is genuine and has not been revoked.
         </p>
         <VerifyCertificateForm className="mt-8" autoFocus />

@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles } from "lucide-react";
 import { FLAGSHIP_SLUG, PLATFORM_NAME } from "@/lib/course";
+import { BrandMark } from "@/components/BrandMark";
 
 const ATTRIBUTION =
   "Developed by: Centre of Excellence in Logistics & Supply Chain Management, Doon University under financial aid by UCOST, Government of Uttarakhand";
@@ -61,12 +61,10 @@ export function Footer() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div>
           <Link href="/" className="inline-flex items-center gap-2.5 text-foreground">
-            <span className="w-8 h-8 rounded-[10px] bg-violet-600 text-white flex items-center justify-center">
-              <Sparkles className="w-4 h-4" aria-hidden />
-            </span>
+            <BrandMark />
             <span className="font-semibold tracking-tight">{PLATFORM_NAME}</span>
           </Link>
-          <p className="mt-4 text-[15px] font-medium text-foreground"> Demystifying AI for Everyone</p>
+          <p className="mt-4 text-[15px] font-medium text-foreground">Demystifying AI for Everyone</p>
           <p className="mt-1 text-[14px] text-muted-foreground leading-relaxed max-w-xs">
             A self-paced course on artificial intelligence with Dr. Sudhanshu Joshi — ending in a
             verifiable certificate.

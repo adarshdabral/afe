@@ -46,7 +46,7 @@ export default function StudentCertificates() {
             <Empty>
               <Award className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
                 No certificates yet — complete every topic and pass each module assessment to earn yours.{" "}
-              <Link href={`/learn/${FLAGSHIP_SLUG}`} className="text-violet-600 underline">Continue  Demystifying AI for Everyone</Link>.
+              <Link href={`/learn/${FLAGSHIP_SLUG}`} className="text-violet-600 underline">Continue Demystifying AI for Everyone</Link>.
             </Empty>
           ) : (
             <div className="space-y-4">

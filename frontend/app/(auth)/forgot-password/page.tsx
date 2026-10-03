@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ArrowLeft, Sparkles } from "lucide-react";
+import { CheckCircle2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BrandMark } from "@/components/BrandMark";
+import { PLATFORM_NAME } from "@/lib/course";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -26,16 +28,14 @@ export default function ForgotPassword() {
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="w-full max-w-md bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8">
         <Link href="/" className="flex items-center gap-2 font-semibold text-foreground mb-6">
-          <span className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center">
-            <Sparkles className="w-4 h-4" />
-          </span>
-          AI Spark
+          <BrandMark />
+          {PLATFORM_NAME}
         </Link>
         {!sent ? (
           <>
             <h1 className="text-2xl font-bold text-foreground">Reset your password</h1>
             <p className="text-muted-foreground mt-2 text-sm">
-              Enter your email and we'll send you a reset link.
+              Enter your email and we&apos;ll send you a reset link.
             </p>
             <form onSubmit={submit} className="mt-6 space-y-4">
               <div>

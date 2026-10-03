@@ -54,6 +54,8 @@ await db.collection("lessons").insertMany([
   { _id: l2, moduleId: String(m1), courseId: String(courseId), title: "Old Lesson B", description: "", order: 1, contentType: "rich_text", content: "# B", videoUrl: "", subtitleUrl: "", audioUrl: "", documentUrl: "", estimatedDurationMinutes: 5, isPreview: false, createdAt: now, updatedAt: now },
   { _id: l3, moduleId: String(m2), courseId: String(courseId), title: "Only Lesson C", description: "solo", order: 0, contentType: "pdf", documentUrl: "https://x/c.pdf", videoUrl: "", subtitleUrl: "", audioUrl: "", content: "", estimatedDurationMinutes: 5, isPreview: false, createdAt: now, updatedAt: now },
 ]);
+const flagshipId = oid(); // a database still on the OLD flagship slug
+await db.collection("courses").insertOne({ _id: flagshipId, title: "Demystifying AI for Everyone", slug: "ai-for-everyone", status: "published", deletedAt: null, description: "", shortDescription: "", instructor: "", level: "beginner", tags: [], learningObjectives: [], prerequisites: [], createdBy: "u-platform-admin", createdAt: now, updatedAt: now });
 await db.collection("progresses").insertOne({ studentId: "u-student", courseId: String(courseId), completedLessons: [String(l1)], lastVisitedLessonId: String(l1), completedModules: [], assessmentScores: [], timeSpentMinutes: 3, overallProgress: 33, certificateEligible: false, createdAt: now, updatedAt: now });
 await db.collection("analyticssnapshots").insertOne({ studentUserId: "u-legacy", studentName: "Legacy", schoolName: "S", teacherId: "u-teacher", lessonsCompleted: 2, lessonsTotal: 3, modulesCompleted: 0, modulesTotal: 2, quizzesTaken: 0, quizzesPassed: 0, totalTimeSec: 10, updatedAt: now.toISOString() });
 
@@ -86,6 +88,15 @@ console.log("[Lesson → Topic migration]");
   check("course got its 3 sections", sections.map((s) => s.kind).sort().join() === "instructor,introduction,overview", sections.map((s) => s.kind));
 }
 
+console.log("[Course slug rename]");
+{
+  const renamed = await db.collection("courses").findOne({ _id: flagshipId });
+  check("old slug ai-for-everyone renamed IN PLACE (same _id) → demystifying-ai-for-everyone", renamed?.slug === "demystifying-ai-for-everyone", renamed?.slug);
+  check("no course left on the old slug", (await db.collection("courses").countDocuments({ slug: "ai-for-everyone" })) === 0);
+  const r = await fetch(`${BASE}/courses/demystifying-ai-for-everyone`);
+  check("course reachable at the new slug", r.status === 200, r.status);
+}
+
 // ---- The migrated course works through the API ----
 {
   const student = client();
@@ -103,6 +114,8 @@ console.log("[Lesson → Topic migration]");
 {
   const { migrateLessonsToTopics } = await import("../server/migrations/lessons-to-topics.ts");
   const again = await migrateLessonsToTopics();
+  const { renameFlagshipSlug } = await import("../server/migrations/rename-course-slug.ts");
+  check("re-running the slug rename changes nothing", (await renameFlagshipSlug()) === false);
   const counts = [await db.collection("topics").countDocuments(), await db.collection("lessons").countDocuments(), await db.collection("coursesections").countDocuments({ courseId: String(courseId) })];
   check("re-running the migration changes nothing", again.topics === 0 && JSON.stringify(counts) === "[3,2,3]", { again, counts });
 }

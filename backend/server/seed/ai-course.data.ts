@@ -1,4 +1,4 @@
-// Curriculum content for the single standardized course " Demystifying AI for Everyone".
+// Curriculum content for the single standardized course "Demystifying AI for Everyone".
 //
 // NOTE: No separate curriculum document was present in the repository, so this
 // content was authored strictly ON-TOPIC to the 12 module titles supplied in the
@@ -792,13 +792,13 @@ export const AI_FOR_EVERYONE_MODULES: SeedModule[] = [
 ];
 
 export const AI_COURSE_META = {
-  title: " Demystifying AI for Everyone",
-  slug: "ai-for-everyone",
+  title: "Demystifying AI for Everyone",
+  slug: "demystifying-ai-for-everyone",
   instructor: "Dr. Sudhanshu Joshi",
   shortDescription:
     "A complete AI-literacy course — from what AI is to building responsible AI projects — in 12 modules.",
   description:
-    " Demystifying AI for Everyone is a 12-module journey through artificial intelligence for a general audience: understanding AI, data, how AI learns, everyday and industry applications, careers, economics, the future of work, ethics and safety, and a capstone project. Taught by Dr. Sudhanshu Joshi.",
+    "Demystifying AI for Everyone is a 12-module journey through artificial intelligence for a general audience: understanding AI, data, how AI learns, everyday and industry applications, careers, economics, the future of work, ethics and safety, and a capstone project. Taught by Dr. Sudhanshu Joshi.",
   level: "beginner" as const,
   tags: ["ai", "ai-literacy", "machine-learning", "ethics"],
 };

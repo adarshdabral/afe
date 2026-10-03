@@ -9,6 +9,7 @@ import { seedDemoUsers } from "./seed/users.seed";
 import { seedAnalyticsCohort } from "./seed/analytics.seed";
 import { seedForum } from "./seed/forum.seed";
 import { migrateLessonsToTopics } from "./migrations/lessons-to-topics";
+import { renameFlagshipSlug } from "./migrations/rename-course-slug";
 
 const g = globalThis as typeof globalThis & { __afeReady?: Promise<void> };
 
@@ -18,6 +19,7 @@ export function ensureServerReady(): Promise<void> {
       void env.jwtSecret; // throws in production when JWT_SECRET is missing/short
       await connectDb();
       await migrateLessonsToTopics(); // idempotent; must run before anything reads topics
+      await renameFlagshipSlug(); // idempotent; ai-for-everyone → demystifying-ai-for-everyone
       await seedDemoUsers();
       await seedAnalyticsCohort();
       await seedForum();

@@ -15,6 +15,15 @@ const nextConfig: NextConfig = {
   // backend/verify harnesses build the frontend into its own folder so they can
   // run while `npm run dev` (which owns .next/) is running.
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  // The course slug changed from "ai-for-everyone" to "demystifying-ai-for-everyone";
+  // keep old links, bookmarks and shared URLs working.
+  async redirects() {
+    return [
+      { source: "/courses/ai-for-everyone", destination: "/courses/demystifying-ai-for-everyone", permanent: true },
+      { source: "/learn/ai-for-everyone/:path*", destination: "/learn/demystifying-ai-for-everyone/:path*", permanent: true },
+      { source: "/learn/ai-for-everyone", destination: "/learn/demystifying-ai-for-everyone", permanent: true },
+    ];
+  },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${BACKEND_URL}/api/:path*` }];
   },

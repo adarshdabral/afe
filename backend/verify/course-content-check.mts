@@ -1,11 +1,9 @@
-// Verifies course-content standardization: after seeding, " Demystifying AI for Everyone" is the
+// Verifies course-content standardization: after seeding, "Demystifying AI for Everyone" is the
 // ONLY course the platform returns; it has exactly the 12 required modules (ordered,
 // published), each module has a lesson containing 7 topics and exactly ONE assessment with
 // 10 MCQ + 5 True/False + 2 scenario questions; and every previously-existing
 // course has been archived/removed from the catalog.
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { seedAiCourse } from "../server/seed/course.seed.ts";
-import { connectDb } from "../server/config/db.ts";
 
 const PORT = 4113;
 const BASE = `http://127.0.0.1:${PORT}/api`;
@@ -38,7 +36,9 @@ process.env.NODE_ENV = "test";
 process.env.CORS_ORIGIN = "http://localhost:3000";
 await (await import("./_server.mts")).startServer();
 if (!(await up())) { console.error("not healthy"); process.exit(1); }
-await connectDb();
+// Load server code only AFTER the env points at the test database (a static import
+// would evaluate it first). The seed shares the app's mongoose connection.
+const { seedAiCourse } = await import("../server/seed/course.seed.ts");
 
 const REQUIRED_MODULES = [
   "Understanding Artificial Intelligence",
@@ -78,7 +78,7 @@ check("seed reports 12 modules + archived others", result.modules === 12 && resu
   const courses = list.json?.data?.courses ?? [];
   check("catalog returns exactly ONE course", courses.length === 1, courses.map((c: any) => c.slug));
   const c = courses[0];
-  check("the one course is ' Demystifying AI for Everyone' (ai-for-everyone, published)", c?.slug === "ai-for-everyone" && c?.title === " Demystifying AI for Everyone" && c?.status === "published", c);
+  check("the one course is 'Demystifying AI for Everyone' (demystifying-ai-for-everyone, published)", c?.slug === "demystifying-ai-for-everyone" && c?.title === "Demystifying AI for Everyone" && c?.status === "published", c);
   check("instructor is Dr. Sudhanshu Joshi", c?.instructor === "Dr. Sudhanshu Joshi", c?.instructor);
   check("legacy courses are not in the catalog", !courses.some((x: any) => x.slug === "legacy-one" || x.slug === "legacy-two"), courses.map((x: any) => x.slug));
 }
@@ -87,11 +87,11 @@ check("seed reports 12 modules + archived others", result.modules === 12 && resu
 {
   const all = await admin.get("/admin/courses?pageSize=100");
   const slugs = (all.json?.data?.courses ?? []).map((c: any) => c.slug);
-  check("admin catalog contains no other live course", slugs.length === 1 && slugs[0] === "ai-for-everyone", slugs);
+  check("admin catalog contains no other live course", slugs.length === 1 && slugs[0] === "demystifying-ai-for-everyone", slugs);
 }
 
 // 3. Course tree: exactly 12 modules, ordered, matching the required titles.
-const tree = (await student.get("/courses/ai-for-everyone")).json?.data;
+const tree = (await student.get("/courses/demystifying-ai-for-everyone")).json?.data;
 {
   const mods = tree?.modules ?? [];
   check("course has exactly 12 modules", mods.length === 12, mods.length);

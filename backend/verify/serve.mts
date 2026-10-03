@@ -1,5 +1,5 @@
 // Boots ephemeral Mongo + the full Next.js app (pages + API) on :3100 and stays alive (manual probing).
-// The UI is at http://localhost:3100, the API at http://localhost:3100/api. Seeds the  Demystifying AI for Everyone course.
+// The UI is at http://localhost:3100, the API at http://localhost:3100/api. Seeds the Demystifying AI for Everyone course.
 import { MongoMemoryServer } from "mongodb-memory-server";
 const mongo = await MongoMemoryServer.create();
 process.env.MONGODB_URI = mongo.getUri("ai-spark");

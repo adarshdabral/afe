@@ -1,4 +1,4 @@
-// The " Demystifying AI for Everyone" curriculum (SRS FR-05 / FR-06): one course,
+// The "Demystifying AI for Everyone" curriculum (SRS FR-05 / FR-06): one course,
 // eight modules, multi-format topics. This is seed data — the DB seam for the
 // future `courses`/`modules`/`topics` tables. Content types are a discriminated
 // union so the topic player can render each format type-safely.
@@ -95,7 +95,7 @@ export interface Course {
 
 export const AI_COURSE: Course = {
   id: "ai-literacy",
-  title: " Demystifying AI for Everyone",
+  title: "Demystifying AI for Everyone",
   subtitle: "An eight-module journey into AI literacy for school students.",
   modules: [
     {

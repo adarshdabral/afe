@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Clock, CheckCircle2, XCircle, Sparkles, LogOut } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/context/AppContext";
 import { myRegistration, type RegistrationRequest, type Notification } from "@/lib/api/registrations";
+import { BrandMark } from "@/components/BrandMark";
+import { PLATFORM_NAME } from "@/lib/course";
 
 export default function PendingApproval() {
   const router = useRouter();
@@ -48,10 +50,8 @@ export default function PendingApproval() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
       <div className="absolute top-6 left-6 flex items-center gap-2 font-semibold text-foreground">
-        <span className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center">
-          <Sparkles className="w-4 h-4" />
-        </span>
-        AI Spark
+        <BrandMark />
+        {PLATFORM_NAME}
       </div>
 
       <div className="w-full max-w-md bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">

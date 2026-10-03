@@ -4,19 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  BookOpen,
-  PlusCircle,
   ClipboardCheck,
   BarChart2,
   MessageSquare,
-  Settings,
-  Sparkles,
   Menu,
   X,
   LogOut,
 } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "@/context/AppContext";
+import { BrandMark } from "@/components/BrandMark";
 
 const links = [
   { to: "/instructor/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -39,9 +36,7 @@ export function InstructorSidebar() {
   const SidebarBody = () => (
     <div className="flex flex-col h-full">
       <div className="px-5 h-16 flex items-center gap-2.5">
-        <span className="w-8 h-8 rounded-[10px] bg-violet-600 text-white flex items-center justify-center shadow-sm">
-          <Sparkles className="w-4 h-4" />
-        </span>
+        <BrandMark />
         <span className="font-semibold text-foreground tracking-tight">Instructor</span>
       </div>
       <nav className="flex-1 px-3 py-3 space-y-0.5">

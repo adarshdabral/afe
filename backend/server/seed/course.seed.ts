@@ -1,4 +1,4 @@
-// Course-content standardization seed. Makes " Demystifying AI for Everyone" the ONE and ONLY
+// Course-content standardization seed. Makes "Demystifying AI for Everyone" the ONE and ONLY
 // course on the platform: it soft-deletes every other course (unless
 // `archiveOthers: false`), then (idempotently) (re)builds the AI-for-Everyone course with 12 published modules — each with a
 // lesson of 7 topics and exactly one assessment (10 MCQ + 5 True/False + 2 scenario).
@@ -21,6 +21,7 @@ import {
   MODULE_LEARNING_OBJECTIVES,
   type LessonSections,
 } from "./ai-course.data";
+import { renameFlagshipSlug } from "../migrations/rename-course-slug";
 
 const SLUG = AI_COURSE_META.slug;
 
@@ -52,11 +53,15 @@ export interface SeedCourseOptions {
   archiveOthers?: boolean;
 }
 
-/** Standardize the platform to a single published " Demystifying AI for Everyone" course. */
+/** Standardize the platform to a single published "Demystifying AI for Everyone" course. */
 export async function seedAiCourse({
   createdBy = "u-platform-admin",
   archiveOthers = true,
 }: SeedCourseOptions = {}): Promise<SeedCourseResult> {
+  // 0. A database still on the old slug: rename that course in place first, so it
+  //    is updated below instead of being archived and replaced by a copy.
+  await renameFlagshipSlug();
+
   // 1. Soft-delete (remove from every surface) every OTHER course.
   const archived = archiveOthers
     ? await Course.updateMany(

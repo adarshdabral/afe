@@ -21,8 +21,30 @@ import busboy from "busboy";
 import { HttpError } from "../http/errors";
 import type { UploadedFile } from "../http/types";
 
-export const UPLOAD_DIR = path.resolve(process.cwd(), process.env.UPLOAD_DIR?.trim() || "uploads");
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+/**
+ * Where local-mode uploads are stored. If the configured UPLOAD_DIR can't be created
+ * (e.g. UPLOAD_DIR=/var/data/uploads on a Render service without its disk attached),
+ * fall back to ./uploads instead of throwing at import time — a throw here would take
+ * down every route that imports this module. The fallback is NOT persistent on
+ * Render, hence the loud warning.
+ */
+function resolveUploadDir(): string {
+  const configured = path.resolve(process.cwd(), process.env.UPLOAD_DIR?.trim() || "uploads");
+  try {
+    fs.mkdirSync(configured, { recursive: true });
+    return configured;
+  } catch (err) {
+    const fallback = path.resolve(process.cwd(), "uploads");
+    console.error(
+      `[uploads] UPLOAD_DIR "${configured}" is not writable (${(err as Error).message}); ` +
+        `using "${fallback}" instead — files there are lost on redeploy. Attach a disk or unset UPLOAD_DIR.`,
+    );
+    fs.mkdirSync(fallback, { recursive: true });
+    return fallback;
+  }
+}
+
+export const UPLOAD_DIR = resolveUploadDir();
 
 const MB = 1024 * 1024;
 const envBytes = (key: string, fallback: number) => Number(process.env[key] || fallback);

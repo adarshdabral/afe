@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-A MOOC / online-learning platform ("AI Spark" presenting the course "AI for
-Everyone") for the Centre of Excellence in Logistics & Supply Chain Management, Doon
+A MOOC / online-learning platform ("AI on Wheels" presenting the course "Demystifying
+AI for Everyone", slug `demystifying-ai-for-everyone`) for the Centre of Excellence in Logistics & Supply Chain Management, Doon
 University. The repo has exactly **two apps, both Next.js 15**:
 
 - **`frontend/`** — the UI (App Router, React 19, Tailwind v4, shadcn/ui "new-york").
@@ -44,7 +44,7 @@ npm run dev          # next dev -p 4000 (needs MONGODB_URI)
 npm run build        # next build
 npm run start        # next start (respects $PORT — Render sets it)
 npm run typecheck    # tsc --noEmit
-npm run seed         # demo users + standardize content to the single "AI for Everyone" course
+npm run seed         # demo users + standardize content to the single "Demystifying AI for Everyone" course
 npm run seed:flagship # same, but leaves every other course untouched (--keep-others)
 
 # --- frontend/ (UI, http://localhost:3000) — config in frontend/.env.local ---
@@ -53,11 +53,11 @@ npm run dev          # next dev
 npm run build        # next build (type-checks; eslint is ignored during build)
 npm run start        # next start
 npm run typecheck    # tsc --noEmit
-npm run lint         # next lint
+npm run lint         # eslint . (flat config: frontend/eslint.config.mjs)
 ```
 
 `npm run seed` (`backend/server/seed/course.seed.ts`) is **destructive to other courses**: it
-soft-deletes every course except "AI for Everyone" and (re)builds that course's 12
+soft-deletes every course except "Demystifying AI for Everyone" and (re)builds that course's 12
 modules, lesson containers, seven topics per module and assessments. Use `npm run seed:flagship` to (re)build only the
 flagship and keep other courses. Neither is run on server startup.
 
@@ -82,7 +82,7 @@ npx tsx verify/registration-check.mts    # student registration workflow (approv
 npx tsx verify/teacher-check.mts         # teacher-management CRUD (/api/admin/teachers)
 npx tsx verify/course-cms-check.mts      # Course CMS: course/section/module/lesson/topic CRUD, ordering, visibility
 npx tsx verify/migration-check.mts       # legacy content/progress migration and idempotent rerun
-npx tsx verify/course-content-check.mts  # seed: AI for Everyone is the only course, 12 modules, quiz mix
+npx tsx verify/course-content-check.mts  # seed: Demystifying AI for Everyone is the only course, 12 modules, quiz mix
 npx tsx verify/upload-check.mts          # uploads: RBAC, 415/413/400, Range/206, upload tokens, CORS, topics
 npx tsx verify/media-check.mts           # multi-part topics, presign (local + R2), >10 MB upload, subtitles, TTS (fake Cloudflare)
 npx tsx verify/learning-engine-check.mts # catalog visibility, topic ordering, role-scoped topic nav
@@ -91,6 +91,7 @@ npx tsx verify/progress-check.mts        # topic sequential locking, module/cour
 npx tsx verify/certificate-check.mts     # auto-issue, verify, PDF download, revoke, access control
 npx tsx verify/reviews-check.mts         # reviews & ratings
 npx tsx verify/feature-check.mts         # seed identities / self-registration rules
+npx tsx verify/branding-check.mts        # logo: public read, admin-only write, URL validation, SVG CSP
 npx tsx verify/e2e-student-journey.mts   # register → learn → quiz → complete → certificate → verify
 npx tsx verify/e2e-admin-journey.mts     # teachers → courses/modules/lessons/topics → assessments → certs
 npx tsx verify/serve.mts                 # backend on :3100 + ephemeral Mongo + seeded course (manual probing)
@@ -144,6 +145,7 @@ Consistent per-feature layering under `backend/` — follow it for new features:
 | `/api/auth` | public / any | login (email **or** username), register, `me`, logout |
 | `/api/registrations` | public + teacher/admin | teacher directory, self-registration, approval queue, decide |
 | `/api/admin/teachers` | platform_admin | teacher CRUD, activate/deactivate, reset password |
+| `/api/branding`, `/api/admin/branding` | public read; platform_admin write | platform logo (`SiteSetting` doc `"branding"`) |
 | `/api/admin/courses` | platform_admin | course/module/lesson-container/topic CRUD, ordering, publish/unpublish/archive |
 | `/api/admin/courses/:courseId/sections/:kind` | platform_admin | edit Introduction, Overview and Instructor course sections |
 | `/api/admin/courses/lessons/:lessonId/topics` | platform_admin | topic CRUD and ordering within lesson containers |
@@ -292,19 +294,24 @@ Consistent per-feature layering under `backend/` — follow it for new features:
   they flash/deny during session load.
 - **`LearningContext`** owns the active course's learning state (completed topics,
   current lesson, progress) backed by the progress API.
-- **Single-course product**: public pages present one flagship course ("AI for
-  Everyone", `FLAGSHIP_SLUG` in `frontend/lib/course.ts`, mirrors
+- **Single-course product**: public pages present one flagship course ("Demystifying
+  AI for Everyone", `FLAGSHIP_SLUG` in `frontend/lib/course.ts`, mirrors
   `AI_COURSE_META.slug` in `backend/server/seed/ai-course.data.ts`). `/` and
   `/courses/[slug]` are dynamic server components that fetch the course outline from
   the backend (`lib/server/course.ts`, lesson bodies stripped; client-side retry if
   the backend is asleep) and render `components/course-landing/*`; `/courses` redirects to the
-  flagship. Platform brand is "AI Spark"; the course is "AI for Everyone".
+  flagship. Platform brand is "AI on Wheels" (`PLATFORM_NAME`); the course is "Demystifying
+  AI for Everyone". The old slug `ai-for-everyone` is renamed in place on startup
+  (`server/migrations/rename-course-slug.ts`) and redirected in `next.config.ts`.
+- **Branding**: the logo uploaded at `/admin/branding` replaces the default Sparkles mark
+  everywhere — always render the brand with `components/BrandMark.tsx` (reads
+  `BrandingContext`, seeded server-side in `app/layout.tsx`), never a bare `<Sparkles />`.
 - Route map: public `/`, `/courses` (redirect), `/courses/[slug]`, `/certificate/verify{,/[id]}`;
   auth `/login`, `/register`, `/forgot-password` (UI only — no reset backend);
   learner `/learn/[slug]{,/section/[kind],/module/[moduleId],/topic/[topicId],/assessment/[assessmentId]}`;
   `/student/{dashboard,certificates,forum,pending}`;
   `/instructor/{dashboard,approvals,analytics,forum}`;
-  `/admin/{dashboard,courses/**,teachers/**,certificates,analytics}`.
+  `/admin/{dashboard,courses/**,teachers/**,certificates,analytics,branding}`.
 
 ### UI conventions
 - shadcn/ui ("new-york") in `frontend/components/ui/`. Icons: **lucide-react**. Class

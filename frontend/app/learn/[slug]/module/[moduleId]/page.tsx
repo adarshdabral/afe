@@ -32,10 +32,10 @@ export default function ModuleOverview() {
     () => (tree ? tree.modules.flatMap((m) => m.lessons.flatMap((lesson) => lesson.topics.map((topic) => topic.id))) : []),
     [tree],
   );
-  const module = tree?.modules.find((m) => m.id === moduleId) ?? null;
-  const moduleIndex = tree && module ? tree.modules.indexOf(module) : -1;
-  const score = module?.assessmentId
-    ? detail?.progress.assessmentScores.find((a) => a.assessmentId === module.assessmentId)
+  const mod = tree?.modules.find((m) => m.id === moduleId) ?? null;
+  const moduleIndex = tree && mod ? tree.modules.indexOf(mod) : -1;
+  const score = mod?.assessmentId
+    ? detail?.progress.assessmentScores.find((a) => a.assessmentId === mod.assessmentId)
     : undefined;
 
   return (
@@ -48,7 +48,7 @@ export default function ModuleOverview() {
           </Link>
           {status === "loading" ? (
             <div className="skeleton h-40 rounded-3xl" />
-          ) : !module ? (
+          ) : !mod ? (
             <div className="rounded-3xl border border-border bg-card p-10 text-center shadow-soft">
               <p className="font-medium text-foreground">Module not found</p>
             </div>
@@ -57,16 +57,16 @@ export default function ModuleOverview() {
               <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-violet-600">
                 Module {pad2(moduleIndex + 1)} of {tree?.modules.length}
               </p>
-              <h1 className="mt-1.5 text-3xl md:text-4xl font-semibold tracking-tight text-foreground mb-2">{module.title}</h1>
-              {module.description && <p className="text-[16px] text-muted-foreground leading-relaxed mb-6 max-w-2xl">{module.description}</p>}
-              {(module.learningObjectives?.length ?? 0) > 0 && (
+              <h1 className="mt-1.5 text-3xl md:text-4xl font-semibold tracking-tight text-foreground mb-2">{mod.title}</h1>
+              {mod.description && <p className="text-[16px] text-muted-foreground leading-relaxed mb-6 max-w-2xl">{mod.description}</p>}
+              {(mod.learningObjectives?.length ?? 0) > 0 && (
                 <section aria-labelledby="objectives" className="mb-6 rounded-3xl border border-border bg-card shadow-soft p-5 md:p-6">
                   <h2 id="objectives" className="flex items-center gap-2 font-semibold text-foreground">
                     <Target className="w-4 h-4 text-violet-600" aria-hidden /> What you&apos;ll learn
                   </h2>
                   <p className="text-[13px] text-muted-foreground mt-0.5">By the end of this module, you will be able to:</p>
                   <ul className="mt-3 space-y-2">
-                    {module.learningObjectives.map((o, i) => (
+                    {mod.learningObjectives.map((o, i) => (
                       <li key={i} className="flex gap-2.5 text-[15px] text-foreground leading-relaxed">
                         <CheckCircle2 className="w-4 h-4 text-violet-600 shrink-0 mt-1" aria-hidden />
                         {o}
@@ -77,7 +77,7 @@ export default function ModuleOverview() {
               )}
               <h2 className="font-semibold text-foreground mb-2">Learning content</h2>
               <div className="bg-card rounded-3xl border border-border shadow-soft divide-y divide-border overflow-hidden">
-                {module.lessons.map((lesson) => (
+                {mod.lessons.map((lesson) => (
                   <section key={lesson.id} className="px-5 py-4">
                     <h3 className="font-medium text-foreground">{lesson.title}</h3>
                     {lesson.description && <p className="text-xs text-muted-foreground mt-1">{lesson.description}</p>}
@@ -103,14 +103,14 @@ export default function ModuleOverview() {
                   </section>
                 ))}
               </div>
-              {module.assessmentId && (
+              {mod.assessmentId && (
                 <h2 className="font-semibold text-foreground mt-8">Module assessment</h2>
               )}
-              {module.assessmentId && (
+              {mod.assessmentId && (
                 <p className="text-[13px] text-muted-foreground mt-0.5">One test covering this whole module.</p>
               )}
-              {module.assessmentId && (
-                <Link href={`/learn/${slug}/assessment/${module.assessmentId}`}>
+              {mod.assessmentId && (
+                <Link href={`/learn/${slug}/assessment/${mod.assessmentId}`}>
                   <Button className="rounded-full h-11 px-5 mt-3 bg-violet-600 hover:bg-violet-700 text-white">
                     <ClipboardList className="w-4 h-4 mr-2" />
                     {score ? (score.passed ? `Assessment passed · ${score.score}%` : `Retake assessment · best ${score.score}%`) : "Take the module assessment"}

@@ -1,6 +1,6 @@
 # PROJECT_MEMORY.md
 
-Durable engineering memory for **ai-spark** ("AI For Everyone" / SRS: * Demystifying AI for Everyone*).
+Durable engineering memory for **ai-spark** ("AI For Everyone" / SRS: *Demystifying AI for Everyone*).
 Read this before adding features so new code matches existing conventions instead of inventing new ones.
 Source of truth for behavior is `CLAUDE.md` (build/runtime rules) + `src/routes/README.md` (routing) + `SRS.pdf` (product requirements). This file captures the *coding* conventions distilled from the current codebase.
 
