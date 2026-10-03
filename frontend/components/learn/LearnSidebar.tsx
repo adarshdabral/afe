@@ -68,6 +68,8 @@ export function LearnSidebar({
           </div>
         )}
         <div className="space-y-3 max-h-[calc(100vh-13rem)] overflow-y-auto pr-0.5">
+          {/* Course sections (Course Introduction, Course Overview, Meet the Instructor)
+              are hidden from the left pane for now — uncomment to show them again.
           {(tree.sections?.length ?? 0) > 0 && (
             <ul className="space-y-0.5">
               {tree.sections.map((s) => (
@@ -80,6 +82,7 @@ export function LearnSidebar({
               ))}
             </ul>
           )}
+          */}
           {tree.modules.map((m, mi) => (
             <div key={m.id}>
               <Link
