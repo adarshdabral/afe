@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   PlayCircle,
+  BookOpen,
   Award,
   ClipboardCheck,
   CheckCircle2,
@@ -18,6 +19,7 @@ import { useLearning } from "@/context/LearningContext";
 import { getPublicCourse, type CourseTree } from "@/lib/api/courses";
 import { roleHome } from "@/lib/access";
 import { pad2 } from "@/lib/course";
+import { describeRemaining, remainingWork } from "@/lib/progress";
 
 // The " Demystifying AI for Everyone learning experience" home: course header, progress,
 // resume point, certificate status and the module map. Sequential locking and
@@ -53,6 +55,12 @@ export default function LearnOverview() {
   const completedModules = new Set(detail?.progress.completedModules ?? []);
   const assessments = tree?.modules.filter((m) => m.assessmentId) ?? [];
   const passed = assessments.filter((m) => scores.get(m.assessmentId!)?.passed).length;
+  // Students see what's LEFT; staff previewing the course see the totals.
+  const work = remainingWork(
+    tree?.modules ?? [],
+    isStudent ? completedTopics : new Set(),
+    new Set(isStudent ? [...scores.values()].filter((a) => a.passed).map((a) => a.assessmentId) : []),
+  );
   const allTopicsDone = sequence.length > 0 && sequence.every((id) => completedTopics.has(id));
 
   if (status === "loading")
@@ -130,6 +138,8 @@ export default function LearnOverview() {
                 {assessments.length > 0 && <Stat label="Passed" value={`${passed}/${assessments.length}`} />}
               </dl>
 
+              <RemainingStats work={work} suffix="left" />
+
               <div className="mt-8 flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
                 {resumeId && !allTopicsDone && (
                   <Link
@@ -151,6 +161,7 @@ export default function LearnOverview() {
               </div>
             </>
           ) : (
+            <>
             <div className="mt-6 flex items-start gap-3 rounded-2xl bg-secondary/70 p-4 max-w-2xl">
               <Eye className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" aria-hidden />
               <p className="text-[14px] text-foreground leading-relaxed">
@@ -158,6 +169,8 @@ export default function LearnOverview() {
                 Progress, sequential locking and certificates apply to student accounts only.
               </p>
             </div>
+            <RemainingStats work={work} suffix="" />
+            </>
           )}
         </div>
 
@@ -274,6 +287,29 @@ function CertificateStatus({
         </Link>
       )}
     </div>
+  );
+}
+
+/** "46 min of videos left · 1h 20m of readings left · 1 graded assessment left". */
+function RemainingStats({ work, suffix }: { work: ReturnType<typeof remainingWork>; suffix: string }) {
+  const items: { icon: typeof PlayCircle; text: string }[] = [];
+  if (work.videos.count > 0) items.push({ icon: PlayCircle, text: describeRemaining("video", work.videos, suffix) });
+  if (work.readings.count > 0) items.push({ icon: BookOpen, text: describeRemaining("reading", work.readings, suffix) });
+  if (work.gradedAssessments > 0)
+    items.push({
+      icon: ClipboardCheck,
+      text: `${work.gradedAssessments} graded ${work.gradedAssessments === 1 ? "assessment" : "assessments"}${suffix ? ` ${suffix}` : ""}`,
+    });
+  if (items.length === 0) return null;
+  return (
+    <ul className="mt-5 flex flex-col sm:flex-row sm:flex-wrap gap-x-6 gap-y-2" aria-label="Remaining in this course">
+      {items.map((i) => (
+        <li key={i.text} className="inline-flex items-center gap-2 text-[14px] text-foreground">
+          <i.icon className="w-4 h-4 text-violet-600 shrink-0" aria-hidden />
+          {i.text}
+        </li>
+      ))}
+    </ul>
   );
 }
 
