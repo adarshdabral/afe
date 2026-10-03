@@ -3,7 +3,7 @@ node_modules
 .env
 .env.local
 next-env.d.ts
-uploads
+/uploads/
 *.tsbuildinfo
 .next-verify
 .next-verify.lock
