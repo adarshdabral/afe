@@ -22,6 +22,7 @@ export interface CreateAssessmentInput {
   title: string;
   description?: string;
   passingScore?: number;
+  estimatedDurationMinutes?: number;
 }
 
 /** True if the module already has an assessment (one-per-module rule). */
@@ -40,6 +41,7 @@ export async function createAssessment(
     title: input.title.trim(),
     description: input.description ?? "",
     passingScore: input.passingScore ?? undefined,
+    estimatedDurationMinutes: input.estimatedDurationMinutes ?? 0,
   });
   return toAssessment(doc);
 }
@@ -56,13 +58,14 @@ export async function getAssessmentForModule(moduleId: string): Promise<Assessme
 
 export async function updateAssessment(
   id: string,
-  patch: { title?: string; description?: string; passingScore?: number },
+  patch: { title?: string; description?: string; passingScore?: number; estimatedDurationMinutes?: number },
 ): Promise<AssessmentView | null> {
   const doc = await Assessment.findById(id).catch(() => null);
   if (!doc) return null;
   if (patch.title !== undefined) doc.title = patch.title.trim();
   if (patch.description !== undefined) doc.description = patch.description;
   if (patch.passingScore !== undefined) doc.passingScore = patch.passingScore;
+  if (patch.estimatedDurationMinutes !== undefined) doc.estimatedDurationMinutes = patch.estimatedDurationMinutes;
   await doc.save();
   return toAssessment(doc);
 }

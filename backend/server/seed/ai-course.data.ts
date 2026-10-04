@@ -801,7 +801,35 @@ export const AI_COURSE_META = {
     "Demystifying AI for Everyone is a 12-module journey through artificial intelligence for a general audience: understanding AI, data, how AI learns, everyday and industry applications, careers, economics, the future of work, ethics and safety, and a capstone project. Taught by Dr. Sudhanshu Joshi.",
   level: "beginner" as const,
   tags: ["ai", "ai-literacy", "machine-learning", "ethics"],
+  // Course-page metadata (editable in Admin → Courses → Course details). Each entry
+  // names something the 12 modules actually teach.
+  skills: [
+    "AI literacy",
+    "Machine learning fundamentals",
+    "Data literacy",
+    "Natural language processing",
+    "Computer vision",
+    "AI project lifecycle",
+    "Responsible AI & ethics",
+    "Critical evaluation of AI output",
+  ],
+  tools: [
+    "Generative AI chatbots",
+    "AI copilots",
+    "Image & video generators",
+    "Low-code / AutoML platforms",
+    "MLOps tools",
+  ],
+  offeredBy: {
+    name: "Doon University",
+    logoUrl: "",
+    description: "Centre of Excellence in Logistics & Supply Chain Management",
+    url: "https://doonuniversity.ac.in",
+  },
 };
+
+/** Estimated minutes per module assessment (10 MCQs, 5 True/False, 2 scenarios). */
+export const MODULE_ASSESSMENT_MINUTES = 20;
 
 /**
  * Learning objectives per module (by module title). Each one restates that

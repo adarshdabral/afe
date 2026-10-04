@@ -30,6 +30,7 @@ const createSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(5000).optional(),
   passingScore: z.coerce.number().int().min(0).max(100).optional(),
+  estimatedDurationMinutes: z.coerce.number().int().min(0).max(1000).optional(),
 });
 
 const updateSchema = z
@@ -37,6 +38,7 @@ const updateSchema = z
     title: z.string().min(1).max(200).optional(),
     description: z.string().max(5000).optional(),
     passingScore: z.coerce.number().int().min(0).max(100).optional(),
+    estimatedDurationMinutes: z.coerce.number().int().min(0).max(1000).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "No fields to update." });
 

@@ -14,6 +14,8 @@ export interface AssessmentView {
   title: string;
   description: string;
   passingScore: number;
+  /** Expected time to complete, in minutes (0 = not estimated). */
+  estimatedDurationMinutes: number;
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;
@@ -26,6 +28,7 @@ const assessmentSchema = new Schema(
     title: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
     passingScore: { type: Number, default: DEFAULT_PASSING_SCORE, min: 0, max: 100 },
+    estimatedDurationMinutes: { type: Number, default: 0, min: 0 },
     isPublished: { type: Boolean, default: false },
   },
   { timestamps: true },
@@ -45,6 +48,7 @@ export function toAssessment(doc: AssessmentDoc): AssessmentView {
     title: doc.title,
     description: doc.description ?? "",
     passingScore: doc.passingScore ?? DEFAULT_PASSING_SCORE,
+    estimatedDurationMinutes: doc.estimatedDurationMinutes ?? 0,
     isPublished: doc.isPublished === true,
     createdAt: ts.createdAt?.toISOString() ?? new Date(0).toISOString(),
     updatedAt: ts.updatedAt?.toISOString() ?? new Date(0).toISOString(),

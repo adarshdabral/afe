@@ -14,6 +14,7 @@ import {
   getModuleAssessment,
   publishAssessment,
   unpublishAssessment,
+  updateAssessment,
   QUESTION_TYPES,
   type Assessment,
   type Question,
@@ -84,6 +85,25 @@ export function AssessmentBuilder({ moduleId, onChange }: { moduleId: string; on
           <p className="text-xs text-muted-foreground">
             Passing score {assessment.passingScore}% · {assessment.isPublished ? "published" : "draft"}
           </p>
+          <label className="mt-1.5 inline-flex items-center gap-2 text-xs text-muted-foreground">
+            Estimated time
+            <Input
+              key={`${assessment.id}-${assessment.estimatedDurationMinutes}`}
+              type="number"
+              min={0}
+              max={1000}
+              defaultValue={assessment.estimatedDurationMinutes || ""}
+              placeholder="0"
+              disabled={busy}
+              className="h-7 w-20 rounded-lg text-xs"
+              onBlur={(e) => {
+                const minutes = Math.max(0, Math.min(1000, Math.round(Number(e.target.value) || 0)));
+                if (minutes !== (assessment.estimatedDurationMinutes ?? 0))
+                  void run(() => updateAssessment(assessment.id, { estimatedDurationMinutes: minutes }), "Estimated time saved.");
+              }}
+            />
+            min
+          </label>
         </div>
         <div className="flex gap-2">
           <Button

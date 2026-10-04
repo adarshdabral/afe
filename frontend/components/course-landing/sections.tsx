@@ -5,7 +5,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   Award,
+  BadgeCheck,
   BarChart3,
+  Building2,
   BookOpenText,
   CheckCircle2,
   ClipboardCheck,
@@ -20,6 +22,7 @@ import {
 import {
   assessmentCount,
   contentFormats,
+  contentSection,
   courseMinutes,
   formatMinutes,
   initials,
@@ -143,7 +146,7 @@ export function LearningOutcomes({ course }: { course: CourseOutline }) {
 
 export function InstructorSection({ course }: { course: CourseOutline }) {
   if (!course.instructor) return null;
-  const instructorSection = course.sections.find((section) => section.kind === "instructor");
+  const instructorSection = contentSection(course, "instructor");
   const first = course.modules[0]?.title;
   const last = course.modules[course.modules.length - 1]?.title;
   return (
@@ -161,7 +164,18 @@ export function InstructorSection({ course }: { course: CourseOutline }) {
           <h2 id="instructor-heading" className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight text-foreground">
             {course.instructor}
           </h2>
-          <p className="mt-1 text-muted-foreground">Instructor, {course.title}</p>
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-600/10 px-2.5 py-1 text-[12px] font-semibold text-violet-700 dark:text-violet-300">
+              <BadgeCheck className="w-3.5 h-3.5" aria-hidden /> Course instructor
+            </span>
+            <span>{course.instructorTitle || course.title}</span>
+          </p>
+          {course.offeredBy.name && (
+            <p className="mt-2 flex items-center gap-1.5 text-[14px] text-muted-foreground">
+              <Building2 className="w-4 h-4 shrink-0" aria-hidden />
+              {[course.offeredBy.description, course.offeredBy.name].filter(Boolean).join(", ")}
+            </p>
+          )}
           {first && last && course.modules.length > 1 && (
             <p className="mt-5 text-[16px] text-foreground leading-relaxed max-w-2xl">
               {course.instructor} leads all {course.modules.length} modules of {course.title} — from{" "}

@@ -4,7 +4,7 @@
 //   course → sections (Introduction, Overview, Instructor) + modules → lessons → topics.
 // No req/res here — pure business logic over the Mongoose models.
 
-import { Course, toCourse, type CourseStatus, type CourseView } from "../models/Course";
+import { Course, toCourse, type CourseStatus, type CourseView, type OfferedBy } from "../models/Course";
 import { Module, toModule, type ModuleView } from "../models/Module";
 import { Lesson, toLesson, type LessonView } from "../models/Lesson";
 import { Topic, toTopic, type TopicView } from "../models/Topic";
@@ -22,6 +22,8 @@ export type ModuleNode = ModuleView & {
   lessons: LessonNode[];
   /** Published assessment id for this module (admins also see unpublished), else null. */
   assessmentId: string | null;
+  /** Estimated minutes for that assessment (0 = not estimated / no assessment). */
+  assessmentDurationMinutes: number;
   /** Admin tree only: what the module still needs before it can be published. */
   readiness?: ModuleReadiness;
 };
@@ -95,6 +97,7 @@ export interface CreateCourseInput {
   description?: string;
   shortDescription?: string;
   instructor?: string;
+  instructorTitle?: string;
   thumbnail?: string;
   bannerImage?: string;
   level?: "beginner" | "intermediate" | "advanced";
@@ -102,7 +105,12 @@ export interface CreateCourseInput {
   learningObjectives?: string[];
   prerequisites?: string[];
   tags?: string[];
+  skills?: string[];
+  tools?: string[];
+  offeredBy?: Partial<OfferedBy>;
 }
+
+const EMPTY_OFFERED_BY: OfferedBy = { name: "", logoUrl: "", description: "", url: "" };
 
 export async function createCourse(
   input: CreateCourseInput,
@@ -115,6 +123,7 @@ export async function createCourse(
     description: input.description ?? "",
     shortDescription: input.shortDescription ?? "",
     instructor: input.instructor ?? "",
+    instructorTitle: input.instructorTitle ?? "",
     thumbnail: input.thumbnail ?? "",
     bannerImage: input.bannerImage ?? "",
     status: "draft",
@@ -123,6 +132,9 @@ export async function createCourse(
     learningObjectives: input.learningObjectives ?? [],
     prerequisites: input.prerequisites ?? [],
     tags: input.tags ?? [],
+    skills: input.skills ?? [],
+    tools: input.tools ?? [],
+    offeredBy: { ...EMPTY_OFFERED_BY, ...input.offeredBy },
     createdBy,
   });
   await ensureSections(String(doc._id)); // every course starts with its 3 sections
@@ -153,6 +165,7 @@ export async function updateCourse(
   if (patch.description !== undefined) doc.description = patch.description;
   if (patch.shortDescription !== undefined) doc.shortDescription = patch.shortDescription;
   if (patch.instructor !== undefined) doc.instructor = patch.instructor;
+  if (patch.instructorTitle !== undefined) doc.instructorTitle = patch.instructorTitle;
   if (patch.thumbnail !== undefined) doc.thumbnail = patch.thumbnail;
   if (patch.bannerImage !== undefined) doc.bannerImage = patch.bannerImage;
   if (patch.level !== undefined) doc.level = patch.level;
@@ -161,6 +174,13 @@ export async function updateCourse(
   if (patch.learningObjectives !== undefined) doc.learningObjectives = patch.learningObjectives;
   if (patch.prerequisites !== undefined) doc.prerequisites = patch.prerequisites;
   if (patch.tags !== undefined) doc.tags = patch.tags;
+  if (patch.skills !== undefined) doc.set("skills", patch.skills);
+  if (patch.tools !== undefined) doc.set("tools", patch.tools);
+  if (patch.offeredBy !== undefined) {
+    // Merge: omitted keys keep their stored value.
+    const current = toCourse(doc).offeredBy;
+    doc.set("offeredBy", { ...current, ...patch.offeredBy });
+  }
   await doc.save();
   await ensureSections(String(doc._id)); // every course starts with its 3 sections
   return toCourse(doc);
@@ -248,7 +268,7 @@ async function buildTree(course: CourseView, includeUnpublished: boolean): Promi
   // Attach each module's assessment (published only for non-admins).
   const assessmentFilter: Record<string, unknown> = { courseId: course.id };
   if (!includeUnpublished) assessmentFilter.isPublished = true;
-  const assessments = await Assessment.find(assessmentFilter).select("_id moduleId isPublished");
+  const assessments = await Assessment.find(assessmentFilter).select("_id moduleId isPublished estimatedDurationMinutes");
   const assessmentByModule = new Map<string, string>();
   for (const a of assessments) assessmentByModule.set(a.moduleId, String(a._id));
 
@@ -272,6 +292,7 @@ async function buildTree(course: CourseView, includeUnpublished: boolean): Promi
         ...mv,
         lessons: byModule.get(mv.id) ?? [],
         assessmentId: assessmentByModule.get(mv.id) ?? null,
+        assessmentDurationMinutes: assessmentDocByModule.get(mv.id)?.estimatedDurationMinutes ?? 0,
         ...(includeUnpublished
           ? {
               readiness: readinessFrom(

@@ -13,6 +13,8 @@ export interface Assessment {
   title: string;
   description: string;
   passingScore: number;
+  /** Expected minutes to complete (0 = not estimated). */
+  estimatedDurationMinutes: number;
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;
@@ -88,7 +90,7 @@ export async function createAssessment(input: CreateAssessmentInput): Promise<As
 }
 export async function updateAssessment(
   id: string,
-  patch: Partial<Pick<Assessment, "title" | "description" | "passingScore">>,
+  patch: Partial<Pick<Assessment, "title" | "description" | "passingScore" | "estimatedDurationMinutes">>,
 ): Promise<Assessment> {
   const { data } = await api.patch<{ data: Assessment }>(`${ADMIN}/${id}`, patch);
   return data.data;

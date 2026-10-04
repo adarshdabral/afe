@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { ArrowLeft, ClipboardList, CheckCircle2, PlayCircle, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LearnSidebar } from "@/components/learn/LearnSidebar";
+import { ModuleProgressSummary } from "@/components/learn/ModuleProgressSummary";
 import { useApp } from "@/context/AppContext";
 import { useLearning } from "@/context/LearningContext";
 import { pad2 } from "@/lib/course";
@@ -58,6 +59,7 @@ export default function ModuleOverview() {
                 Module {pad2(moduleIndex + 1)} of {tree?.modules.length}
               </p>
               <h1 className="mt-1.5 text-3xl md:text-4xl font-semibold tracking-tight text-foreground mb-2">{mod.title}</h1>
+              <ModuleProgressSummary module={mod} className="mb-4" />
               {mod.description && <p className="text-[16px] text-muted-foreground leading-relaxed mb-6 max-w-2xl">{mod.description}</p>}
               {(mod.learningObjectives?.length ?? 0) > 0 && (
                 <section aria-labelledby="objectives" className="mb-6 rounded-3xl border border-border bg-card shadow-soft p-5 md:p-6">

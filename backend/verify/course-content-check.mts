@@ -95,6 +95,8 @@ const tree = (await student.get("/courses/demystifying-ai-for-everyone")).json?.
 {
   const mods = tree?.modules ?? [];
   check("course has exactly 12 modules", mods.length === 12, mods.length);
+  check("course page metadata seeded (skills, tools, offered by)", tree?.skills?.length > 0 && tree?.tools?.length > 0 && tree?.offeredBy?.name === "Doon University", { skills: tree?.skills, tools: tree?.tools, offeredBy: tree?.offeredBy });
+  check("every module assessment has a time estimate", mods.every((m: any) => m.assessmentDurationMinutes > 0), mods.map((m: any) => m.assessmentDurationMinutes));
   check("modules are in ascending order 0..11", mods.every((m: any, i: number) => m.order === i), mods.map((m: any) => m.order));
   check("module titles match the required curriculum exactly", JSON.stringify(mods.map((m: any) => m.title)) === JSON.stringify(REQUIRED_MODULES), mods.map((m: any) => m.title));
   check("every module is published & has one lesson with 7 topics + assessment", mods.every((m: any) => m.isPublished && m.lessons.length === 1 && m.lessons[0].topics.length === 7 && !!m.assessmentId), mods.map((m: any) => ({ p: m.isPublished, l: m.lessons.length, t: m.lessons[0]?.topics?.length, a: !!m.assessmentId })));

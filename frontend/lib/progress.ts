@@ -71,3 +71,60 @@ export function describeRemaining(
   const text = b.minutes > 0 ? `${formatTimeLeft(b.minutes)} of ${noun}` : `${b.count} ${b.count === 1 ? kind : noun}`;
   return suffix ? `${text} ${suffix}` : text;
 }
+
+export interface ModuleRemaining {
+  /** Graded (published) module assessments not yet passed. */
+  gradedLeft: number;
+  /** Learning units (topics) not yet completed. */
+  lessonsLeft: number;
+  /** Estimated minutes of the unfinished topics + the assessment, if not yet passed. */
+  minutesLeft: number;
+  /** Totals for the module (what a fresh student, or staff previewing, sees). */
+  totalGraded: number;
+  totalLessons: number;
+  totalMinutes: number;
+}
+
+/**
+ * What a student still has to do in ONE module, from the module's content and the
+ * student's progress record (completed topics + passed assessments). Nothing is
+ * stored: it is recomputed whenever progress changes, so it is per-student.
+ * Durations come from each topic's estimate and the assessment's estimate; content
+ * without an estimate counts toward the item totals but adds no time.
+ */
+export function moduleRemaining(
+  module: { assessmentId: string | null; assessmentDurationMinutes?: number; lessons: { topics: TopicLike[] }[] },
+  completed: Set<string>,
+  passedAssessmentIds: Set<string>,
+): ModuleRemaining {
+  const out: ModuleRemaining = { gradedLeft: 0, lessonsLeft: 0, minutesLeft: 0, totalGraded: 0, totalLessons: 0, totalMinutes: 0 };
+  for (const l of module.lessons) {
+    for (const t of l.topics) {
+      const minutes = t.estimatedDurationMinutes || 0;
+      out.totalLessons += 1;
+      out.totalMinutes += minutes;
+      if (completed.has(t.id)) continue;
+      out.lessonsLeft += 1;
+      out.minutesLeft += minutes;
+    }
+  }
+  if (module.assessmentId) {
+    const minutes = module.assessmentDurationMinutes || 0;
+    out.totalGraded = 1;
+    out.totalMinutes += minutes;
+    if (!passedAssessmentIds.has(module.assessmentId)) {
+      out.gradedLeft = 1;
+      out.minutesLeft += minutes;
+    }
+  }
+  return out;
+}
+
+/** "1h 25m", "46m" — compact form used in the module summary line. */
+export function formatHm(minutes: number): string {
+  const m = Math.max(0, Math.round(minutes));
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  if (h === 0) return `${r}m`;
+  return r ? `${h}h ${r}m` : `${h}h`;
+}

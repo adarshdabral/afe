@@ -7,7 +7,12 @@ export function CourseJsonLd({ course }: { course: CourseOutline }) {
     "@type": "Course",
     name: course.title,
     description: course.shortDescription || course.description,
-    provider: { "@type": "Organization", name: PLATFORM_NAME },
+    provider: {
+      "@type": "Organization",
+      name: course.offeredBy.name || PLATFORM_NAME,
+      ...(course.offeredBy.url ? { url: course.offeredBy.url } : {}),
+    },
+    ...(course.skills.length ? { teaches: course.skills } : {}),
     ...(course.instructor ? { creator: { "@type": "Person", name: course.instructor } } : {}),
     educationalLevel: course.level,
     syllabusSections: course.modules.map((m) => ({

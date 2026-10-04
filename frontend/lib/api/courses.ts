@@ -20,6 +20,14 @@ export type CourseStatus = (typeof COURSE_STATUSES)[number];
 export type CourseLevel = (typeof COURSE_LEVELS)[number];
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
+/** The institution offering a course ("Offered by"). */
+export interface OfferedBy {
+  name: string;
+  logoUrl: string;
+  description: string;
+  url: string;
+}
+
 export interface Course {
   id: string;
   title: string;
@@ -27,6 +35,8 @@ export interface Course {
   description: string;
   shortDescription: string;
   instructor: string;
+  /** Credential line for the instructor badge (optional). */
+  instructorTitle: string;
   thumbnail: string;
   bannerImage: string;
   status: CourseStatus;
@@ -35,6 +45,11 @@ export interface Course {
   learningObjectives: string[];
   prerequisites: string[];
   tags: string[];
+  /** "Skills you'll gain" chips. */
+  skills: string[];
+  /** "Tools you'll learn" chips. */
+  tools: string[];
+  offeredBy: OfferedBy;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -129,6 +144,8 @@ export type ModuleWithLessons = Module & {
   lessons: LessonWithTopics[];
   /** The module's ONE assessment (students: published only; null if none). */
   assessmentId: string | null;
+  /** Estimated minutes for that assessment (0 = not estimated). */
+  assessmentDurationMinutes: number;
   readiness?: ModuleReadiness;
 };
 export type CourseTree = Course & { sections: CourseSection[]; modules: ModuleWithLessons[] };
@@ -153,6 +170,8 @@ export interface CreateCourseInput {
   slug?: string;
   description?: string;
   shortDescription?: string;
+  instructor?: string;
+  instructorTitle?: string;
   thumbnail?: string;
   bannerImage?: string;
   level?: CourseLevel;
@@ -160,6 +179,9 @@ export interface CreateCourseInput {
   learningObjectives?: string[];
   prerequisites?: string[];
   tags?: string[];
+  skills?: string[];
+  tools?: string[];
+  offeredBy?: Partial<OfferedBy>;
 }
 export type UpdateCourseInput = Partial<CreateCourseInput>;
 

@@ -26,12 +26,18 @@ const slugField = z
   .max(160)
   .regex(/^[a-z0-9-]+$/i, "Slug may only contain letters, numbers, and hyphens.");
 const stringList = z.array(z.string().max(500)).max(100);
+/** Chip lists (skills, tools): trimmed, non-empty, de-duplicated. */
+const chipList = z
+  .array(z.string().trim().min(1).max(80))
+  .max(30)
+  .transform((xs) => [...new Set(xs)]);
 
 const courseFields = {
   slug: slugField.optional(),
   description: z.string().max(50000).optional(),
   shortDescription: z.string().max(500).optional(),
   instructor: z.string().max(120).optional(),
+  instructorTitle: z.string().max(200).optional(),
   thumbnail: urlish,
   bannerImage: urlish,
   level: z.enum(COURSE_LEVELS).optional(),
@@ -39,6 +45,16 @@ const courseFields = {
   learningObjectives: stringList.optional(),
   prerequisites: stringList.optional(),
   tags: z.array(z.string().max(60)).max(50).optional(),
+  skills: chipList.optional(),
+  tools: chipList.optional(),
+  offeredBy: z
+    .object({
+      name: z.string().trim().max(200).optional(),
+      logoUrl: urlish,
+      description: z.string().max(2000).optional(),
+      url: urlish,
+    })
+    .optional(),
 };
 
 const createSchema = z.object({ title: z.string().min(1).max(200), ...courseFields });

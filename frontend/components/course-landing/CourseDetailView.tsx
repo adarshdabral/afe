@@ -8,7 +8,8 @@ import { CourseReviews, StarRow } from "@/components/CourseReviews";
 import { ContentRenderer } from "@/components/learn/ContentRenderer";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { listReviews, type RatingAggregate } from "@/lib/api/reviews";
-import { initials, levelLabel, type CourseOutline } from "@/lib/course";
+import { contentSection, levelLabel, type CourseOutline } from "@/lib/course";
+import { CourseHighlights, InstructorBadge } from "./CourseHighlights";
 import { CourseCta } from "./CourseCta";
 import { CurriculumPreview } from "./CurriculumPreview";
 import {
@@ -31,6 +32,16 @@ const SECTIONS = [
   { id: "reviews", label: "Reviews" },
   { id: "faq", label: "FAQ" },
 ];
+
+/** In-page nav entries for the sections this course actually renders. */
+function visibleSections(course: CourseOutline) {
+  const shown: Record<string, boolean> = {
+    introduction: !!contentSection(course, "introduction") || !!course.description.trim(),
+    overview: !!contentSection(course, "overview"),
+    instructor: !!course.instructor,
+  };
+  return SECTIONS.filter((s) => shown[s.id] ?? true);
+}
 
 /** `/courses/[slug]` — the full public course page. */
 export function CourseDetailView({ slug, initial }: { slug: string; initial: CourseOutline | null }) {
@@ -92,16 +103,7 @@ export function CourseDetailView({ slug, initial }: { slug: string; initial: Cou
                     </p>
                   )}
                   <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
-                    {course.instructor && (
-                      <a href="#instructor" className="flex items-center gap-2.5 group">
-                        <span className="w-9 h-9 rounded-full bg-violet-600 text-white text-[12px] font-semibold flex items-center justify-center">
-                          {initials(course.instructor)}
-                        </span>
-                        <span className="text-[15px] text-foreground">
-                          Instructor: <span className="font-semibold group-hover:underline">{course.instructor}</span>
-                        </span>
-                      </a>
-                    )}
+                    <InstructorBadge course={course} />
                     {rating && rating.totalReviews > 0 && (
                       <a href="#reviews" className="flex items-center gap-2 text-[14px] text-foreground hover:underline">
                         <span className="font-semibold tabular-nums">{rating.averageRating.toFixed(1)}</span>
@@ -129,7 +131,7 @@ export function CourseDetailView({ slug, initial }: { slug: string; initial: Cou
           {/* ── In-page section nav ───────────────────────────────────────── */}
           <nav aria-label="Course sections" className="glass sticky top-16 z-30 border-b border-border/70">
             <ul className="max-w-6xl mx-auto px-4 sm:px-6 flex gap-1 overflow-x-auto [scrollbar-width:none]">
-              {SECTIONS.map((s) => (
+              {visibleSections(course).map((s) => (
                 <li key={s.id} className="shrink-0">
                   <a
                     href={`#${s.id}`}
@@ -145,10 +147,12 @@ export function CourseDetailView({ slug, initial }: { slug: string; initial: Cou
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <section aria-label="Course at a glance" className="pt-12">
               <CourseFacts course={course} />
+              <CourseHighlights course={course} />
             </section>
 
             {(() => {
-              const introduction = course.sections.find((section) => section.kind === "introduction");
+              // Course sections are auto-created empty — only render them when they have content.
+              const introduction = contentSection(course, "introduction");
               return introduction ? (
                 <section id="introduction" aria-labelledby="introduction-heading" className="py-16 md:py-20 border-t border-border">
                   <SectionHeading id="introduction-heading" eyebrow="Introduction" title={introduction.title}>
@@ -156,7 +160,7 @@ export function CourseDetailView({ slug, initial }: { slug: string; initial: Cou
                   </SectionHeading>
                   <div className="mt-7 max-w-3xl"><ContentRenderer item={introduction} /></div>
                 </section>
-              ) : course.description ? (
+              ) : course.description.trim() ? (
                 <section id="introduction" aria-labelledby="introduction-heading" className="py-16 md:py-20 border-t border-border">
                   <SectionHeading id="introduction-heading" eyebrow="Introduction" title="About this course" />
                   <p className="mt-5 text-[16px] md:text-[17px] text-foreground leading-[1.75] max-w-3xl whitespace-pre-line">{course.description}</p>
@@ -165,7 +169,7 @@ export function CourseDetailView({ slug, initial }: { slug: string; initial: Cou
             })()}
 
             {(() => {
-              const overview = course.sections.find((section) => section.kind === "overview");
+              const overview = contentSection(course, "overview");
               return overview ? (
                 <section id="overview" aria-labelledby="overview-heading" className="py-16 md:py-20 border-t border-border">
                   <SectionHeading id="overview-heading" eyebrow="Course overview" title={overview.title}>
@@ -173,7 +177,7 @@ export function CourseDetailView({ slug, initial }: { slug: string; initial: Cou
                   </SectionHeading>
                   <div className="mt-7 max-w-3xl"><ContentRenderer item={overview} /></div>
                 </section>
-              ) : <div id="overview" />;
+              ) : null;
             })()}
 
             <div id="outcomes">

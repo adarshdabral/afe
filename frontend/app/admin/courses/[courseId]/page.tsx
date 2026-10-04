@@ -9,6 +9,7 @@ import { AdminSidebar } from "@/components/AdminSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CourseStatusBadge } from "@/components/course/CourseStatusBadge";
+import { CourseDetailsEditor } from "@/components/course/CourseDetailsEditor";
 import { Reorderable, move } from "@/components/course/Reorderable";
 import { useApp } from "@/context/AppContext";
 import {
@@ -195,7 +196,7 @@ export default function CourseBuilder() {
         </div>
       </header>
 
-      <section className="mb-6 border-y border-border py-4">
+      <section className="mb-4 border-y border-border py-4">
         <h2 className="text-sm font-semibold text-foreground mb-3">Course sections</h2>
         <div className="flex flex-wrap gap-2">
           {tree.sections.map((section) => (
@@ -210,6 +211,8 @@ export default function CourseBuilder() {
           ))}
         </div>
       </section>
+
+      <CourseDetailsEditor course={tree} onSaved={() => void refresh()} />
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         {/* Left: modules */}

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { Award, Footprints, Layers } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
-import { initials, PLATFORM_NAME, type CourseOutline } from "@/lib/course";
+import { PLATFORM_NAME, type CourseOutline } from "@/lib/course";
+import { CourseHighlights, InstructorBadge } from "./CourseHighlights";
 import { CourseCta } from "./CourseCta";
 import { CurriculumPreview } from "./CurriculumPreview";
 import { HeroVisual } from "./HeroVisual";
@@ -47,16 +48,7 @@ export function HomeLanding({ slug, initial }: { slug: string; initial: CourseOu
               without needing a technical background.
             </p>
 
-            {course?.instructor && (
-              <div className="mt-7 flex items-center gap-3">
-                <span className="w-10 h-10 rounded-full bg-violet-600 text-white text-[13px] font-semibold flex items-center justify-center">
-                  {initials(course.instructor)}
-                </span>
-                <p className="text-[15px] text-foreground">
-                  By <span className="font-semibold">{course.instructor}</span>
-                </p>
-              </div>
-            )}
+            {course && <InstructorBadge course={course} className="mt-7 w-fit" />}
 
             <div className="mt-9 flex flex-col sm:flex-row gap-3">
               <CourseCta slug={slug} courseId={course?.id} />
@@ -106,6 +98,7 @@ export function HomeLanding({ slug, initial }: { slug: string; initial: CourseOu
           <>
             <section aria-label="Course at a glance">
               <CourseFacts course={course} />
+              <CourseHighlights course={course} />
             </section>
 
             <LearningOutcomes course={course} />

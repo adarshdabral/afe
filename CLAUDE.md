@@ -90,6 +90,7 @@ npx tsx verify/assessment-check.mts      # quizzes: CRUD/publish, grading, pass/
 npx tsx verify/progress-check.mts        # topic sequential locking, module/course completion, persistence
 npx tsx verify/certificate-check.mts     # auto-issue, verify, PDF download, revoke, access control
 npx tsx verify/reviews-check.mts         # reviews & ratings
+npx tsx verify/course-overview-check.mts # course-page metadata (skills/tools/offered by) + per-student module "left" summary
 npx tsx verify/feature-check.mts         # seed identities / self-registration rules
 npx tsx verify/branding-check.mts        # logo: public read, admin-only write, URL validation, SVG CSP
 npx tsx verify/e2e-student-journey.mts   # register → learn → quiz → complete → certificate → verify
@@ -239,6 +240,21 @@ Consistent per-feature layering under `backend/` — follow it for new features:
   branded PDF via `pdf-lib` with a QR code pointing at `/certificate/verify/<id>`
   (origin from `APP_PUBLIC_URL`; `CORS_ORIGIN` is a legacy fallback). Admins can revoke.
 - **Reviews** recompute a per-course `CourseRating` aggregate after every mutation.
+- **Course-page metadata** lives on `Course`: `instructorTitle` (badge credential line),
+  `skills` / `tools` (chip lists, trimmed + de-duplicated, ≤30) and `offeredBy
+  {name, logoUrl, description, url}` (PATCH merges keys). Edited in the course builder's
+  "Course page details" panel (`components/course/CourseDetailsEditor.tsx`), rendered by
+  `components/course-landing/CourseHighlights.tsx`. Existing DBs: `npm run
+  backfill:course-meta` fills only empty values for the flagship (+ assessment estimates).
+- **Module "left" summary** (`X graded assignments left · Y lessons left · Z left`,
+  `components/learn/ModuleProgressSummary.tsx`) is never stored: `moduleRemaining()` in
+  `frontend/lib/progress.ts` derives it from the course tree + the student's progress
+  (completed topics; assessments count as done only when **passed**). "Lessons" = topics.
+  Time = unfinished topics' `estimatedDurationMinutes` + the module assessment's
+  `estimatedDurationMinutes` (tree: `modules[].assessmentDurationMinutes`; 0 = no estimate).
+- Course Introduction / Overview / Instructor sections are auto-created empty; public
+  pages render one only when it has content (`hasSectionContent` / `contentSection` in
+  `lib/course.ts`).
 
 ### Auth, RBAC & the shared access module
 - **JWT sessions**, not sealed cookies. `signToken`/`verifyToken` (`backend/server/utils/jwt.ts`)

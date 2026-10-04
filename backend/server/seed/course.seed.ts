@@ -17,6 +17,7 @@ import { Assessment } from "../models/Assessment";
 import { Question } from "../models/Question";
 import {
   AI_COURSE_META,
+  MODULE_ASSESSMENT_MINUTES,
   AI_FOR_EVERYONE_MODULES,
   MODULE_LEARNING_OBJECTIVES,
   type LessonSections,
@@ -78,6 +79,9 @@ export async function seedAiCourse({
     description: AI_COURSE_META.description,
     level: AI_COURSE_META.level,
     tags: AI_COURSE_META.tags,
+    skills: AI_COURSE_META.skills,
+    tools: AI_COURSE_META.tools,
+    offeredBy: AI_COURSE_META.offeredBy,
     status: "published" as const,
     deletedAt: null,
   };
@@ -166,6 +170,7 @@ export async function seedAiCourse({
       title: `${m.title} — Assessment`,
       description: "10 MCQs, 5 True/False, and 2 scenario questions from this module.",
       passingScore: 60,
+      estimatedDurationMinutes: MODULE_ASSESSMENT_MINUTES,
       isPublished: true,
     });
     const assessmentId = String(assessment._id);

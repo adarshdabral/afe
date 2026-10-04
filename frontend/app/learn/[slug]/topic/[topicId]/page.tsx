@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { LearnSidebar, topicSequence } from "@/components/learn/LearnSidebar";
 import { ContentRenderer } from "@/components/learn/ContentRenderer";
+import { ModuleProgressSummary } from "@/components/learn/ModuleProgressSummary";
 import { useApp } from "@/context/AppContext";
 import { useLearning } from "@/context/LearningContext";
 import { pad2 } from "@/lib/course";
@@ -69,6 +70,7 @@ export default function TopicPage() {
   if (status === "error" || !tree) return <Center><Msg title="Course unavailable" href="/" cta="Back to home" /></Center>;
   if (!topic) return <Center><Msg title="Topic not found" href={`/learn/${slug}`} cta="Course overview" /></Center>;
 
+  const owningModule = tree.modules.find((m) => m.id === moduleId);
   const locked = isStudent && !isUnlocked(sequence, topic.id);
   const done = completedTopics.has(topic.id);
 
@@ -111,6 +113,8 @@ export default function TopicPage() {
               Module {pad2(moduleIndex + 1)} · {moduleTitle}
             </Link>
           </nav>
+
+          {owningModule && <ModuleProgressSummary module={owningModule} className="mb-4 text-[13px]" />}
 
           <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.08em] font-medium text-violet-600 bg-violet-600/10 rounded-full px-2.5 py-1">
             {topic.contentType.replace("_", " ")}

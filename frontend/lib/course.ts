@@ -2,7 +2,7 @@
 // ("Demystifying AI for Everyone"); everything shown publicly is derived from the real course
 // tree served by the API — no hard-coded curriculum, outcomes or statistics.
 
-import type { ContentType, CourseLevel, CourseTree, SectionKind } from "@/lib/api/courses";
+import type { ContentType, CourseLevel, CourseTree, OfferedBy, SectionKind } from "@/lib/api/courses";
 
 /** Platform brand vs. course identity. */
 export const PLATFORM_NAME = "AI on Wheels";
@@ -31,6 +31,7 @@ export interface ModuleOutline {
   learningObjectives: string[];
   estimatedDurationMinutes: number;
   hasAssessment: boolean;
+  assessmentDurationMinutes: number;
   lessons: LessonOutline[];
 }
 export interface CourseSectionOutline {
@@ -52,11 +53,15 @@ export interface CourseOutline {
   shortDescription: string;
   description: string;
   instructor: string;
+  instructorTitle: string;
   level: CourseLevel;
   estimatedDurationMinutes: number;
   learningObjectives: string[];
   prerequisites: string[];
   tags: string[];
+  skills: string[];
+  tools: string[];
+  offeredBy: OfferedBy;
   sections: CourseSectionOutline[];
   modules: ModuleOutline[];
 }
@@ -74,11 +79,20 @@ export function toCourseOutline(tree: CourseTree): CourseOutline {
     shortDescription: tree.shortDescription,
     description: tree.description,
     instructor: tree.instructor,
+    instructorTitle: tree.instructorTitle ?? "",
     level: tree.level,
     estimatedDurationMinutes: tree.estimatedDurationMinutes,
     learningObjectives: tree.learningObjectives ?? [],
     prerequisites: tree.prerequisites ?? [],
     tags: tree.tags ?? [],
+    skills: tree.skills ?? [],
+    tools: tree.tools ?? [],
+    offeredBy: {
+      name: tree.offeredBy?.name ?? "",
+      logoUrl: tree.offeredBy?.logoUrl ?? "",
+      description: tree.offeredBy?.description ?? "",
+      url: tree.offeredBy?.url ?? "",
+    },
     sections: (tree.sections ?? []).map((section) => ({
       id: section.id,
       kind: section.kind,
@@ -98,6 +112,7 @@ export function toCourseOutline(tree: CourseTree): CourseOutline {
       learningObjectives: m.learningObjectives ?? [],
       estimatedDurationMinutes: m.estimatedDurationMinutes,
       hasAssessment: !!m.assessmentId,
+      assessmentDurationMinutes: m.assessmentDurationMinutes ?? 0,
       lessons: (m.lessons ?? []).map((l) => ({
         id: l.id,
         title: l.title,
@@ -111,6 +126,20 @@ export function toCourseOutline(tree: CourseTree): CourseOutline {
       })),
     })),
   };
+}
+
+/** True when a course section has something to show (text, a description, or media).
+ *  Sections are auto-created empty for every course, so empty ones are not rendered. */
+export function hasSectionContent(
+  s: Pick<CourseSectionOutline, "description" | "content" | "audioUrl" | "documentUrl" | "videoUrl">,
+): boolean {
+  return [s.description, s.content, s.audioUrl, s.documentUrl, s.videoUrl].some((v) => !!v?.trim());
+}
+
+/** The course's section of `kind`, only when it has content. */
+export function contentSection(c: CourseOutline, kind: SectionKind): CourseSectionOutline | undefined {
+  const s = c.sections.find((section) => section.kind === kind);
+  return s && hasSectionContent(s) ? s : undefined;
 }
 
 export function lessonCount(c: CourseOutline): number {
