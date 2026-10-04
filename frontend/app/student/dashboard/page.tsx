@@ -48,7 +48,7 @@ export default function StudentDashboard() {
           if (!cancelled) setStatus("empty");
           return;
         }
-        const t = await getPublicCourse(flagshipSlug);
+        const t = await getPublicCourse(flagshipSlug, "outline");
         if (cancelled) return;
         setProgress(p);
         setCerts(c);

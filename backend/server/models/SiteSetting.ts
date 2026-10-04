@@ -4,6 +4,7 @@
 
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
+import { invalidateOnWrite } from "../cache/content-cache";
 
 export interface BrandingView {
   /** Logo image URL ("" = none → the UI shows the default Sparkles mark). Either a
@@ -22,6 +23,7 @@ const siteSettingSchema = new Schema(
 );
 
 export type SiteSettingDoc = HydratedDocument<InferSchemaType<typeof siteSettingSchema>>;
+invalidateOnWrite(siteSettingSchema); // branding is cached (server/cache/content-cache.ts)
 export const SiteSetting = defineModel("SiteSetting", siteSettingSchema);
 
 export function toBranding(doc: SiteSettingDoc | null): BrandingView {

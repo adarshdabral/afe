@@ -344,7 +344,30 @@ export async function listPublicCourses(params: CourseListParams): Promise<Cours
   const { data } = await api.get<{ data: CourseListResult }>("/courses", { params });
   return data.data;
 }
-export async function getPublicCourse(slug: string): Promise<CourseTree> {
-  const { data } = await api.get<{ data: CourseTree }>(`/courses/${encodeURIComponent(slug)}`);
+/**
+ * The role-scoped course tree. `view: "outline"` omits topic text bodies (smaller —
+ * enough for navigation, landing pages and progress summaries); fetch a topic's
+ * body with getPublicTopic.
+ */
+export async function getPublicCourse(slug: string, view: "full" | "outline" = "full"): Promise<CourseTree> {
+  const { data } = await api.get<{ data: CourseTree }>(`/courses/${encodeURIComponent(slug)}`, {
+    params: view === "outline" ? { view } : undefined,
+  });
   return normalizeTree(data.data);
+}
+
+/** One visible topic (full content) + its prev/next ids. */
+export interface TopicInCourse {
+  courseSlug: string;
+  moduleId: string;
+  lessonId: string;
+  topic: Topic;
+  prevTopicId: string | null;
+  nextTopicId: string | null;
+}
+export async function getPublicTopic(slug: string, topicId: string): Promise<TopicInCourse> {
+  const { data } = await api.get<{ data: TopicInCourse }>(
+    `/courses/${encodeURIComponent(slug)}/topics/${encodeURIComponent(topicId)}`,
+  );
+  return data.data;
 }

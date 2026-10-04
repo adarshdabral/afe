@@ -91,6 +91,8 @@ npx tsx verify/progress-check.mts        # topic sequential locking, module/cour
 npx tsx verify/certificate-check.mts     # auto-issue, verify, PDF download, revoke, access control
 npx tsx verify/reviews-check.mts         # reviews & ratings
 npx tsx verify/course-overview-check.mts # course-page metadata (skills/tools/offered by) + per-student module "left" summary
+npx tsx verify/content-cache-check.mts   # content cache: every admin write type is visible on the next read; ?view=outline
+npx tsx verify/perf-bench.mts            # NOT pass/fail: latency + DB round trips per hot endpoint (DB_RTT_MS=50 default)
 npx tsx verify/feature-check.mts         # seed identities / self-registration rules
 npx tsx verify/branding-check.mts        # logo: public read, admin-only write, URL validation, SVG CSP
 npx tsx verify/e2e-student-journey.mts   # register → learn → quiz → complete → certificate → verify
@@ -252,6 +254,26 @@ Consistent per-feature layering under `backend/` — follow it for new features:
   (completed topics; assessments count as done only when **passed**). "Lessons" = topics.
   Time = unfinished topics' `estimatedDurationMinutes` + the module assessment's
   `estimatedDurationMinutes` (tree: `modules[].assessmentDurationMinutes`; 0 = no estimate).
+- **Performance / caching** — keep these when changing data access:
+  - **Backend content cache** (`server/cache/content-cache.ts`): the published course
+    tree, the progress topic sequence, published-assessment ids and branding are
+    cached in-process (60 s TTL). Every content model calls `invalidateOnWrite(schema)`
+    so ANY write clears it — **a new model whose data feeds a cached read must do the
+    same**. Cached values are shared: never mutate what `cachedContent()` returns.
+    Admin reads (`platform_admin`) bypass the cache.
+  - Course tree queries run in one parallel round with `.lean()`; `listSections` only
+    back-fills when sections are missing. Progress writes are single atomic upserts
+    (`upsertProgress`, retries the duplicate-key race).
+  - `GET /api/courses/:slug?view=outline` omits topic text bodies (sections keep
+    theirs); learn pages use it and fetch a topic's body from
+    `/api/courses/:slug/topics/:id`.
+  - **Frontend**: learn pages load via `hooks/use-learn-course.ts` (`useLearnCourse`,
+    `useLearnTopic`, `prefetchTopic`) — a module-level stale-while-revalidate cache
+    (30 s) shared across learn pages, and `LearningContext.load()` skips same-course
+    reloads for 30 s unless `{ force: true }` (used after an assessment attempt).
+    Landing pages cache backend data for 60 s with `unstable_cache`
+    (`lib/server/course.ts`; failures are never cached), so public edits reach `/` and
+    `/courses/[slug]` within a minute.
 - Course Introduction / Overview / Instructor sections are auto-created empty; public
   pages render one only when it has content (`hasSectionContent` / `contentSection` in
   `lib/course.ts`).

@@ -4,6 +4,7 @@
 
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
+import { invalidateOnWrite } from "../cache/content-cache";
 
 export const DEFAULT_PASSING_SCORE = 60;
 
@@ -36,6 +37,8 @@ const assessmentSchema = new Schema(
 
 export type AssessmentSchemaType = InferSchemaType<typeof assessmentSchema>;
 export type AssessmentDoc = HydratedDocument<AssessmentSchemaType>;
+
+invalidateOnWrite(assessmentSchema); // course content is cached (server/cache/content-cache.ts)
 
 export const Assessment = defineModel("Assessment", assessmentSchema);
 

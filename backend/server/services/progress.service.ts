@@ -10,6 +10,7 @@ import { Topic } from "../models/Topic";
 import { Progress, toProgress, type ProgressView } from "../models/Progress";
 import { publishedAssessmentIds } from "./assessment.service";
 import { issueCertificate } from "./certificate.service";
+import { cachedContent } from "../cache/content-cache";
 
 /** Auto-issue a certificate the moment progress becomes eligible (idempotent). */
 async function maybeIssueCertificate(doc: { certificateEligible?: boolean; studentId: string; courseId: string }): Promise<void> {
@@ -27,39 +28,68 @@ interface Structure {
   sequence: string[]; // flat ordered topicIds (module → lesson → topic order)
 }
 
-async function courseStructure(courseId: string): Promise<Structure> {
+/** The course's topic sequence — cached (content cache, invalidated on CMS writes). */
+function courseStructure(courseId: string): Promise<Structure> {
+  return cachedContent(`structure:${courseId}`, () => loadCourseStructure(courseId));
+}
+
+async function loadCourseStructure(courseId: string): Promise<Structure> {
+  // Ids only — the sequence never needs topic bodies.
   const [modules, lessons, topics] = await Promise.all([
-    Module.find({ courseId }).sort({ order: 1, createdAt: 1 }),
-    Lesson.find({ courseId }).sort({ order: 1, createdAt: 1 }),
-    Topic.find({ courseId }).sort({ order: 1, createdAt: 1 }),
+    Module.find({ courseId }).sort({ order: 1, createdAt: 1 }).select("_id").lean(),
+    Lesson.find({ courseId }).sort({ order: 1, createdAt: 1 }).select("_id moduleId").lean(),
+    Topic.find({ courseId }).sort({ order: 1, createdAt: 1 }).select("_id lessonId").lean(),
   ]);
+  const topicsByLesson = new Map<string, string[]>();
+  for (const t of topics) {
+    if (!topicsByLesson.has(t.lessonId)) topicsByLesson.set(t.lessonId, []);
+    topicsByLesson.get(t.lessonId)!.push(String(t._id));
+  }
+  const lessonsByModule = new Map<string, string[]>();
+  for (const l of lessons) {
+    if (!lessonsByModule.has(l.moduleId)) lessonsByModule.set(l.moduleId, []);
+    lessonsByModule.get(l.moduleId)!.push(String(l._id));
+  }
   const byModule = new Map<string, string[]>();
   const sequence: string[] = [];
   const moduleIds: string[] = [];
   for (const m of modules) {
     const mid = String(m._id);
     moduleIds.push(mid);
-    const ids: string[] = [];
-    for (const l of lessons.filter((x) => x.moduleId === mid)) {
-      const lid = String(l._id);
-      ids.push(...topics.filter((t) => t.lessonId === lid).map((t) => String(t._id)));
-    }
+    const ids = (lessonsByModule.get(mid) ?? []).flatMap((lid) => topicsByLesson.get(lid) ?? []);
     byModule.set(mid, ids);
     sequence.push(...ids);
   }
   return { moduleIds, byModule, sequence };
 }
 
-async function getOrCreate(studentId: string, courseId: string) {
-  const existing = await Progress.findOne({ studentId, courseId });
-  if (existing) return existing;
-  return Progress.create({ studentId, courseId });
+/**
+ * Atomic update of the student's progress doc, creating it on first access — one
+ * round trip. Two first-ever requests racing to insert hit the unique
+ * (studentId, courseId) index; the loser simply retries as an update.
+ */
+async function upsertProgress(studentId: string, courseId: string, update: Record<string, unknown> = {}) {
+  const run = () =>
+    Progress.findOneAndUpdate({ studentId, courseId }, { ...update, $setOnInsert: { studentId, courseId } }, {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true,
+    });
+  try {
+    return (await run())!;
+  } catch (err) {
+    if ((err as { code?: number })?.code !== 11000) throw err;
+    return (await run())!;
+  }
 }
+
+const getOrCreate = (studentId: string, courseId: string) => upsertProgress(studentId, courseId);
 
 /** Recompute derived fields (modules complete, overall %, certificate) in place. */
 async function recompute(
   doc: Awaited<ReturnType<typeof getOrCreate>>,
   struct: Structure,
+  mandatory: string[],
 ): Promise<void> {
   const completed = new Set(doc.completedTopics ?? []);
   doc.completedModules = struct.moduleIds.filter((mid) => {
@@ -70,7 +100,6 @@ async function recompute(
   const done = struct.sequence.filter((t) => completed.has(t)).length;
   doc.overallProgress = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  const mandatory = await publishedAssessmentIds(doc.courseId);
   const passed = new Set((doc.assessmentScores ?? []).filter((a) => a.passed).map((a) => a.assessmentId));
   const allAssessmentsPassed = mandatory.every((id) => passed.has(id));
   doc.certificateEligible = doc.overallProgress === 100 && allAssessmentsPassed;
@@ -94,8 +123,7 @@ async function detail(
 
 /** Read (creating an empty record if needed) — includes the next unlocked topic. */
 export async function getProgress(studentId: string, courseId: string): Promise<ProgressDetail> {
-  const doc = await getOrCreate(studentId, courseId);
-  const struct = await courseStructure(courseId);
+  const [doc, struct] = await Promise.all([getOrCreate(studentId, courseId), courseStructure(courseId)]);
   return detail(doc, struct);
 }
 
@@ -112,10 +140,13 @@ export async function markTopicComplete(
   courseId: string,
   topicId: string,
 ): Promise<CompleteResult> {
-  const struct = await courseStructure(courseId);
+  const [struct, doc, mandatory] = await Promise.all([
+    courseStructure(courseId),
+    getOrCreate(studentId, courseId),
+    publishedAssessmentIds(courseId),
+  ]);
   const idx = struct.sequence.indexOf(topicId);
   if (idx === -1) return { ok: false, reason: "not_found" };
-  const doc = await getOrCreate(studentId, courseId);
   const completed = new Set(doc.completedTopics ?? []);
   if (idx > 0 && !completed.has(struct.sequence[idx - 1])) {
     return { ok: false, reason: "locked" };
@@ -124,7 +155,7 @@ export async function markTopicComplete(
     doc.completedTopics = [...(doc.completedTopics ?? []), topicId];
   }
   doc.lastVisitedTopicId = topicId;
-  await recompute(doc, struct);
+  await recompute(doc, struct, mandatory);
   await doc.save();
   await maybeIssueCertificate(doc);
   return { ok: true, detail: await detail(doc, struct) };
@@ -136,7 +167,11 @@ export async function applyAssessmentResult(
   courseId: string,
   result: { assessmentId: string; score: number; passed: boolean },
 ): Promise<ProgressDetail> {
-  const doc = await getOrCreate(studentId, courseId);
+  const [doc, struct, mandatory] = await Promise.all([
+    getOrCreate(studentId, courseId),
+    courseStructure(courseId),
+    publishedAssessmentIds(courseId),
+  ]);
   // Work on a plain array (avoids Mongoose subdocument-array typing) then set().
   const scores = (doc.assessmentScores ?? []).map((a) => ({
     assessmentId: a.assessmentId ?? "",
@@ -151,8 +186,7 @@ export async function applyAssessmentResult(
     scores.push({ ...result });
   }
   doc.set("assessmentScores", scores);
-  const struct = await courseStructure(courseId);
-  await recompute(doc, struct);
+  await recompute(doc, struct, mandatory);
   await doc.save();
   await maybeIssueCertificate(doc);
   return detail(doc, struct);
@@ -163,10 +197,12 @@ export async function setLastVisited(
   courseId: string,
   topicId: string,
 ): Promise<ProgressDetail> {
-  const doc = await getOrCreate(studentId, courseId);
-  doc.lastVisitedTopicId = topicId;
-  await doc.save();
-  return getProgress(studentId, courseId);
+  // One atomic write (creating the record if needed) alongside the structure read.
+  const [doc, struct] = await Promise.all([
+    upsertProgress(studentId, courseId, { $set: { lastVisitedTopicId: topicId } }),
+    courseStructure(courseId),
+  ]);
+  return detail(doc, struct);
 }
 
 export async function addTimeSpent(
@@ -174,10 +210,11 @@ export async function addTimeSpent(
   courseId: string,
   minutes: number,
 ): Promise<ProgressDetail> {
-  const doc = await getOrCreate(studentId, courseId);
-  doc.timeSpentMinutes = (doc.timeSpentMinutes ?? 0) + Math.max(0, Math.round(minutes));
-  await doc.save();
-  return getProgress(studentId, courseId);
+  const [doc, struct] = await Promise.all([
+    upsertProgress(studentId, courseId, { $inc: { timeSpentMinutes: Math.max(0, Math.round(minutes)) } }),
+    courseStructure(courseId),
+  ]);
+  return detail(doc, struct);
 }
 
 /** All progress records for a student (dashboard). */

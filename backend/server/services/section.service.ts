@@ -8,6 +8,7 @@ import {
   SECTION_KINDS,
   SECTION_TITLES,
   toCourseSection,
+  type CourseSectionDoc,
   type CourseSectionView,
   type SectionKind,
 } from "../models/CourseSection";
@@ -26,9 +27,14 @@ export async function ensureSections(courseId: string): Promise<void> {
 
 /** The course's sections in display order (introduction, overview, instructor). */
 export async function listSections(courseId: string): Promise<CourseSectionView[]> {
-  await ensureSections(courseId);
-  const docs = await CourseSection.find({ courseId });
-  return docs.map(toCourseSection).sort((a, b) => a.order - b.order);
+  // Sections are created with the course, so this is normally ONE read. Older
+  // courses missing some are back-filled here (then re-read) — rare.
+  let docs = await CourseSection.find({ courseId }).lean();
+  if (docs.length < SECTION_KINDS.length) {
+    await ensureSections(courseId);
+    docs = await CourseSection.find({ courseId }).lean();
+  }
+  return docs.map((d) => toCourseSection(d as unknown as CourseSectionDoc)).sort((a, b) => a.order - b.order);
 }
 
 export interface UpdateSectionInput {

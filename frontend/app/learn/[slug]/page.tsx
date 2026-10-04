@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { useLearning } from "@/context/LearningContext";
-import { getPublicCourse, type CourseTree } from "@/lib/api/courses";
+import { useLearnCourse } from "@/hooks/use-learn-course";
 import { roleHome } from "@/lib/access";
 import { pad2 } from "@/lib/course";
 import { describeRemaining, remainingWork } from "@/lib/progress";
@@ -27,20 +27,9 @@ import { describeRemaining, remainingWork } from "@/lib/progress";
 export default function LearnOverview() {
   const { slug } = useParams<{ slug: string }>();
   const { authUser } = useApp();
-  const { load, detail, completedTopics, overallProgress, certificateEligible, isUnlocked } = useLearning();
-  const [tree, setTree] = useState<CourseTree | null>(null);
-  const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
+  const { detail, completedTopics, overallProgress, certificateEligible, isUnlocked } = useLearning();
+  const { tree, status } = useLearnCourse(slug);
   const isStudent = authUser?.role === "student";
-
-  useEffect(() => {
-    getPublicCourse(slug)
-      .then(async (t) => {
-        setTree(t);
-        await load(t.id);
-        setStatus("ready");
-      })
-      .catch(() => setStatus("error"));
-  }, [slug, load]);
 
   const sequence = useMemo(() => (tree ? tree.modules.flatMap((module) => module.lessons.flatMap((lesson) => lesson.topics.map((topic) => topic.id))) : []), [tree]);
   const topicById = useMemo(() => {

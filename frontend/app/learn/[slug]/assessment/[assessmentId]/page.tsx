@@ -44,7 +44,7 @@ export default function AssessmentPage() {
         questions.map((q) => ({ questionId: q.id, answer: answers[q.id] ?? "" })),
       );
       setResult({ score: res.attempt.score, passed: res.attempt.passed, review: res.review });
-      if (assessment) await load(assessment.courseId); // refresh progress + certificate state
+      if (assessment) await load(assessment.courseId, { force: true }); // refresh progress + certificate state
       toast[res.attempt.passed ? "success" : "message"](
         res.attempt.passed ? `Passed with ${res.attempt.score}%` : `Scored ${res.attempt.score}% — keep going`,
       );

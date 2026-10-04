@@ -18,7 +18,7 @@ export function useCourseOutline(slug: string, initial: CourseOutline | null): O
   useEffect(() => {
     if (initial) return;
     let cancelled = false;
-    getPublicCourse(slug)
+    getPublicCourse(slug, "outline")
       .then((t) => !cancelled && setState({ status: "ready", course: toCourseOutline(t) }))
       .catch(() => !cancelled && setState({ status: "missing", course: null }));
     return () => {

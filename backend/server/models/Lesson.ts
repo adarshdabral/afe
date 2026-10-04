@@ -6,6 +6,7 @@
 
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
+import { invalidateOnWrite } from "../cache/content-cache";
 
 export interface LessonView {
   id: string;
@@ -29,8 +30,13 @@ const lessonSchema = new Schema(
   { timestamps: true },
 );
 
+// Course tree + progress sequence read a whole course sorted by order.
+lessonSchema.index({ courseId: 1, order: 1 });
+
 export type LessonSchemaType = InferSchemaType<typeof lessonSchema>;
 export type LessonDoc = HydratedDocument<LessonSchemaType>;
+
+invalidateOnWrite(lessonSchema); // course content is cached (server/cache/content-cache.ts)
 
 export const Lesson = defineModel("Lesson", lessonSchema);
 

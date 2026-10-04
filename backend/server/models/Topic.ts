@@ -7,6 +7,7 @@
 
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
+import { invalidateOnWrite } from "../cache/content-cache";
 import { contentFieldsSchema, toContentFields, type ContentFieldsView } from "./content";
 
 export { CONTENT_TYPES as TOPIC_CONTENT_TYPES, type ContentType as TopicContentType } from "./content";
@@ -40,8 +41,13 @@ const topicSchema = new Schema(
   { timestamps: true },
 );
 
+// Course tree + progress sequence read a whole course sorted by order.
+topicSchema.index({ courseId: 1, order: 1 });
+
 export type TopicSchemaType = InferSchemaType<typeof topicSchema>;
 export type TopicDoc = HydratedDocument<TopicSchemaType>;
+
+invalidateOnWrite(topicSchema); // course content is cached (server/cache/content-cache.ts)
 
 export const Topic = defineModel("Topic", topicSchema);
 

@@ -4,6 +4,7 @@
 
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
+import { invalidateOnWrite } from "../cache/content-cache";
 
 export const QUESTION_TYPES = ["mcq", "reflection", "scenario"] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
@@ -41,6 +42,8 @@ const questionSchema = new Schema(
 
 export type QuestionSchemaType = InferSchemaType<typeof questionSchema>;
 export type QuestionDoc = HydratedDocument<QuestionSchemaType>;
+
+invalidateOnWrite(questionSchema); // course content is cached (server/cache/content-cache.ts)
 
 export const Question = defineModel("Question", questionSchema);
 

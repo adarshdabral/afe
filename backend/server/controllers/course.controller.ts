@@ -12,6 +12,7 @@ import {
   getCourseBySlug,
   getCourseTreeById,
   getTopicInCourse,
+  outlineOf,
   listCourses,
   setCourseStatus,
   slugTaken,
@@ -167,12 +168,14 @@ export async function publicList(req: Request, res: Response): Promise<void> {
 /** GET /api/courses/:slug — ordered tree; 404 for non-admins on draft/archived. */
 export async function publicGetBySlug(req: Request, res: Response): Promise<void> {
   const slug = z.string().min(1).parse(req.params.slug);
+  const { view } = z.object({ view: z.enum(["full", "outline"]).default("full") }).parse(req.query);
   const tree = await getCourseBySlug(slug, req.user?.role ?? null);
   if (!tree) {
     res.status(404).json({ error: { message: "Course not found." } });
     return;
   }
-  res.json({ data: tree });
+  // ?view=outline omits topic text bodies (learner navigation); default is the full tree.
+  res.json({ data: view === "outline" ? outlineOf(tree) : tree });
 }
 
 /** GET /api/courses/:slug/topics/:topicId — a visible topic + prev/next. */

@@ -16,6 +16,7 @@ import {
 import { Attempt, toAttempt, type AttemptView } from "../models/Attempt";
 import { Module } from "../models/Module";
 import { HttpError } from "../http/errors";
+import { cachedContent } from "../cache/content-cache";
 
 export interface CreateAssessmentInput {
   moduleId: string;
@@ -280,7 +281,9 @@ export async function listAttempts(
 }
 
 /** Published assessment ids for a course (mandatory assessments for completion). */
-export async function publishedAssessmentIds(courseId: string): Promise<string[]> {
-  const docs = await Assessment.find({ courseId, isPublished: true }).select("_id");
-  return docs.map((d) => String(d._id));
+export function publishedAssessmentIds(courseId: string): Promise<string[]> {
+  return cachedContent(`published-assessments:${courseId}`, async () => {
+    const docs = await Assessment.find({ courseId, isPublished: true }).select("_id").lean();
+    return docs.map((d) => String(d._id));
+  });
 }

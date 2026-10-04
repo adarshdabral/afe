@@ -13,29 +13,19 @@ import { useApp } from "@/context/AppContext";
 import { useLearning } from "@/context/LearningContext";
 import { pad2 } from "@/lib/course";
 import { useTopicTimer } from "@/hooks/use-topic-timer";
-import { getPublicCourse, type CourseTree, type Topic } from "@/lib/api/courses";
+import type { Topic } from "@/lib/api/courses";
+import { prefetchTopic, useLearnCourse, useLearnTopic } from "@/hooks/use-learn-course";
 
 export default function TopicPage() {
   const { slug, topicId } = useParams<{ slug: string; topicId: string }>();
   const router = useRouter();
   // Progress + sequential locking are student concepts; staff preview freely.
   const isStudent = useApp().role === "student";
-  const { load, completedTopics, isUnlocked, markComplete, recordVisit, addMinutes } =
-    useLearning();
-
-  const [tree, setTree] = useState<CourseTree | null>(null);
-  const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
+  const { completedTopics, isUnlocked, markComplete, recordVisit, addMinutes } = useLearning();
+  // Outline (no topic bodies) for navigation; this topic's body is fetched on its own.
+  const { tree, status } = useLearnCourse(slug);
+  const { data: topicData, failed: bodyFailed } = useLearnTopic(slug, topicId);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    getPublicCourse(slug)
-      .then(async (t) => {
-        setTree(t);
-        await load(t.id);
-        setStatus("ready");
-      })
-      .catch(() => setStatus("error"));
-  }, [slug, load]);
 
   const { topic, moduleTitle, moduleIndex, moduleId, assessmentId, isLastInModule, sequence, prevId, nextId } = useMemo(() => {
     const empty = { topic: null as Topic | null, moduleTitle: "", moduleIndex: -1, moduleId: "", assessmentId: null as string | null, isLastInModule: false, sequence: [] as string[], prevId: null as string | null, nextId: null as string | null };
@@ -62,6 +52,11 @@ export default function TopicPage() {
     if (status === "ready" && topic) void recordVisit(topic.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, topic?.id]);
+
+  // Warm the next topic's body so "Next topic" opens instantly.
+  useEffect(() => {
+    if (status === "ready") prefetchTopic(slug, nextId);
+  }, [status, slug, nextId]);
 
   // Track active time on this topic → persists to POST /progress/:id/time.
   useTopicTimer(status === "ready" && !!topic, (minutes) => void addMinutes(minutes));
@@ -149,7 +144,17 @@ export default function TopicPage() {
               {/* Immersive reading surface — comfortable measure, generous air. */}
               <article className="bg-card rounded-3xl border border-border shadow-soft p-7 md:p-10 pb-32">
                 <div className="max-w-[68ch] text-[1.02rem] leading-[1.75]">
-                  <ContentRenderer item={topic} />
+                  {topicData?.topic.id === topic.id ? (
+                    <ContentRenderer item={topicData.topic} />
+                  ) : bodyFailed ? (
+                    <p className="text-muted-foreground">This topic couldn&apos;t be loaded. Please refresh the page.</p>
+                  ) : (
+                    <div className="space-y-3" aria-busy="true" aria-label="Loading topic">
+                      <div className="skeleton h-5 w-11/12 rounded-lg" />
+                      <div className="skeleton h-5 w-10/12 rounded-lg" />
+                      <div className="skeleton h-5 w-9/12 rounded-lg" />
+                    </div>
+                  )}
                 </div>
               </article>
 

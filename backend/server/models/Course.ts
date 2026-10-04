@@ -5,6 +5,7 @@
 
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
+import { invalidateOnWrite } from "../cache/content-cache";
 
 export const COURSE_STATUSES = ["draft", "published", "archived"] as const;
 export const COURSE_LEVELS = ["beginner", "intermediate", "advanced"] as const;
@@ -79,6 +80,8 @@ const courseSchema = new Schema(
 
 export type CourseSchemaType = InferSchemaType<typeof courseSchema>;
 export type CourseDoc = HydratedDocument<CourseSchemaType>;
+
+invalidateOnWrite(courseSchema); // course content is cached (server/cache/content-cache.ts)
 
 export const Course = defineModel("Course", courseSchema);
 

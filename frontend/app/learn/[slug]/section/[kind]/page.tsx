@@ -1,32 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ContentRenderer } from "@/components/learn/ContentRenderer";
 import { LearnSidebar, topicSequence } from "@/components/learn/LearnSidebar";
-import { useLearning } from "@/context/LearningContext";
-import { getPublicCourse, SECTION_KINDS, type CourseTree, type SectionKind } from "@/lib/api/courses";
+import { useLearnCourse } from "@/hooks/use-learn-course";
+import { SECTION_KINDS, type SectionKind } from "@/lib/api/courses";
 
 export default function CourseSectionPage() {
   const { slug, kind } = useParams<{ slug: string; kind: string }>();
   const sectionKind = SECTION_KINDS.includes(kind as SectionKind) ? kind as SectionKind : null;
-  const { load } = useLearning();
-  const [tree, setTree] = useState<CourseTree | null>(null);
-  const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
-
-  useEffect(() => {
-    if (!sectionKind) {
-      setStatus("ready");
-      return;
-    }
-    getPublicCourse(slug).then(async (course) => {
-      setTree(course);
-      await load(course.id);
-      setStatus("ready");
-    }).catch(() => setStatus("error"));
-  }, [slug, load]);
+  // Sections keep their content in the outline (only topic bodies are omitted).
+  const { tree, status } = useLearnCourse(slug);
 
   const section = tree?.sections.find((item) => item.kind === sectionKind);
   if (status === "loading") return <Center><div className="skeleton h-64 w-full max-w-3xl rounded-xl" /></Center>;

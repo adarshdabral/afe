@@ -7,6 +7,7 @@
 
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
+import { invalidateOnWrite } from "../cache/content-cache";
 import { contentFieldsSchema, toContentFields, type ContentFieldsView } from "./content";
 
 export const SECTION_KINDS = ["introduction", "overview", "instructor"] as const;
@@ -45,6 +46,8 @@ const courseSectionSchema = new Schema(
 courseSectionSchema.index({ courseId: 1, kind: 1 }, { unique: true });
 
 export type CourseSectionDoc = HydratedDocument<InferSchemaType<typeof courseSectionSchema>>;
+
+invalidateOnWrite(courseSectionSchema); // course content is cached (server/cache/content-cache.ts)
 
 export const CourseSection = defineModel("CourseSection", courseSectionSchema);
 

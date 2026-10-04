@@ -4,16 +4,17 @@
 //   course → sections (Introduction, Overview, Instructor) + modules → lessons → topics.
 // No req/res here — pure business logic over the Mongoose models.
 
-import { Course, toCourse, type CourseStatus, type CourseView, type OfferedBy } from "../models/Course";
-import { Module, toModule, type ModuleView } from "../models/Module";
-import { Lesson, toLesson, type LessonView } from "../models/Lesson";
-import { Topic, toTopic, type TopicView } from "../models/Topic";
+import { Course, toCourse, type CourseDoc, type CourseStatus, type CourseView, type OfferedBy } from "../models/Course";
+import { Module, toModule, type ModuleDoc, type ModuleView } from "../models/Module";
+import { Lesson, toLesson, type LessonDoc, type LessonView } from "../models/Lesson";
+import { Topic, toTopic, type TopicDoc, type TopicView } from "../models/Topic";
 import type { CourseSectionView } from "../models/CourseSection";
 import { ensureSections, listSections } from "./section.service";
 import { Assessment } from "../models/Assessment";
 import { Question } from "../models/Question";
 import { readinessFrom, type ModuleReadiness } from "./module.service";
 import type { Role } from "../shared/access";
+import { cachedContent } from "../cache/content-cache";
 
 /** A lesson (container) with its topics (learning units), in order. */
 export type LessonNode = LessonView & { topics: TopicView[] };
@@ -241,34 +242,35 @@ export async function listCourses(input: ListInput, role: Role | null): Promise<
   };
 }
 
-/** Assemble the ordered tree for a course doc (sections; modules → lessons → topics, asc). */
+/** Assemble the ordered tree for a course doc (sections; modules → lessons → topics, asc).
+ *  Every query runs in ONE parallel round (they only need the course id). */
 async function buildTree(course: CourseView, includeUnpublished: boolean): Promise<CourseTree> {
   const moduleFilter: Record<string, unknown> = { courseId: course.id };
   if (!includeUnpublished) moduleFilter.isPublished = true;
-  const modules = await Module.find(moduleFilter).sort({ order: 1, createdAt: 1 });
-  const [lessons, topics, sections] = await Promise.all([
-    Lesson.find({ courseId: course.id }).sort({ order: 1, createdAt: 1 }),
-    Topic.find({ courseId: course.id }).sort({ order: 1, createdAt: 1 }),
+  // Published assessments only for non-admins.
+  const assessmentFilter: Record<string, unknown> = { courseId: course.id };
+  if (!includeUnpublished) assessmentFilter.isPublished = true;
+  const [modules, lessons, topics, sections, assessments] = await Promise.all([
+    Module.find(moduleFilter).sort({ order: 1, createdAt: 1 }).lean(),
+    Lesson.find({ courseId: course.id }).sort({ order: 1, createdAt: 1 }).lean(),
+    Topic.find({ courseId: course.id }).sort({ order: 1, createdAt: 1 }).lean(),
     listSections(course.id),
+    Assessment.find(assessmentFilter).select("_id moduleId isPublished estimatedDurationMinutes").lean(),
   ]);
 
   const topicsByLesson = new Map<string, TopicView[]>();
   for (const t of topics) {
-    const v = toTopic(t);
+    const v = toTopic(t as unknown as TopicDoc);
     if (!topicsByLesson.has(v.lessonId)) topicsByLesson.set(v.lessonId, []);
     topicsByLesson.get(v.lessonId)!.push(v);
   }
   const byModule = new Map<string, LessonNode[]>();
   for (const l of lessons) {
-    const v = toLesson(l);
+    const v = toLesson(l as unknown as LessonDoc);
     if (!byModule.has(v.moduleId)) byModule.set(v.moduleId, []);
     byModule.get(v.moduleId)!.push({ ...v, topics: topicsByLesson.get(v.id) ?? [] });
   }
 
-  // Attach each module's assessment (published only for non-admins).
-  const assessmentFilter: Record<string, unknown> = { courseId: course.id };
-  if (!includeUnpublished) assessmentFilter.isPublished = true;
-  const assessments = await Assessment.find(assessmentFilter).select("_id moduleId isPublished estimatedDurationMinutes");
   const assessmentByModule = new Map<string, string>();
   for (const a of assessments) assessmentByModule.set(a.moduleId, String(a._id));
 
@@ -287,7 +289,7 @@ async function buildTree(course: CourseView, includeUnpublished: boolean): Promi
     ...course,
     sections,
     modules: modules.map((m) => {
-      const mv = toModule(m);
+      const mv = toModule(m as unknown as ModuleDoc);
       return {
         ...mv,
         lessons: byModule.get(mv.id) ?? [],
@@ -325,11 +327,32 @@ export async function getCourseTreeById(id: string): Promise<CourseTree | null> 
  * Returns null when the caller may not see the course (draft/archived → 404).
  */
 export async function getCourseBySlug(slug: string, role: Role | null): Promise<CourseTree | null> {
-  const doc = await Course.findOne({ slug: slugify(slug), deletedAt: null }).catch(() => null);
-  if (!doc) return null;
   const isAdmin = role === "platform_admin";
-  if (!isAdmin && doc.status !== "published") return null;
-  return buildTree(toCourse(doc), isAdmin);
+  const load = async () => {
+    const doc = await Course.findOne({ slug: slugify(slug), deletedAt: null }).lean().catch(() => null);
+    if (!doc) return null;
+    if (!isAdmin && doc.status !== "published") return null;
+    return buildTree(toCourse(doc as unknown as CourseDoc), isAdmin);
+  };
+  // The published view is identical for every non-admin — serve it from the content
+  // cache (invalidated on every CMS write). Admins always read live.
+  return isAdmin ? load() : cachedContent(`tree:${slugify(slug)}`, load);
+}
+
+/**
+ * The tree without topic TEXT bodies (`content` → ""), for learner navigation:
+ * sidebar, module pages and progress summaries need titles, formats, media URLs
+ * and durations, not every topic's markdown. A topic's body is fetched on its own
+ * (getTopicInCourse). Returns new objects — the cached tree is never mutated.
+ */
+export function outlineOf(tree: CourseTree): CourseTree {
+  return {
+    ...tree,
+    modules: tree.modules.map((m) => ({
+      ...m,
+      lessons: m.lessons.map((l) => ({ ...l, topics: l.topics.map((t) => ({ ...t, content: "" })) })),
+    })),
+  };
 }
 
 export interface TopicInCourse {
