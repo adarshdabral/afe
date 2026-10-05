@@ -202,7 +202,10 @@ check("T3 unlocked after the assignment", (await student.get(`/courses/${SLUG}/t
 
 // Downloads (T3: YouTube video, local document, text).
 {
-  check("download not allowed by default → 403", (await student.get(`/courses/${SLUG}/topics/${T3}/download?part=text`)).status === 403);
+  const t1Text = await student.get(`/courses/${SLUG}/topics/${T1}/download?part=text`);
+  check("downloads are allowed by default (new topic)", t1Text.status === 200 && /attachment/.test(t1Text.headers.get("content-disposition") ?? ""), t1Text.status);
+  await admin.patch(`/admin/courses/topics/${T3}`, { allowDownload: false });
+  check("download switched off by the admin → 403", (await student.get(`/courses/${SLUG}/topics/${T3}/download?part=text`)).status === 403);
   const staffText = await admin.get(`/courses/${SLUG}/topics/${T3}/download?part=text`);
   check("staff can always download", staffText.status === 200 && /attachment/.test(staffText.headers.get("content-disposition") ?? ""), staffText.status);
   await admin.patch(`/admin/courses/topics/${T3}`, { allowDownload: true });

@@ -53,7 +53,7 @@ export async function createTopic(lessonId: string, input: CreateTopicInput): Pr
     subtitleUrl: input.subtitleUrl ?? "",
     estimatedDurationMinutes: input.estimatedDurationMinutes ?? 0,
     isPreview: input.isPreview ?? false,
-    allowDownload: input.allowDownload ?? false,
+    allowDownload: input.allowDownload ?? true,
     discussion: normalizeDiscussion(input.discussion),
   });
   return toTopic(doc);

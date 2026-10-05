@@ -36,7 +36,7 @@ export interface TopicView extends ContentFieldsView {
   order: number;
   estimatedDurationMinutes: number;
   isPreview: boolean;
-  /** Students may download this topic's text/media (admin-controlled; default off). */
+  /** Students may download this topic's text/media (admin-controlled; default on). */
   allowDownload: boolean;
   /** True when the topic has a video (kept even when media URLs are withheld). */
   hasVideo: boolean;
@@ -56,7 +56,7 @@ const topicSchema = new Schema(
     ...contentFieldsSchema,
     estimatedDurationMinutes: { type: Number, default: 0 },
     isPreview: { type: Boolean, default: false },
-    allowDownload: { type: Boolean, default: false },
+    allowDownload: { type: Boolean, default: true }, // admins can switch it off per topic
     discussion: {
       prompt: { type: String, default: "" },
       instructions: { type: String, default: "" },
@@ -91,7 +91,7 @@ export function toTopic(doc: TopicDoc): TopicView {
     ...toContentFields(doc),
     estimatedDurationMinutes: doc.estimatedDurationMinutes ?? 0,
     isPreview: doc.isPreview === true,
-    allowDownload: doc.allowDownload === true,
+    allowDownload: doc.allowDownload !== false,
     hasVideo: !!doc.videoUrl,
     discussion: {
       prompt: doc.discussion?.prompt ?? "",

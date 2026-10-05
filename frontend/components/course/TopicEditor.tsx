@@ -40,7 +40,7 @@ export function TopicEditor({
     subtitleUrl: topic?.subtitleUrl ?? "",
     estimatedDurationMinutes: topic?.estimatedDurationMinutes ?? 0,
     isPreview: topic?.isPreview ?? false,
-    allowDownload: topic?.allowDownload ?? false,
+    allowDownload: topic?.allowDownload ?? true,
   });
   const [discussion, setDiscussion] = useState({
     prompt: topic?.discussion?.prompt ?? "",
@@ -199,7 +199,7 @@ export function TopicEditor({
           Free preview topic
         </label>
         <label className="flex items-center gap-2 text-sm text-foreground sm:col-span-2">
-          <input type="checkbox" checked={form.allowDownload ?? false} onChange={(e) => set("allowDownload", e.target.checked)} className="h-4 w-4" />
+          <input type="checkbox" checked={form.allowDownload ?? true} onChange={(e) => set("allowDownload", e.target.checked)} className="h-4 w-4" />
           Download allowed — students can download this topic&apos;s text and uploaded files
         </label>
       </div>
