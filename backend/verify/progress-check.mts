@@ -96,31 +96,37 @@ const cp = (path: string, body?: unknown) => student.post(`/progress/${courseId}
   check("M1 not complete yet", !(r.json?.data?.progress?.completedModules ?? []).includes(m1), r.json?.data?.progress?.completedModules);
 }
 
-// 4. Complete L2 → M1 complete, 50%.
+// 4. Complete L2 → 50%, but M1 is NOT complete until its assessment is passed,
+//    and Module 2 stays locked (module unlock rule).
 {
   const r = await cp(`/topics/${L2}/complete`);
-  check("complete L2 → overall 50, M1 complete", r.json?.data?.progress?.overallProgress === 50 && (r.json?.data?.progress?.completedModules ?? []).includes(m1), r.json?.data?.progress);
+  check("complete L2 → overall 50", r.json?.data?.progress?.overallProgress === 50, r.json?.data?.progress);
+  check("M1 not complete while its assessment is unpassed", !(r.json?.data?.progress?.completedModules ?? []).includes(m1), r.json?.data?.progress?.completedModules);
+  check("next item is M1's assessment", r.json?.data?.nextItem?.id === assessmentId && r.json?.data?.nextItem?.kind === "assessment", r.json?.data?.nextItem);
+  const locked = await cp(`/topics/${L3}/complete`);
+  check("Module 2 topic locked until Module 1 is complete → 409", locked.status === 409 && /Module 1/.test(locked.json?.error?.message ?? ""), locked.json);
 }
 
-// 5. Complete L3, L4 → 100% lessons, both modules complete.
-{
-  await cp(`/topics/${L3}/complete`);
-  const r = await cp(`/topics/${L4}/complete`);
-  const p = r.json?.data?.progress;
-  check("all topics complete → overall 100", p?.overallProgress === 100 && r.json?.data?.nextTopicId === null, p);
-  check("both modules complete", (p?.completedModules ?? []).includes(m1) && (p?.completedModules ?? []).includes(m2), p?.completedModules);
-  check("NOT certificate-eligible yet (assessment unpassed)", p?.certificateEligible === false, p);
-}
-
-// 6. Pass every module's assessment → certificate eligible.
+// 5. Pass M1's assessment → M1 complete, Module 2 unlocks; complete L3, L4.
 {
   const a = await student.post(`/assessments/${assessmentId}/attempt`, { answers: [{ questionId: q, answer: "A" }] });
   check("assessment passed", a.json?.data?.attempt?.passed === true, a.json?.data?.attempt);
   const mid = await student.get(`/progress/${courseId}`);
-  check("still NOT eligible while M2's module assessment is unpassed", mid.json?.data?.progress?.certificateEligible === false, mid.json?.data?.progress);
+  check("M1 complete after its assessment", (mid.json?.data?.progress?.completedModules ?? []).includes(m1), mid.json?.data?.progress?.completedModules);
+  await cp(`/topics/${L3}/complete`);
+  const r = await cp(`/topics/${L4}/complete`);
+  const p = r.json?.data?.progress;
+  check("all topics complete → overall 100", p?.overallProgress === 100 && r.json?.data?.nextTopicId === null, p);
+  check("M2 not complete yet (its assessment unpassed)", !(p?.completedModules ?? []).includes(m2), p?.completedModules);
+  check("NOT certificate-eligible yet (M2 assessment unpassed)", p?.certificateEligible === false, p);
+}
+
+// 6. Pass M2's assessment → both modules complete, certificate eligible.
+{
   const a2 = await student.post(`/assessments/${m2AssessmentId}/attempt`, { answers: [{ questionId: m2Question, answer: "Yes" }] });
   check("M2 module assessment passed", a2.json?.data?.attempt?.passed === true, a2.json?.data?.attempt);
   const g = await student.get(`/progress/${courseId}`);
+  check("both modules complete", ["m1", "m2"].every((k) => (g.json?.data?.progress?.completedModules ?? []).includes(k === "m1" ? m1 : m2)), g.json?.data?.progress?.completedModules);
   check("100% topics + every module assessment passed → certificateEligible true", g.json?.data?.progress?.certificateEligible === true, g.json?.data?.progress);
   check("assessment score recorded in progress", (g.json?.data?.progress?.assessmentScores ?? []).some((s: any) => s.assessmentId === assessmentId && s.passed), g.json?.data?.progress?.assessmentScores);
 }

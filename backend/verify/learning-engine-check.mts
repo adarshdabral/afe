@@ -106,10 +106,13 @@ const draft = await admin.post("/admin/courses", { title: "Draft Only", slug: "d
 {
   const first = await student.get(`/courses/ai-foundations/topics/${l1}`);
   check("student topic L1 → 200 with next=L2, prev=null", first.status === 200 && first.json?.data?.prevTopicId === null && first.json?.data?.nextTopicId === l2, first.json?.data);
-  const mid = await student.get(`/courses/ai-foundations/topics/${l2}`);
-  check("student topic L2 → prev=L1, next=L3", mid.json?.data?.prevTopicId === l1 && mid.json?.data?.nextTopicId === l3, mid.json?.data);
-  const last = await student.get(`/courses/ai-foundations/topics/${l3}`);
-  check("student topic L3 → next=null (end of sequence)", last.json?.data?.nextTopicId === null, last.json?.data);
+  // Students can't open topics ahead of their sequence (403, even via the API);
+  // prev/next navigation is checked as staff, who preview freely.
+  check("student topic L2 (not yet unlocked) → 403", (await student.get(`/courses/ai-foundations/topics/${l2}`)).status === 403);
+  const mid = await teacher.get(`/courses/ai-foundations/topics/${l2}`);
+  check("topic L2 → prev=L1, next=L3", mid.json?.data?.prevTopicId === l1 && mid.json?.data?.nextTopicId === l3, mid.json?.data);
+  const last = await teacher.get(`/courses/ai-foundations/topics/${l3}`);
+  check("topic L3 → next=null (end of sequence)", last.json?.data?.nextTopicId === null, last.json?.data);
   check("topic endpoint returns flat ordered sequence", JSON.stringify(first.json?.data?.sequence) === JSON.stringify([l1, l2, l3]), first.json?.data?.sequence);
 }
 

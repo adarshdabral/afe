@@ -6,11 +6,35 @@ import type { ApiRequest as Request, ApiResponse as Response } from "../http/typ
 import { TOPIC_CONTENT_TYPES } from "../models/Topic";
 import { createTopic, deleteTopic, reorderTopics, updateTopic } from "../services/topic.service";
 import { contentFields, idSchema, reorderSchema } from "./content.schema";
+import { ensureDiscussionThread, hideDiscussionThread } from "../services/forum.service";
+import { getUserById } from "../services/auth.service";
+import type { TopicView } from "../models/Topic";
+
+/** Keep a discussion topic's forum thread in sync (create/update, or hide it when the
+ *  topic stops being a discussion). */
+async function syncDiscussion(req: Request, topic: TopicView): Promise<void> {
+  if (topic.contentType !== "discussion") {
+    await hideDiscussionThread(topic.id);
+    return;
+  }
+  const user = await getUserById(req.user!.id);
+  await ensureDiscussionThread(topic, { id: req.user!.id, name: user?.name ?? "Course team", role: req.user!.role });
+}
 
 const base = {
   description: z.string().max(5000).optional(),
   ...contentFields,
   isPreview: z.boolean().optional(),
+  allowDownload: z.boolean().optional(),
+  discussion: z
+    .object({
+      prompt: z.string().max(5000).optional(),
+      instructions: z.string().max(10000).optional(),
+      questions: z.array(z.string().max(1000)).max(20).optional(),
+      relatedTopicId: z.string().max(100).nullable().optional(),
+      required: z.boolean().optional(),
+    })
+    .optional(),
 };
 
 const createSchema = z.object({
@@ -31,6 +55,7 @@ export async function create(req: Request, res: Response): Promise<void> {
     res.status(404).json({ error: { message: "Lesson not found." } });
     return;
   }
+  await syncDiscussion(req, topic);
   res.status(201).json({ data: topic });
 }
 
@@ -42,12 +67,15 @@ export async function update(req: Request, res: Response): Promise<void> {
     res.status(404).json({ error: { message: "Topic not found." } });
     return;
   }
+  await syncDiscussion(req, topic);
   res.json({ data: topic });
 }
 
 /** DELETE /api/admin/courses/topics/:topicId */
 export async function remove(req: Request, res: Response): Promise<void> {
-  const ok = await deleteTopic(idSchema.parse(req.params.topicId));
+  const topicId = idSchema.parse(req.params.topicId);
+  const ok = await deleteTopic(topicId);
+  if (ok) await hideDiscussionThread(topicId);
   if (!ok) {
     res.status(404).json({ error: { message: "Topic not found." } });
     return;

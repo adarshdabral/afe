@@ -10,6 +10,7 @@ import { seedAnalyticsCohort } from "./seed/analytics.seed";
 import { seedForum } from "./seed/forum.seed";
 import { migrateLessonsToTopics } from "./migrations/lessons-to-topics";
 import { renameFlagshipSlug } from "./migrations/rename-course-slug";
+import { migrateAssessmentKinds } from "./migrations/assessment-kinds";
 
 const g = globalThis as typeof globalThis & { __afeReady?: Promise<void> };
 
@@ -20,6 +21,7 @@ export function ensureServerReady(): Promise<void> {
       await connectDb();
       await migrateLessonsToTopics(); // idempotent; must run before anything reads topics
       await renameFlagshipSlug(); // idempotent; ai-for-everyone → demystifying-ai-for-everyone
+      await migrateAssessmentKinds(); // idempotent; module/lesson assessment kinds + index swap
       await seedDemoUsers();
       await seedAnalyticsCohort();
       await seedForum();

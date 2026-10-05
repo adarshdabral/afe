@@ -367,7 +367,7 @@ function ThreadCard({
   );
 }
 
-function ThreadPanel({
+export function ThreadPanel({
   threadId,
   isStaff,
   onReplied,

@@ -68,7 +68,7 @@ const allTopics = (t: any) => t?.modules?.flatMap((m: any) => m.lessons.flatMap(
 // Warm every cached read twice.
 for (let i = 0; i < 2; i++) {
   await tree();
-  await anon.get(`/courses/${SLUG}/topics/${t1}`);
+  await student.get(`/courses/${SLUG}/topics/${t1}`);
   await student.get(`/progress/${courseId}`);
   await anon.get("/branding");
 }
@@ -87,7 +87,7 @@ check("section PATCH visible immediately", (await tree())?.sections?.find((s: an
 await admin.patch(`/admin/courses/topics/${t1}`, { title: "T1 renamed", content: "one v2" });
 check("topic PATCH visible in tree", allTopics(await tree())?.includes("T1 renamed"), allTopics(await tree()));
 {
-  const tp = (await anon.get(`/courses/${SLUG}/topics/${t1}`)).json?.data;
+  const tp = (await student.get(`/courses/${SLUG}/topics/${t1}`)).json?.data;
   check("topic PATCH visible on topic endpoint", tp?.topic?.title === "T1 renamed" && tp?.topic?.content === "one v2", tp?.topic);
 }
 const t3 = (await admin.post(`/admin/courses/lessons/${l1}/topics`, { title: "T3", contentType: "rich_text", content: "three" })).json.data.id;
@@ -108,7 +108,9 @@ check("deleted topic gone from progress sequence", (await student.get(`/progress
   const topics = o?.modules?.flatMap((m: any) => m.lessons.flatMap((l: any) => l.topics)) ?? [];
   check("outline view: topic bodies omitted, titles kept", topics.length === 2 && topics.every((t: any) => t.content === "" && t.title), topics.map((t: any) => ({ t: t.title, c: t.content })));
   check("outline view keeps section content", o?.sections?.find((x: any) => x.kind === "overview")?.content === "Overview body");
-  check("full view (default) still carries topic bodies", allTopics(await tree()) && (await tree())?.modules?.[0]?.lessons?.[0]?.topics?.[0]?.content !== "");
+  const staff = (await admin.get(`/courses/${SLUG}`)).json?.data;
+  check("staff full view (default) still carries topic bodies", staff?.modules?.[0]?.lessons?.[0]?.topics?.[0]?.content !== "");
+  check("learner view never carries topic bodies", (await tree())?.modules?.every((m: any) => m.lessons.every((l: any) => l.topics.every((t: any) => t.content === ""))));
   check("bad view value → 400", (await anon.get(`/courses/${SLUG}?view=nope`)).status === 400);
 }
 

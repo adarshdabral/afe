@@ -12,6 +12,9 @@ export interface ThreadView {
   title: string;
   body: string;
   moduleId: string | null;
+  /** Set for a course discussion: the "discussion" topic this thread belongs to. */
+  topicId: string | null;
+  courseId: string | null;
   authorId: string;
   authorName: string;
   authorRole: Role;
@@ -24,6 +27,8 @@ const forumThreadSchema = new Schema(
     title: { type: String, required: true },
     body: { type: String, required: true },
     moduleId: { type: String, default: null },
+    topicId: { type: String, default: null, index: true },
+    courseId: { type: String, default: null },
     authorId: { type: String, required: true },
     authorName: { type: String, required: true },
     authorRole: { type: String, required: true },
@@ -45,6 +50,8 @@ export function toThread(doc: ForumThreadDoc): ThreadView {
     title: doc.title,
     body: doc.body,
     moduleId: doc.moduleId ?? null,
+    topicId: doc.topicId ?? null,
+    courseId: doc.courseId ?? null,
     authorId: doc.authorId,
     authorName: doc.authorName,
     authorRole: doc.authorRole as Role,

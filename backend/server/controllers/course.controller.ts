@@ -6,12 +6,19 @@
 import type { ApiRequest as Request, ApiResponse as Response } from "../http/types";
 import { z } from "zod";
 import { COURSE_LEVELS, COURSE_STATUSES } from "../models/Course";
+import { checkItemAccess } from "../services/progress.service";
+import { discussionThreadId } from "../services/forum.service";
+import { HttpError } from "../http/errors";
+import { keyForPublicUrl, presignDownload } from "../utils/r2";
+import { slugify as slugifyName } from "../services/course.service";
 import {
   createCourse,
   getCourse,
   getCourseBySlug,
   getCourseTreeById,
   getTopicInCourse,
+  isStaffRole,
+  learnerViewOf,
   outlineOf,
   listCourses,
   setCourseStatus,
@@ -165,27 +172,86 @@ export async function publicList(req: Request, res: Response): Promise<void> {
   res.json({ data: result });
 }
 
-/** GET /api/courses/:slug — ordered tree; 404 for non-admins on draft/archived. */
+/** GET /api/courses/:slug — ordered tree; 404 for non-admins on draft/archived.
+ *  Staff get full content (`?view=outline` omits topic text bodies). Students and
+ *  anonymous visitors always get the learner view: no topic content at all — each
+ *  topic's content comes from the topic endpoint, after the sequence check. */
 export async function publicGetBySlug(req: Request, res: Response): Promise<void> {
   const slug = z.string().min(1).parse(req.params.slug);
   const { view } = z.object({ view: z.enum(["full", "outline"]).default("full") }).parse(req.query);
-  const tree = await getCourseBySlug(slug, req.user?.role ?? null);
+  const role = req.user?.role ?? null;
+  const tree = await getCourseBySlug(slug, role);
   if (!tree) {
     res.status(404).json({ error: { message: "Course not found." } });
     return;
   }
-  // ?view=outline omits topic text bodies (learner navigation); default is the full tree.
-  res.json({ data: view === "outline" ? outlineOf(tree) : tree });
+  if (!isStaffRole(role)) res.json({ data: learnerViewOf(tree) });
+  else res.json({ data: view === "outline" ? outlineOf(tree) : tree });
 }
 
-/** GET /api/courses/:slug/topics/:topicId — a visible topic + prev/next. */
-export async function publicGetTopic(req: Request, res: Response): Promise<void> {
+/**
+ * A visible topic the caller may open: staff — any; students — only when it is
+ * unlocked in their learning sequence (403 otherwise, even by direct URL/API);
+ * anonymous visitors — free-preview topics only.
+ */
+async function accessibleTopic(req: Request) {
   const slug = z.string().min(1).parse(req.params.slug);
   const topicId = z.string().min(1).parse(req.params.topicId);
-  const result = await getTopicInCourse(slug, topicId, req.user?.role ?? null);
-  if (!result) {
-    res.status(404).json({ error: { message: "Topic not found." } });
+  const role = req.user?.role ?? null;
+  const result = await getTopicInCourse(slug, topicId, role);
+  if (!result) throw new HttpError(404, "Topic not found.");
+  if (role === "student") {
+    const access = await checkItemAccess(req.user!.id, result.courseId, topicId);
+    if (!access.ok) throw new HttpError(access.reason === "locked" ? 403 : 404, access.message);
+  } else if (!role && !result.topic.isPreview) {
+    throw new HttpError(401, "Sign in to open this topic.");
+  }
+  return result;
+}
+
+/** GET /api/courses/:slug/topics/:topicId — a topic the caller may open + prev/next
+ *  (+ the forum thread behind a discussion topic). */
+export async function publicGetTopic(req: Request, res: Response): Promise<void> {
+  const result = await accessibleTopic(req);
+  const threadId = result.topic.contentType === "discussion" ? await discussionThreadId(result.topic.id) : null;
+  res.json({ data: { ...result, discussionThreadId: threadId } });
+}
+
+const DOWNLOAD_PARTS = ["text", "video", "audio", "document", "subtitle"] as const;
+const PART_FIELD = { video: "videoUrl", audio: "audioUrl", document: "documentUrl", subtitle: "subtitleUrl" } as const;
+
+/**
+ * GET /api/courses/:slug/topics/:topicId/download?part=text|video|audio|document|subtitle
+ * Downloads one part of a topic the caller may open. Students need the topic's
+ * "Download allowed" switch on. Files are served through the existing storage —
+ * a short-lived presigned R2 link, or the local uploads route — never by exposing
+ * storage credentials. External links (e.g. YouTube) can't be downloaded.
+ */
+export async function downloadTopic(req: Request, res: Response): Promise<void> {
+  const { part } = z.object({ part: z.enum(DOWNLOAD_PARTS) }).parse(req.query);
+  const { topic } = await accessibleTopic(req);
+  if (!isStaffRole(req.user?.role ?? null) && !topic.allowDownload) {
+    throw new HttpError(403, "Downloads are not enabled for this topic.");
+  }
+  res.setHeader("Cache-Control", "no-store"); // presigned links are per-request
+  const base = slugifyName(topic.title) || "topic";
+  if (part === "text") {
+    if (!topic.content.trim()) throw new HttpError(404, "This topic has no text to download.");
+    res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${base}.md"`);
+    res.send(`# ${topic.title}\n\n${topic.content}\n`);
     return;
   }
-  res.json({ data: result });
+  const url = topic[PART_FIELD[part]];
+  if (!url) throw new HttpError(404, `This topic has no ${part} to download.`);
+  const ext = (/\.([a-z0-9]{1,5})(?:[?#]|$)/i.exec(url)?.[1] ?? "").toLowerCase();
+  const filename = ext ? `${base}.${ext}` : base;
+  const key = keyForPublicUrl(url);
+  let location: string | null = null;
+  if (key) location = await presignDownload(key, filename); // R2: short-lived signed link
+  else if (url.startsWith("/api/uploads/")) location = `${url.split("?")[0]}?download=${encodeURIComponent(filename)}`;
+  if (!location) throw new HttpError(409, "This file is hosted elsewhere and can't be downloaded here.");
+  res.status(302);
+  res.setHeader("Location", location);
+  res.send("");
 }

@@ -33,7 +33,8 @@ export async function completeTopic(req: Request, res: Response): Promise<void> 
     if (result.reason === "not_found") {
       res.status(404).json({ error: { message: "Topic not found in this course." } });
     } else {
-      res.status(409).json({ error: { message: "Complete the previous topic first." } });
+      // locked (sequence / module lock) or a required discussion without a post
+      res.status(409).json({ error: { message: result.message ?? "Complete the previous topic first." } });
     }
     return;
   }

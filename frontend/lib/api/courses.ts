@@ -15,6 +15,7 @@ export const CONTENT_TYPES = [
   "case_study",
   "reflection",
   "activity",
+  "discussion",
 ] as const;
 export type CourseStatus = (typeof COURSE_STATUSES)[number];
 export type CourseLevel = (typeof COURSE_LEVELS)[number];
@@ -71,7 +72,19 @@ export interface ContentFields {
   subtitleUrl: string;
 }
 
-/** Topic — the actual learning unit: Course → Module → Lesson → **Topic** → content. */
+/** Settings of a "discussion" topic; participation happens in its linked forum thread. */
+export interface DiscussionConfig {
+  prompt: string;
+  instructions: string;
+  questions: string[];
+  relatedTopicId: string | null;
+  /** The student must post before the topic can be completed. */
+  required: boolean;
+}
+
+/** Topic — the actual learning unit: Course → Module → Lesson → **Topic** → content.
+ *  In learners' course trees topics carry NO content (text/media are withheld until
+ *  the topic is opened — see getPublicTopic). */
 export interface Topic extends ContentFields {
   id: string;
   lessonId: string;
@@ -82,6 +95,11 @@ export interface Topic extends ContentFields {
   order: number;
   estimatedDurationMinutes: number;
   isPreview: boolean;
+  /** Students may download this topic's text/media. */
+  allowDownload: boolean;
+  /** Has a video (true even when media URLs are withheld). */
+  hasVideo: boolean;
+  discussion: DiscussionConfig;
   createdAt: string;
   updatedAt: string;
 }
@@ -97,7 +115,17 @@ export interface Lesson {
   createdAt: string;
   updatedAt: string;
 }
-export type LessonWithTopics = Lesson & { topics: Topic[] };
+/** A lesson assignment as listed in the course tree. */
+export interface AssignmentSummary {
+  id: string;
+  title: string;
+  isGraded: boolean;
+  isRequired: boolean;
+  isPublished: boolean;
+  timeLimitMinutes: number;
+  estimatedDurationMinutes: number;
+}
+export type LessonWithTopics = Lesson & { topics: Topic[]; assignment: AssignmentSummary | null };
 
 export const SECTION_KINDS = ["introduction", "overview", "instructor"] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
@@ -146,6 +174,8 @@ export type ModuleWithLessons = Module & {
   assessmentId: string | null;
   /** Estimated minutes for that assessment (0 = not estimated). */
   assessmentDurationMinutes: number;
+  /** Its timer in minutes (0 = untimed). */
+  assessmentTimeLimitMinutes: number;
   readiness?: ModuleReadiness;
 };
 export type CourseTree = Course & { sections: CourseSection[]; modules: ModuleWithLessons[] };
@@ -215,6 +245,8 @@ export interface CreateTopicInput extends ContentInput {
   contentType: ContentType;
   description?: string;
   isPreview?: boolean;
+  allowDownload?: boolean;
+  discussion?: Partial<DiscussionConfig>;
 }
 export type UpdateTopicInput = Partial<CreateTopicInput>;
 
@@ -237,7 +269,7 @@ function normalizeTree(tree: CourseTree): CourseTree {
     modules: (tree.modules ?? []).map((m) => ({
       ...m,
       learningObjectives: m.learningObjectives ?? [],
-      lessons: (m.lessons ?? []).map((l) => ({ ...l, topics: l.topics ?? [] })),
+      lessons: (m.lessons ?? []).map((l) => ({ ...l, topics: l.topics ?? [], assignment: l.assignment ?? null })),
     })),
   };
 }
@@ -364,10 +396,20 @@ export interface TopicInCourse {
   topic: Topic;
   prevTopicId: string | null;
   nextTopicId: string | null;
+  /** The forum thread behind a discussion topic. */
+  discussionThreadId: string | null;
 }
 export async function getPublicTopic(slug: string, topicId: string): Promise<TopicInCourse> {
   const { data } = await api.get<{ data: TopicInCourse }>(
     `/courses/${encodeURIComponent(slug)}/topics/${encodeURIComponent(topicId)}`,
   );
   return data.data;
+}
+
+export const DOWNLOAD_PARTS = ["text", "video", "audio", "document", "subtitle"] as const;
+export type DownloadPart = (typeof DOWNLOAD_PARTS)[number];
+/** Same-origin download link for one part of a topic (the backend checks access and
+ *  the topic's "Download allowed" switch, then streams/redirects to secure storage). */
+export function topicDownloadUrl(slug: string, topicId: string, part: DownloadPart): string {
+  return `/api/courses/${encodeURIComponent(slug)}/topics/${encodeURIComponent(topicId)}/download?part=${part}`;
 }

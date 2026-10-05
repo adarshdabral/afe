@@ -144,3 +144,55 @@ export async function setPostHidden(postId: string, hidden: boolean): Promise<Po
   await doc.save();
   return toPost(doc);
 }
+
+// ── Course discussions ──────────────────────────────────────────────────────
+// A "discussion" topic is backed by ONE thread in this forum (ForumThread.topicId),
+// so learners participate through the regular forum (replies, moderation, answers).
+
+/** Create or update the thread behind a discussion topic (title/prompt kept in sync). */
+export async function ensureDiscussionThread(
+  topic: { id: string; courseId: string; moduleId: string; title: string; description: string; discussion: { prompt: string } },
+  author: Author,
+): Promise<ThreadView> {
+  const body = topic.discussion.prompt.trim() || topic.description.trim() || topic.title;
+  const existing = await ForumThread.findOne({ topicId: topic.id });
+  if (existing) {
+    existing.title = topic.title;
+    existing.body = body;
+    existing.moduleId = topic.moduleId;
+    existing.courseId = topic.courseId;
+    existing.hidden = false;
+    await existing.save();
+    return toThread(existing);
+  }
+  const doc = await ForumThread.create({
+    title: topic.title,
+    body,
+    moduleId: topic.moduleId,
+    topicId: topic.id,
+    courseId: topic.courseId,
+    authorId: author.id,
+    authorName: author.name,
+    authorRole: author.role,
+    createdAt: nowIso(),
+    hidden: false,
+  });
+  return toThread(doc);
+}
+
+/** Hide a discussion's thread (its topic was deleted or is no longer a discussion). Posts are kept. */
+export async function hideDiscussionThread(topicId: string): Promise<void> {
+  await ForumThread.updateOne({ topicId }, { $set: { hidden: true } });
+}
+
+/** The visible thread id behind a discussion topic, or null. */
+export async function discussionThreadId(topicId: string): Promise<string | null> {
+  const t = await ForumThread.findOne({ topicId, hidden: false }).select("_id").lean();
+  return t ? String(t._id) : null;
+}
+
+/** The (course, topic) a thread belongs to, when it is a course discussion. */
+export async function threadDiscussion(threadId: string): Promise<{ topicId: string; courseId: string } | null> {
+  const t = await ForumThread.findById(threadId).select("topicId courseId").lean().catch(() => null);
+  return t?.topicId && t.courseId ? { topicId: t.topicId, courseId: t.courseId } : null;
+}

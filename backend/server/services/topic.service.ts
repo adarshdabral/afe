@@ -3,7 +3,7 @@
 // `courseId` are inherited from the parent lesson. Reordering is scoped to one lesson.
 
 import { Lesson } from "../models/Lesson";
-import { Topic, toTopic, type TopicContentType, type TopicView } from "../models/Topic";
+import { Topic, toTopic, type DiscussionView, type TopicContentType, type TopicView } from "../models/Topic";
 
 export interface CreateTopicInput {
   title: string;
@@ -16,10 +16,22 @@ export interface CreateTopicInput {
   subtitleUrl?: string;
   estimatedDurationMinutes?: number;
   isPreview?: boolean;
+  allowDownload?: boolean;
+  discussion?: Partial<DiscussionView>;
 }
 export type UpdateTopicInput = Partial<CreateTopicInput>;
 
 const CONTENT_KEYS = ["contentType", "content", "audioUrl", "documentUrl", "videoUrl", "subtitleUrl"] as const;
+
+function normalizeDiscussion(d: Partial<DiscussionView> | undefined): DiscussionView {
+  return {
+    prompt: d?.prompt?.trim() ?? "",
+    instructions: d?.instructions?.trim() ?? "",
+    questions: (d?.questions ?? []).map((q) => q.trim()).filter(Boolean),
+    relatedTopicId: d?.relatedTopicId || null,
+    required: d?.required === true,
+  };
+}
 
 /** Create a topic at the end of its lesson. Null if the lesson doesn't exist. */
 export async function createTopic(lessonId: string, input: CreateTopicInput): Promise<TopicView | null> {
@@ -41,6 +53,8 @@ export async function createTopic(lessonId: string, input: CreateTopicInput): Pr
     subtitleUrl: input.subtitleUrl ?? "",
     estimatedDurationMinutes: input.estimatedDurationMinutes ?? 0,
     isPreview: input.isPreview ?? false,
+    allowDownload: input.allowDownload ?? false,
+    discussion: normalizeDiscussion(input.discussion),
   });
   return toTopic(doc);
 }
@@ -53,6 +67,10 @@ export async function updateTopic(topicId: string, patch: UpdateTopicInput): Pro
   for (const k of CONTENT_KEYS) if (patch[k] !== undefined) doc.set(k, patch[k]);
   if (patch.estimatedDurationMinutes !== undefined) doc.estimatedDurationMinutes = patch.estimatedDurationMinutes;
   if (patch.isPreview !== undefined) doc.isPreview = patch.isPreview;
+  if (patch.allowDownload !== undefined) doc.allowDownload = patch.allowDownload;
+  if (patch.discussion !== undefined) {
+    doc.set("discussion", normalizeDiscussion({ ...toTopic(doc).discussion, ...patch.discussion }));
+  }
   await doc.save();
   return toTopic(doc);
 }

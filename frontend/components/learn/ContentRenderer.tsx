@@ -12,7 +12,17 @@ import { NarrationPlayer } from "./NarrationPlayer";
 // Documents always offer Open-in-new-tab + Download so the file is reachable even
 // where inline embedding is limited (e.g. mobile Safari). `contentType` only picks
 // the empty-state message when there are no parts yet.
-export function ContentRenderer({ item }: { item: ContentFields & { title: string } }) {
+//
+// `documentDownload` controls the document's Download button: omitted → a direct
+// link (course sections); null → hidden (topic downloads not allowed); a URL → the
+// access-checked topic download endpoint.
+export function ContentRenderer({
+  item,
+  documentDownload,
+}: {
+  item: ContentFields & { title: string };
+  documentDownload?: string | null;
+}) {
   const video = resolveUploadUrl(item.videoUrl ?? "");
   const subtitles = resolveUploadUrl(item.subtitleUrl ?? "");
   const audio = resolveUploadUrl(item.audioUrl ?? "");
@@ -37,7 +47,12 @@ export function ContentRenderer({ item }: { item: ContentFields & { title: strin
         (isImageContent || isImage(doc) ? (
           <ImageBlock url={doc} alt={item.title} />
         ) : (
-          <DocumentViewer url={doc} title={item.title} kind={isDeck(doc) || item.contentType === "presentation" ? "presentation" : "pdf"} />
+          <DocumentViewer
+            url={doc}
+            title={item.title}
+            kind={isDeck(doc) || item.contentType === "presentation" ? "presentation" : "pdf"}
+            downloadHref={documentDownload === undefined ? doc : documentDownload}
+          />
         ))}
     </div>
   );
@@ -98,10 +113,13 @@ function DocumentViewer({
   url,
   title,
   kind,
+  downloadHref,
 }: {
   url: string;
   title: string;
   kind: "pdf" | "presentation";
+  /** null hides the Download button. */
+  downloadHref: string | null;
 }) {
   const Icon = kind === "presentation" ? Presentation : FileText;
   const label = kind === "presentation" ? "Presentation" : "Document";
@@ -126,13 +144,15 @@ function DocumentViewer({
           >
             <Maximize2 className="w-3.5 h-3.5" /> Open
           </a>
-          <a
-            href={url}
-            download
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[13px] bg-violet-600 hover:bg-violet-700 text-white transition-colors"
-          >
-            <Download className="w-3.5 h-3.5" /> Download
-          </a>
+          {downloadHref && (
+            <a
+              href={downloadHref}
+              download
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[13px] bg-violet-600 hover:bg-violet-700 text-white transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" /> Download
+            </a>
+          )}
         </div>
       </figcaption>
 

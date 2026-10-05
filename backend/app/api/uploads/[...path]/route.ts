@@ -37,6 +37,12 @@ async function serve(request: Request, { params }: Ctx, headOnly: boolean): Prom
     "X-Content-Type-Options": "nosniff",
     "Access-Control-Allow-Origin": "*",
   });
+  // ?download=<name> (set by the topic download endpoint) saves instead of displaying.
+  const downloadName = new URL(request.url).searchParams.get("download");
+  if (downloadName) {
+    const safe = downloadName.replace(/["\\\r\n/]/g, "_").slice(0, 200);
+    headers.set("Content-Disposition", `attachment; filename="${safe}"; filename*=UTF-8''${encodeURIComponent(safe)}`);
+  }
   // SVGs can carry scripts; if one is opened directly (not via <img>), block them.
   if (path.extname(file).toLowerCase() === ".svg") {
     headers.set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox");

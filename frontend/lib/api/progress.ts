@@ -28,6 +28,8 @@ export interface ProgressDetail {
   progress: Progress;
   totalTopics: number;
   nextTopicId: string | null;
+  /** First unfinished item of any kind — where "Continue" goes. */
+  nextItem: { id: string; kind: "topic" | "assignment" | "assessment"; moduleId: string } | null;
 }
 
 export async function getCourseProgress(courseId: string): Promise<ProgressDetail> {

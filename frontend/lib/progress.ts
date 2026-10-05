@@ -24,7 +24,7 @@ export interface RemainingWork {
   videos: { count: number; minutes: number };
   /** Unfinished reading topics (text, PDF, slides, …): count + estimated minutes. */
   readings: { count: number; minutes: number };
-  /** Published module assessments not yet passed. */
+  /** Graded items not yet passed: module assessments + graded lesson assignments. */
   gradedAssessments: number;
 }
 
@@ -32,8 +32,24 @@ interface TopicLike {
   id: string;
   contentType: string;
   videoUrl?: string;
+  /** Set even when media URLs are withheld (learners' course trees). */
+  hasVideo?: boolean;
   estimatedDurationMinutes?: number;
 }
+
+interface AssignmentLike {
+  id: string;
+  isGraded: boolean;
+  isPublished?: boolean;
+  estimatedDurationMinutes?: number;
+}
+
+interface LessonLike {
+  topics: TopicLike[];
+  assignment?: AssignmentLike | null;
+}
+
+const liveAssignment = (l: LessonLike) => (l.assignment && l.assignment.isPublished !== false ? l.assignment : null);
 
 /**
  * What's left in a course: video vs reading time (from each topic's estimated
@@ -42,7 +58,7 @@ interface TopicLike {
  * Pass an empty `completed` set to get the course totals.
  */
 export function remainingWork(
-  modules: { assessmentId: string | null; lessons: { topics: TopicLike[] }[] }[],
+  modules: { assessmentId: string | null; lessons: LessonLike[] }[],
   completed: Set<string>,
   passedAssessmentIds: Set<string>,
 ): RemainingWork {
@@ -51,10 +67,12 @@ export function remainingWork(
     for (const l of m.lessons) {
       for (const t of l.topics) {
         if (completed.has(t.id)) continue;
-        const bucket = t.contentType === "video" || !!t.videoUrl ? out.videos : out.readings;
+        const bucket = t.contentType === "video" || !!t.videoUrl || !!t.hasVideo ? out.videos : out.readings;
         bucket.count += 1;
         bucket.minutes += t.estimatedDurationMinutes || 0;
       }
+      const a = liveAssignment(l);
+      if (a?.isGraded && !passedAssessmentIds.has(a.id)) out.gradedAssessments += 1;
     }
     if (m.assessmentId && !passedAssessmentIds.has(m.assessmentId)) out.gradedAssessments += 1;
   }
@@ -73,11 +91,11 @@ export function describeRemaining(
 }
 
 export interface ModuleRemaining {
-  /** Graded (published) module assessments not yet passed. */
+  /** Graded items not yet passed: the module assessment + graded lesson assignments. */
   gradedLeft: number;
   /** Learning units (topics) not yet completed. */
   lessonsLeft: number;
-  /** Estimated minutes of the unfinished topics + the assessment, if not yet passed. */
+  /** Estimated minutes of unfinished topics, assignments and the assessment. */
   minutesLeft: number;
   /** Totals for the module (what a fresh student, or staff previewing, sees). */
   totalGraded: number;
@@ -93,7 +111,7 @@ export interface ModuleRemaining {
  * without an estimate counts toward the item totals but adds no time.
  */
 export function moduleRemaining(
-  module: { assessmentId: string | null; assessmentDurationMinutes?: number; lessons: { topics: TopicLike[] }[] },
+  module: { assessmentId: string | null; assessmentDurationMinutes?: number; lessons: LessonLike[] },
   completed: Set<string>,
   passedAssessmentIds: Set<string>,
 ): ModuleRemaining {
@@ -107,13 +125,23 @@ export function moduleRemaining(
       out.lessonsLeft += 1;
       out.minutesLeft += minutes;
     }
+    const a = liveAssignment(l);
+    if (a) {
+      const minutes = a.estimatedDurationMinutes || 0;
+      out.totalMinutes += minutes;
+      if (a.isGraded) out.totalGraded += 1;
+      if (!passedAssessmentIds.has(a.id)) {
+        out.minutesLeft += minutes;
+        if (a.isGraded) out.gradedLeft += 1;
+      }
+    }
   }
   if (module.assessmentId) {
     const minutes = module.assessmentDurationMinutes || 0;
-    out.totalGraded = 1;
+    out.totalGraded += 1;
     out.totalMinutes += minutes;
     if (!passedAssessmentIds.has(module.assessmentId)) {
-      out.gradedLeft = 1;
+      out.gradedLeft += 1;
       out.minutesLeft += minutes;
     }
   }

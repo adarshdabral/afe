@@ -6,7 +6,8 @@ import { Course } from "../models/Course";
 import { Module, toModule, type ModuleView } from "../models/Module";
 import { Lesson } from "../models/Lesson";
 import { Topic } from "../models/Topic";
-import { Assessment } from "../models/Assessment";
+import { Assessment, MODULE_KIND } from "../models/Assessment";
+import { deleteAssessmentsWhere } from "./assessment.service";
 import { Question } from "../models/Question";
 import { HttpError } from "../http/errors";
 
@@ -50,7 +51,7 @@ export async function moduleReadiness(m: {
   learningObjectives?: string[] | null;
 }): Promise<ModuleReadiness> {
   const moduleId = m.id ?? String(m._id);
-  const a = await Assessment.findOne({ moduleId });
+  const a = await Assessment.findOne({ moduleId, ...MODULE_KIND });
   const questionCount = a ? await Question.countDocuments({ assessmentId: String(a._id) }) : 0;
   return readinessFrom(m, a ? { isPublished: a.isPublished === true, questionCount } : null);
 }
@@ -136,6 +137,7 @@ export async function deleteModule(moduleId: string): Promise<boolean> {
   if (!doc) return false;
   await Topic.deleteMany({ moduleId });
   await Lesson.deleteMany({ moduleId });
+  await deleteAssessmentsWhere({ moduleId }); // module assessment + lesson assignments
   await doc.deleteOne();
   return true;
 }

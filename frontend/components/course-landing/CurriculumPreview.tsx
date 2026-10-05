@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenText, CheckCircle2, ClipboardCheck, Clock } from "lucide-react";
+import { BookOpenText, CheckCircle2, ClipboardCheck, Clock, NotebookPen } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { formatMinutes, lessonCount, moduleMinutes, pad2, topicCount, type CourseOutline } from "@/lib/course";
 
@@ -8,6 +8,7 @@ const TYPE_LABEL: Record<string, string> = {
   rich_text: "Reading",
   case_study: "Case study",
   pdf: "PDF",
+  discussion: "Discussion",
 };
 
 /** Public curriculum: lesson containers, topic titles and module assessments. */
@@ -88,6 +89,13 @@ export function CurriculumPreview({ course, defaultOpen = true }: { course: Cour
                               </span>
                             </li>
                           ))}
+                          {lesson.assignment && (
+                            <li className="flex items-center gap-3 text-[13px] text-foreground">
+                              <NotebookPen className="w-3.5 h-3.5 text-violet-600 shrink-0" aria-hidden />
+                              <span className="flex-1 min-w-0">Assignment: {lesson.assignment.title}</span>
+                              <span className="shrink-0 text-[12px] text-muted-foreground">{lesson.assignment.isGraded ? "Graded" : "Practice"}</span>
+                            </li>
+                          )}
                         </ul>
                       </li>
                     ))}

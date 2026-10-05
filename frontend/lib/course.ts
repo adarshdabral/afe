@@ -23,6 +23,8 @@ export interface LessonOutline {
   title: string;
   description: string;
   topics: TopicOutline[];
+  /** The lesson's assignment (published), if any. */
+  assignment: { title: string; isGraded: boolean } | null;
 }
 export interface ModuleOutline {
   id: string;
@@ -123,6 +125,7 @@ export function toCourseOutline(tree: CourseTree): CourseOutline {
           contentType: t.contentType,
           estimatedDurationMinutes: t.estimatedDurationMinutes,
         })),
+        assignment: l.assignment && l.assignment.isPublished !== false ? { title: l.assignment.title, isGraded: l.assignment.isGraded } : null,
       })),
     })),
   };
@@ -182,6 +185,7 @@ const FORMAT_LABEL: Record<ContentType, string> = {
   case_study: "Case studies",
   reflection: "Reflections",
   activity: "Activities",
+  discussion: "Discussions",
 };
 
 /** Distinct, human-labelled topic formats actually present in the course. */

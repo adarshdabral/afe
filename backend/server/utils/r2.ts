@@ -13,7 +13,7 @@
 // browser can't swap the file type or exceed the declared size. The bucket needs a
 // CORS rule allowing PUT from the frontend origin (see DEPLOY.md / scripts).
 
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 interface R2Config {
@@ -100,6 +100,30 @@ export async function putObject(key: string, body: Uint8Array, contentType: stri
     }),
   );
   return publicUrlFor(key);
+}
+
+/** The object key for one of OUR public URLs (R2_PUBLIC_URL/<key>), else null. */
+export function keyForPublicUrl(url: string): string | null {
+  const cfg = r2Config();
+  if (!cfg || !url.startsWith(`${cfg.publicUrl}/`)) return null;
+  return url.slice(cfg.publicUrl.length + 1);
+}
+
+export const DOWNLOAD_TTL_SECONDS = 5 * 60;
+
+/** A short-lived presigned GET that downloads the object as `filename` (attachment). */
+export async function presignDownload(key: string, filename: string): Promise<string> {
+  const cfg = requireConfig();
+  const safe = filename.replace(/["\\\r\n]/g, "_");
+  return getSignedUrl(
+    s3(cfg),
+    new GetObjectCommand({
+      Bucket: cfg.bucket,
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="${safe}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    }),
+    { expiresIn: DOWNLOAD_TTL_SECONDS },
+  );
 }
 
 /** Best-effort delete of an object we own (by its public URL). */

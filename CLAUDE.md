@@ -92,6 +92,7 @@ npx tsx verify/certificate-check.mts     # auto-issue, verify, PDF download, rev
 npx tsx verify/reviews-check.mts         # reviews & ratings
 npx tsx verify/course-overview-check.mts # course-page metadata (skills/tools/offered by) + per-student module "left" summary
 npx tsx verify/content-cache-check.mts   # content cache: every admin write type is visible on the next read; ?view=outline
+npx tsx verify/learning-flow-check.mts   # lesson assignments, sequence/module locks, server-timed attempts, discussions, downloads, index migration
 npx tsx verify/perf-bench.mts            # NOT pass/fail: latency + DB round trips per hot endpoint (DB_RTT_MS=50 default)
 npx tsx verify/feature-check.mts         # seed identities / self-registration rules
 npx tsx verify/branding-check.mts        # logo: public read, admin-only write, URL validation, SVG CSP
@@ -158,7 +159,9 @@ Consistent per-feature layering under `backend/` — follow it for new features:
 | `/api/uploads/<file>` | public, read-only | `app/api/uploads/[...path]` streams from `UPLOAD_DIR` (Range/206) |
 | `/api/courses` | public (optional auth) | published catalog and course tree (sections, modules, lesson containers and topics) |
 | `/api/courses/:slug/topics/:topicId` | public (optional auth) | role-scoped topic content |
-| `/api/assessments` | auth; attempts = student | answer-key-stripped quiz, submit attempt, my attempts |
+| `/api/assessments` | auth; attempts = student | answer-key-stripped quiz + attempt state, `/start` (server deadline), `PUT /attempts/:id` (autosave), submit, my attempts — students only once unlocked |
+| `/api/admin/assessments/lesson/:lessonId` | platform_admin | a lesson's assignment + questions (create via `POST /api/admin/assessments {lessonId}`) |
+| `/api/courses/:slug/topics/:topicId/download?part=` | auth | text/video/audio/document/subtitle of an unlocked topic with "Download allowed" (R2 presigned link or local `?download`) |
 | `/api/progress` | student | per-course progress, complete topic, visit and time tracking |
 | `/api/certificates` | public verify; student; admin | verify, mine, claim, PDF download, list/revoke |
 | `/api/analytics` | student push; teacher/admin read | progress snapshot sync, teacher/school/platform aggregates |
@@ -194,7 +197,7 @@ Consistent per-feature layering under `backend/` — follow it for new features:
   the admin UI converts `.srt` → `.vtt` in the browser, `srtToVtt()`). `contentType`
   (`CONTENT_TYPES`, duplicated in `backend/server/models/content.ts` and
   `frontend/lib/api/courses.ts` — keep in sync: `video`, `pdf`, `presentation`,
-  `rich_text`, `infographic`, `case_study`, `reflection`, `activity`) is only the
+  `rich_text`, `infographic`, `case_study`, `reflection`, `activity`, `discussion`) is only the
   primary-format label. `frontend/components/learn/ContentRenderer.tsx` renders every
   part present (video+captions → audio → text → document; .pptx at an https URL via
   the Office web viewer); `frontend/components/course/TopicEditor.tsx` edits topics,
@@ -231,6 +234,39 @@ Consistent per-feature layering under `backend/` — follow it for new features:
   concatenated) and stored in R2 (or locally). WAV is ~5 MB/min of speech.
   Max 30,000 characters. 503 when not configured (the editor disables the button via
   `GET /api/admin/uploads/config`).
+- **Lesson assignments & the unified config**: `Assessment.kind` is `"module"` (the one
+  graded module assessment) or `"lesson"` (≤1 assignment per lesson, **non-graded by
+  default**). Both share every setting — instructions, graded/non-graded, required,
+  passing %, time limit + auto-submit, attempt limit, availability window, shuffle
+  questions/options — and the same questions/attempts/grader. Query module assessments
+  with `MODULE_KIND` (legacy docs have no `kind`); `migrations/assessment-kinds.ts`
+  (startup) backfills `kind` and swaps the old unique `moduleId_1` index for partial
+  unique indexes. Non-graded: any submission counts as `passed`.
+- **Learning sequence** (`backend/server/shared/sequence.ts` ⇄ `frontend/lib/sequence.ts`,
+  **identical — change both**): per module, each lesson's topics → its required
+  assignment → the module assessment. An item opens only when the previous one is done,
+  so **Module N+1 unlocks only after Module N's topics, required assignments and graded
+  assessment**. Enforced server-side (`progress.service` `checkItemAccess`) on topic
+  content, topic completion/visit, assessment GET/start/save/submit, discussion replies
+  and downloads → 403/409 with a reason. `completedModules` includes the assessment.
+  Progress `nextItem` says where "Continue" goes. The structure covers PUBLISHED content.
+- **Server-timed attempts** (`Attempt.status` in_progress|submitted; legacy rows =
+  submitted, filter with `SUBMITTED`): `start` stores `deadline`, question/option order;
+  answers autosave (`draftAnswers`); a submit after deadline + `GRACE_MS` (5 s) is
+  refused and the saved answers are submitted instead; expired attempts are graded on the
+  next progress/assessment read (`finalizeExpiredAttempts`). Timed questions are only
+  returned once started. One in-progress attempt per student (partial unique index).
+- **Learner trees carry no topic content**: students/anonymous get `learnerViewOf(tree)`
+  (no text, media URLs or discussion text; `hasVideo` kept). Each topic's content comes
+  from `/api/courses/:slug/topics/:id` after the access check (anonymous: `isPreview`
+  topics only). Staff get the full tree.
+- **Discussions**: content type `discussion` (`Topic.discussion` {prompt, instructions,
+  questions, relatedTopicId, required}) is backed by ONE thread in the existing forum
+  (`ForumThread.topicId`, synced on topic save, hidden on delete); a required discussion
+  needs the student's post before the topic can be completed.
+- **Downloads**: `Topic.allowDownload` (default off). The download endpoint redirects to a
+  5-minute R2 presigned GET (`presignDownload`) or `/api/uploads/<file>?download=<name>`;
+  external links (YouTube…) can't be downloaded.
 - **Assessments**: one per module. Question types are `mcq | reflection | scenario`
   (True/False is modelled as a two-option `mcq`). MCQ is auto-graded; open-ended
   (reflection/scenario) earns full marks for a non-empty answer. Pass = % ≥

@@ -89,6 +89,11 @@ const T1 = await topic(m1, "T1", 5);
 const T2 = await topic(m1, "T2", 10);
 await topic(m1, "T3", 0); // no estimate: counts as a lesson, adds no time
 await topic(m2, "T4", 7);
+// A GRADED lesson assignment after T1's lesson (6 min) — counted as a graded item.
+const t1Lesson = (await admin.get(`/admin/courses/${courseId}`)).json.data.modules[0].lessons[0].id;
+const A = (await admin.post("/admin/assessments", { lessonId: t1Lesson, title: "T1 assignment", isGraded: true, estimatedDurationMinutes: 6 })).json.data.id;
+await admin.post(`/admin/assessments/${A}/questions`, { type: "mcq", question: "?", options: ["Yes", "No"], correctAnswer: "Yes", marks: 1 });
+await admin.post(`/admin/assessments/${A}/publish`);
 const a1 = await publishModule(admin, m1);
 await publishModule(admin, m2);
 const setEst = await admin.patch(`/admin/assessments/${a1}`, { estimatedDurationMinutes: 15 });
@@ -113,29 +118,39 @@ async function summary(student: ReturnType<typeof client>, mod: any) {
 }
 const eq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-// ── Per-student, live ────────────────────────────────────────────────────────
+// ── Per-student, live (sequence: T1 → graded assignment A → T2 → T3 → module assessment)
 {
   const s = await summary(alice, M1);
-  check("fresh student: 1 graded · 3 lessons · 30m left", eq(s, { graded: 1, lessons: 3, minutes: 30 }), s);
+  check("tree lists the lesson assignment", M1?.lessons?.[0]?.assignment?.id === A && M1.lessons[0].assignment.isGraded === true, M1?.lessons?.[0]?.assignment);
+  check("fresh student: 2 graded · 3 lessons · 36m left", eq(s, { graded: 2, lessons: 3, minutes: 36 }), s);
 }
 await alice.post(`/progress/${courseId}/topics/${T1}/complete`);
 {
   const a = await summary(alice, M1);
   const b = await summary(bob, M1);
-  check("after T1: alice 1 · 2 lessons · 25m", eq(a, { graded: 1, lessons: 2, minutes: 25 }), a);
-  check("bob on the same module is unaffected (1 · 3 · 30m)", eq(b, { graded: 1, lessons: 3, minutes: 30 }), b);
+  check("after T1: alice 2 · 2 lessons · 31m", eq(a, { graded: 2, lessons: 2, minutes: 31 }), a);
+  check("bob on the same module is unaffected (2 · 3 · 36m)", eq(b, { graded: 2, lessons: 3, minutes: 36 }), b);
+}
+check("T2 locked until the lesson assignment is done", (await alice.post(`/progress/${courseId}/topics/${T2}/complete`)).status === 409);
+const aQ = (await admin.get(`/admin/assessments/lesson/${t1Lesson}`)).json.data.questions[0].id;
+await alice.post(`/assessments/${A}/attempt`, { answers: [{ questionId: aQ, answer: "Yes" }] });
+{
+  const a = await summary(alice, M1);
+  check("graded assignment passed: 1 · 2 lessons · 25m", eq(a, { graded: 1, lessons: 2, minutes: 25 }), a);
 }
 await alice.post(`/progress/${courseId}/topics/${T2}/complete`);
+const T3 = M1.lessons[2].topics[0].id;
+await alice.post(`/progress/${courseId}/topics/${T3}/complete`);
 const qId = (await admin.get(`/admin/assessments/module/${m1}`)).json.data.questions[0].id;
 await alice.post(`/assessments/${a1}/attempt`, { answers: [{ questionId: qId, answer: "No" }] });
 {
   const a = await summary(alice, M1);
-  check("failed attempt still leaves the graded assignment (1 · 1 · 15m)", eq(a, { graded: 1, lessons: 1, minutes: 15 }), a);
+  check("failed module assessment still left (1 · 0 lessons · 15m)", eq(a, { graded: 1, lessons: 0, minutes: 15 }), a);
 }
 await alice.post(`/assessments/${a1}/attempt`, { answers: [{ questionId: qId, answer: "Yes" }] });
 {
   const a = await summary(alice, M1);
-  check("passed: 0 graded · 1 lesson · 0m (T3 has no estimate)", eq(a, { graded: 0, lessons: 1, minutes: 0 }), a);
+  check("passed: nothing left (0 · 0 · 0m)", eq(a, { graded: 0, lessons: 0, minutes: 0 }), a);
   const m2s = await summary(alice, M2);
   check("other module unchanged for alice (1 · 1 · 7m)", eq(m2s, { graded: 1, lessons: 1, minutes: 7 }), m2s);
 }

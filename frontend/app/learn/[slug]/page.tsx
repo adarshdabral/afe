@@ -13,12 +13,14 @@ import {
   ArrowRight,
   Eye,
   LayoutDashboard,
+  NotebookPen,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { useLearning } from "@/context/LearningContext";
 import { useLearnCourse } from "@/hooks/use-learn-course";
 import { roleHome } from "@/lib/access";
 import { pad2 } from "@/lib/course";
+import { itemHref, learnSequence, moduleLock, topicIds } from "@/lib/learn";
 import { describeRemaining, remainingWork } from "@/lib/progress";
 
 // The "Demystifying AI for Everyone learning experience" home: course header, progress,
@@ -27,18 +29,23 @@ import { describeRemaining, remainingWork } from "@/lib/progress";
 export default function LearnOverview() {
   const { slug } = useParams<{ slug: string }>();
   const { authUser } = useApp();
-  const { detail, completedTopics, overallProgress, certificateEligible, isUnlocked } = useLearning();
+  const { detail, completedTopics, overallProgress, certificateEligible, isUnlocked, done: doneItems } = useLearning();
   const { tree, status } = useLearnCourse(slug);
   const isStudent = authUser?.role === "student";
 
-  const sequence = useMemo(() => (tree ? tree.modules.flatMap((module) => module.lessons.flatMap((lesson) => lesson.topics.map((topic) => topic.id))) : []), [tree]);
+  // Topic ids (counts, resume) and the full learning sequence (locks).
+  const sequence = useMemo(() => (tree ? topicIds(tree) : []), [tree]);
+  const items = useMemo(() => (tree ? learnSequence(tree) : []), [tree]);
   const topicById = useMemo(() => {
     const map = new Map<string, { title: string; lessonTitle: string; moduleIndex: number }>();
     tree?.modules.forEach((module, moduleIndex) => module.lessons.forEach((lesson) => lesson.topics.forEach((topic) => map.set(topic.id, { title: topic.title, lessonTitle: lesson.title, moduleIndex }))));
     return map;
   }, [tree]);
 
+  // "Continue" goes to the next unfinished item — a topic, assignment or assessment.
+  const nextItem = detail?.nextItem ?? null;
   const resumeId = detail?.nextTopicId ?? detail?.progress.lastVisitedTopicId ?? sequence[0] ?? null;
+  const resumeHref = nextItem ? itemHref(slug, nextItem) : resumeId ? `/learn/${slug}/topic/${resumeId}` : null;
   const resume = resumeId ? topicById.get(resumeId) : undefined;
   const scores = new Map((detail?.progress.assessmentScores ?? []).map((a) => [a.assessmentId, a]));
   const completedModules = new Set(detail?.progress.completedModules ?? []);
@@ -130,16 +137,20 @@ export default function LearnOverview() {
               <RemainingStats work={work} suffix="left" />
 
               <div className="mt-8 flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
-                {resumeId && !allTopicsDone && (
+                {resumeHref && (nextItem || !allTopicsDone) && (
                   <Link
-                    href={`/learn/${slug}/topic/${resumeId}`}
+                    href={resumeHref}
                     className="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-full bg-violet-600 hover:bg-violet-700 text-white text-[15px] font-medium shadow-sm transition-colors"
                   >
                     <PlayCircle className="w-5 h-5" aria-hidden />
                     {completedTopics.size > 0 ? "Continue learning" : "Start the course"}
                   </Link>
                 )}
-                {resume && !allTopicsDone && (
+                {nextItem && nextItem.kind !== "topic" ? (
+                  <p className="text-[14px] text-muted-foreground min-w-0">
+                    Up next: <span className="text-foreground">{nextItem.kind === "assignment" ? "Lesson assignment" : "Module assessment"}</span>
+                  </p>
+                ) : resume && !allTopicsDone && (
                   <p className="text-[14px] text-muted-foreground min-w-0">
                     {completedTopics.size > 0 ? "Up next" : "First topic"}: {" "}
                     <span className="text-foreground">
@@ -171,8 +182,8 @@ export default function LearnOverview() {
       <ol className="space-y-3">
         {tree.modules.map((m, i) => {
           const done = completedModules.has(m.id);
-          const firstTopic = m.lessons[0]?.topics[0];
-          const open = !isStudent || !firstTopic || isUnlocked(sequence, firstTopic.id);
+          const lock = moduleLock(tree, items, doneItems, m);
+          const open = !isStudent || lock.unlocked;
           const topics = m.lessons.flatMap((lesson) => lesson.topics);
           const topicsDone = topics.filter((topic) => completedTopics.has(topic.id)).length;
           const score = m.assessmentId ? scores.get(m.assessmentId) : undefined;
@@ -191,6 +202,11 @@ export default function LearnOverview() {
                     {m.title}
                   </Link>
                   {m.description && <p className="mt-1 text-[14px] text-muted-foreground leading-relaxed">{m.description}</p>}
+                  {!open && lock.blockedBy && (
+                    <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-[12px] font-medium text-muted-foreground">
+                      <Lock className="w-3.5 h-3.5" aria-hidden /> Complete Module {lock.blockedBy} to unlock
+                    </p>
+                  )}
                   <ul className="mt-3 space-y-3">
                     {m.lessons.map((lesson) => (
                       <li key={lesson.id}>
@@ -198,7 +214,7 @@ export default function LearnOverview() {
                         <ul className="mt-1 space-y-0.5">
                           {lesson.topics.map((topic) => {
                             const topicDone = completedTopics.has(topic.id);
-                            const unlocked = !isStudent || isUnlocked(sequence, topic.id);
+                            const unlocked = !isStudent || isUnlocked(items, topic.id);
                             const Icon = topicDone ? CheckCircle2 : unlocked ? PlayCircle : Lock;
                             const row = <span className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 -mx-2.5 text-[14px] ${unlocked ? "text-foreground hover:bg-secondary" : "text-muted-foreground"}`}>
                               <Icon className={`w-4 h-4 shrink-0 ${topicDone ? "text-green-600" : unlocked ? "text-violet-600" : ""}`} aria-hidden />
@@ -206,6 +222,18 @@ export default function LearnOverview() {
                             </span>;
                             return <li key={topic.id}>{unlocked ? <Link href={`/learn/${slug}/topic/${topic.id}`}>{row}</Link> : <div title="Complete the previous topic to unlock">{row}</div>}</li>;
                           })}
+                          {lesson.assignment && (() => {
+                            const a = lesson.assignment;
+                            const aDone = doneItems.has(a.id);
+                            const unlocked = !isStudent || isUnlocked(items, a.id, m.id);
+                            const Icon = aDone ? CheckCircle2 : unlocked ? NotebookPen : Lock;
+                            const row = <span className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 -mx-2.5 text-[14px] ${unlocked ? "text-foreground hover:bg-secondary" : "text-muted-foreground"}`}>
+                              <Icon className={`w-4 h-4 shrink-0 ${aDone ? "text-green-600" : unlocked ? "text-violet-600" : ""}`} aria-hidden />
+                              <span className="truncate">Assignment: {a.title}</span>
+                              <span className="ml-auto shrink-0 text-[12px] text-muted-foreground">{a.isGraded ? "Graded" : "Not graded"}{a.timeLimitMinutes > 0 ? ` · ${a.timeLimitMinutes} min` : ""}</span>
+                            </span>;
+                            return <li key={a.id}>{unlocked ? <Link href={`/learn/${slug}/assessment/${a.id}`}>{row}</Link> : <div title="Complete the lesson's topics first">{row}</div>}</li>;
+                          })()}
                         </ul>
                       </li>
                     ))}
@@ -216,7 +244,11 @@ export default function LearnOverview() {
                         {topicsDone}/{topics.length} topics
                       </span>
                     )}
-                    {m.assessmentId && (
+                    {m.assessmentId && isStudent && !isUnlocked(items, m.assessmentId, m.id) ? (
+                      <span className="inline-flex items-center gap-1.5 font-medium text-muted-foreground" title="Complete the module's lessons first">
+                        <Lock className="w-4 h-4" aria-hidden /> Module assessment
+                      </span>
+                    ) : m.assessmentId && (
                       <Link
                         href={`/learn/${slug}/assessment/${m.assessmentId}`}
                         className="inline-flex items-center gap-1.5 font-medium text-violet-600 hover:underline"

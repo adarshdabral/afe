@@ -12,6 +12,7 @@ import {
   markVisited,
   type ProgressDetail,
 } from "@/lib/api/progress";
+import { doneSet, isItemUnlocked, type SequenceItem } from "@/lib/sequence";
 
 interface LearningContextType {
   courseId: string | null;
@@ -32,8 +33,11 @@ interface LearningContextType {
   markComplete: (topicId: string) => Promise<ProgressDetail | null>;
   recordVisit: (topicId: string) => Promise<void>;
   addMinutes: (minutes: number) => Promise<void>;
-  /** Sequential rule: unlocked if first, already done, or predecessor done. */
-  isUnlocked: (sequence: string[], topicId: string) => boolean;
+  /** Everything finished: completed topics + passed assessments/assignments. */
+  done: Set<string>;
+  /** The shared sequence rule (lib/sequence.ts): unlocked if first, already done, or
+   *  the previous item (topic, required assignment, module assessment) is done. */
+  isUnlocked: (sequence: SequenceItem[], itemId: string, moduleId?: string) => boolean;
 }
 
 const LearningContext = createContext<LearningContextType | null>(null);
@@ -117,13 +121,18 @@ export function LearningProvider({ children }: { children: ReactNode }) {
     [courseId],
   );
 
+  const done = useMemo(
+    () =>
+      doneSet(
+        detail?.progress.completedTopics ?? [],
+        (detail?.progress.assessmentScores ?? []).filter((a) => a.passed).map((a) => a.assessmentId),
+      ),
+    [detail],
+  );
+
   const isUnlocked = useCallback(
-    (sequence: string[], topicId: string) => {
-      const idx = sequence.indexOf(topicId);
-      if (idx <= 0) return true;
-      return completedTopics.has(topicId) || completedTopics.has(sequence[idx - 1]);
-    },
-    [completedTopics],
+    (sequence: SequenceItem[], itemId: string, moduleId?: string) => isItemUnlocked(sequence, done, itemId, moduleId),
+    [done],
   );
 
   const currentTopicId = detail?.progress.lastVisitedTopicId ?? detail?.nextTopicId ?? null;
@@ -144,6 +153,7 @@ export function LearningProvider({ children }: { children: ReactNode }) {
         markComplete,
         recordVisit,
         addMinutes,
+        done,
         isUnlocked,
       }}
     >

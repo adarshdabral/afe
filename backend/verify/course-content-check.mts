@@ -105,9 +105,11 @@ const tree = (await student.get("/courses/demystifying-ai-for-everyone")).json?.
   check("every seeded module meets the publish rules (admin readiness.ready)", adminMods.length === 12 && adminMods.every((m: any) => m.readiness?.ready === true), adminMods.filter((m: any) => !m.readiness?.ready).map((m: any) => ({ t: m.title, missing: m.readiness?.missing })));
 }
 
-// 4. Each module's lesson contains all seven required topic sections.
+// 4. Each module's lesson contains all seven required topic sections. Topic bodies
+//    are only in the staff tree (learners' trees carry no content).
 {
-  const allHaveTopics = (tree?.modules ?? []).every((m: any) => {
+  const staffTree = (await admin.get("/courses/demystifying-ai-for-everyone")).json?.data;
+  const allHaveTopics = (staffTree?.modules ?? []).every((m: any) => {
     const topics = m.lessons?.[0]?.topics ?? [];
     return topics.length === TOPIC_TITLES.length && topics.every((topic: any, i: number) => topic.title === TOPIC_TITLES[i] && topic.content.trim().length > 0);
   });
@@ -119,7 +121,7 @@ const tree = (await student.get("/courses/demystifying-ai-for-everyone")).json?.
   let ok = true;
   const detail: any[] = [];
   for (const m of tree?.modules ?? []) {
-    const view = await student.get(`/assessments/${m.assessmentId}`);
+    const view = await admin.get(`/admin/assessments/${m.assessmentId}`);
     const qs = view.json?.data?.questions ?? [];
     const isTF = (q: any) => q.type === "mcq" && q.options.length === 2 && q.options.includes("True") && q.options.includes("False");
     const mcq = qs.filter((q: any) => q.type === "mcq" && !isTF(q)).length;
@@ -134,6 +136,9 @@ const tree = (await student.get("/courses/demystifying-ai-for-everyone")).json?.
 // 6. Answer key is hidden from students; a student can attempt module 1's quiz.
 {
   const m1 = tree.modules[0];
+  // The module assessment opens once the module's lessons are done (learning sequence).
+  check("module 1 assessment locked before its lessons → 403", (await student.get(`/assessments/${m1.assessmentId}`)).status === 403);
+  for (const t of m1.lessons[0].topics) await student.post(`/progress/${tree.id}/topics/${t.id}/complete`);
   const view = await student.get(`/assessments/${m1.assessmentId}`);
   check("student assessment view hides answer key", (view.json?.data?.questions ?? []).every((q: any) => q.correctAnswer === undefined && q.explanation === undefined), view.json?.data?.questions?.[0]);
   const q1 = view.json.data.questions[0];

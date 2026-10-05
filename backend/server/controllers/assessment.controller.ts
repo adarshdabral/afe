@@ -1,5 +1,7 @@
-// Assessment controllers. Admin handlers → requireRole("platform_admin");
-// student handlers → requireRole("student"). zod validates; 404/409 explicit.
+// Assessment controllers — module assessments AND lesson assignments (same model,
+// same configuration). Admin handlers → platform_admin; student handlers check the
+// learning sequence first (a locked item → 403) and merge any results the server
+// auto-submitted (timer expiry) into progress. zod validates; 404/409 explicit.
 
 import type { ApiRequest as Request, ApiResponse as Response } from "../http/types";
 import { z } from "zod";
@@ -10,37 +12,67 @@ import {
   deleteAssessment,
   deleteQuestion,
   getAssessment,
+  getAssessmentForLesson,
   getAssessmentForModule,
   getStudentAssessment,
+  lessonHasAssignment,
   listAttempts,
   listQuestions,
   moduleHasAssessment,
+  publishedAssessmentCourse,
   reorderQuestions,
+  saveDraft,
   setAssessmentPublished,
+  startAttempt,
   submitAttempt,
   updateAssessment,
   updateQuestion,
 } from "../services/assessment.service";
-import { applyAssessmentResult } from "../services/progress.service";
+import { applyAssessmentResult, checkItemAccess } from "../services/progress.service";
+import { HttpError } from "../http/errors";
 
 const idSchema = z.string().min(1);
+const isoDate = z
+  .string()
+  .refine((v) => !Number.isNaN(Date.parse(v)), "Invalid date.")
+  .nullable()
+  .optional();
 
-const createSchema = z.object({
-  moduleId: z.string().min(1),
-  title: z.string().min(1).max(200),
+/** The unified configuration shared by module assessments and lesson assignments. */
+const configFields = {
   description: z.string().max(5000).optional(),
+  instructions: z.string().max(20000).optional(),
+  isGraded: z.boolean().optional(),
+  isRequired: z.boolean().optional(),
   passingScore: z.coerce.number().int().min(0).max(100).optional(),
   estimatedDurationMinutes: z.coerce.number().int().min(0).max(1000).optional(),
-});
+  timeLimitMinutes: z.coerce.number().int().min(0).max(1440).optional(),
+  maxAttempts: z.coerce.number().int().min(0).max(100).optional(),
+  availableFrom: isoDate,
+  availableUntil: isoDate,
+  shuffleQuestions: z.boolean().optional(),
+  shuffleOptions: z.boolean().optional(),
+  autoSubmitOnTimeout: z.boolean().optional(),
+};
+
+const windowOk = (v: { availableFrom?: string | null; availableUntil?: string | null }) =>
+  !v.availableFrom || !v.availableUntil || Date.parse(v.availableFrom) < Date.parse(v.availableUntil);
+const windowMsg = { message: "availableUntil must be after availableFrom." };
+
+const createSchema = z
+  .object({
+    moduleId: z.string().min(1).optional(),
+    lessonId: z.string().min(1).optional(),
+    title: z.string().min(1).max(200),
+    ...configFields,
+  })
+  .refine((v) => !!v.moduleId !== !!v.lessonId, { message: "Give exactly one of moduleId (module assessment) or lessonId (lesson assignment)." })
+  .refine(windowOk, windowMsg);
 
 const updateSchema = z
-  .object({
-    title: z.string().min(1).max(200).optional(),
-    description: z.string().max(5000).optional(),
-    passingScore: z.coerce.number().int().min(0).max(100).optional(),
-    estimatedDurationMinutes: z.coerce.number().int().min(0).max(1000).optional(),
-  })
-  .refine((v) => Object.keys(v).length > 0, { message: "No fields to update." });
+  .object({ title: z.string().min(1).max(200).optional(), ...configFields })
+  .refine((v) => Object.keys(v).length > 0, { message: "No fields to update." })
+  .refine(windowOk, windowMsg);
 
 const questionSchema = {
   type: z.enum(QUESTION_TYPES),
@@ -63,20 +95,19 @@ const updateQuestionSchema = z
   .refine((v) => Object.keys(v).length > 0, { message: "No fields to update." });
 
 const reorderSchema = z.object({ orderedIds: z.array(z.string().min(1)).min(1) });
-const submitSchema = z.object({
-  answers: z.array(z.object({ questionId: z.string().min(1), answer: z.string().max(20000) })).max(200),
-});
+const answersSchema = z.array(z.object({ questionId: z.string().min(1), answer: z.string().max(20000) })).max(200);
+const submitSchema = z.object({ answers: answersSchema });
 
 // ---- Admin ----
 export async function create(req: Request, res: Response): Promise<void> {
   const data = createSchema.parse(req.body);
-  if (await moduleHasAssessment(data.moduleId)) {
-    res.status(409).json({ error: { message: "This module already has an assessment." } });
+  if (data.lessonId ? await lessonHasAssignment(data.lessonId) : await moduleHasAssessment(data.moduleId!)) {
+    res.status(409).json({ error: { message: data.lessonId ? "This lesson already has an assignment." : "This module already has an assessment." } });
     return;
   }
   const a = await createAssessment(data);
   if (!a) {
-    res.status(404).json({ error: { message: "Module not found." } });
+    res.status(404).json({ error: { message: data.lessonId ? "Lesson not found." : "Module not found." } });
     return;
   }
   res.status(201).json({ data: a });
@@ -86,6 +117,14 @@ export async function create(req: Request, res: Response): Promise<void> {
 export async function getForModule(req: Request, res: Response): Promise<void> {
   const moduleId = idSchema.parse(req.params.moduleId);
   const assessment = await getAssessmentForModule(moduleId);
+  const questions = assessment ? await listQuestions(assessment.id) : [];
+  res.json({ data: { assessment, questions } });
+}
+
+/** GET /api/admin/assessments/lesson/:lessonId — the lesson's assignment {assessment|null, questions}. */
+export async function getForLesson(req: Request, res: Response): Promise<void> {
+  const lessonId = idSchema.parse(req.params.lessonId);
+  const assessment = await getAssessmentForLesson(lessonId);
   const questions = assessment ? await listQuestions(assessment.id) : [];
   res.json({ data: { assessment, questions } });
 }
@@ -177,36 +216,80 @@ export async function reorder(req: Request, res: Response): Promise<void> {
 }
 
 // ---- Student ----
-/** GET /api/assessments/:assessmentId — published assessment, no answer key. */
+
+/** Students: the assessment must be published AND unlocked in their sequence. Returns its course. */
+async function assertStudentAccess(assessmentId: string, studentId: string): Promise<string> {
+  const courseId = await publishedAssessmentCourse(assessmentId);
+  if (!courseId) throw new HttpError(404, "Assessment not available.");
+  const access = await checkItemAccess(studentId, courseId, assessmentId);
+  if (!access.ok) throw new HttpError(access.reason === "locked" ? 403 : 404, access.message);
+  return courseId;
+}
+
+type Expired = { assessmentId: string; score: number; passed: boolean }[];
+/** Merge results the server auto-submitted (timer expiry) into the student's progress. */
+async function applyExpired(studentId: string, courseId: string, expired: Expired): Promise<void> {
+  for (const r of expired) await applyAssessmentResult(studentId, courseId, r);
+}
+
+/** GET /api/assessments/:assessmentId — published assessment (no answer keys) + the
+ *  student's attempt state. Staff get a preview (questions, no attempt state). */
 export async function getStudent(req: Request, res: Response): Promise<void> {
   const id = idSchema.parse(req.params.assessmentId);
-  const result = await getStudentAssessment(id);
-  if (!result) {
-    res.status(404).json({ error: { message: "Assessment not available." } });
+  const isStudent = req.user!.role === "student";
+  const courseId = isStudent ? await assertStudentAccess(id, req.user!.id) : null;
+  const { value, expired } = await getStudentAssessment(id, isStudent ? req.user!.id : null);
+  if (courseId) await applyExpired(req.user!.id, courseId, expired);
+  res.json({ data: value });
+}
+
+/** POST /api/assessments/:assessmentId/start — start (or resume) an attempt; sets the server deadline. */
+export async function start(req: Request, res: Response): Promise<void> {
+  const id = idSchema.parse(req.params.assessmentId);
+  const courseId = await assertStudentAccess(id, req.user!.id);
+  const { value, expired } = await startAttempt(id, req.user!.id);
+  await applyExpired(req.user!.id, courseId, expired);
+  res.status(201).json({ data: value });
+}
+
+/** PUT /api/assessments/:assessmentId/attempts/:attemptId — autosave draft answers. */
+export async function saveAnswers(req: Request, res: Response): Promise<void> {
+  const id = idSchema.parse(req.params.assessmentId);
+  const attemptId = idSchema.parse(req.params.attemptId);
+  const { answers } = submitSchema.parse(req.body);
+  const courseId = await assertStudentAccess(id, req.user!.id);
+  const outcome = await saveDraft(id, attemptId, req.user!.id, answers);
+  if (!outcome.ok) {
+    await applyExpired(req.user!.id, courseId, outcome.expired);
+    res.status(outcome.status).json({ error: { message: outcome.message } });
     return;
   }
-  res.json({ data: result });
+  res.json({ data: { savedAt: outcome.savedAt, deadline: outcome.deadline } });
 }
 
 /** POST /api/assessments/:assessmentId/attempt — grade, persist, update progress. */
 export async function attempt(req: Request, res: Response): Promise<void> {
   const id = idSchema.parse(req.params.assessmentId);
   const { answers } = submitSchema.parse(req.body);
-  const result = await submitAttempt(id, req.user!.id, answers);
-  if (!result) {
-    res.status(404).json({ error: { message: "Assessment not available." } });
+  const courseId = await assertStudentAccess(id, req.user!.id);
+  const outcome = await submitAttempt(id, req.user!.id, answers);
+  const result = outcome.result;
+  // Completion feeds progress — including an attempt the server just auto-submitted.
+  if (result) {
+    await applyAssessmentResult(req.user!.id, courseId, {
+      assessmentId: id,
+      score: result.attempt.score,
+      passed: result.attempt.passed,
+    });
+  }
+  if (!outcome.ok) {
+    res.status(outcome.status).json({ error: { message: outcome.message }, ...(outcome.result ? { data: outcome.result } : {}) });
     return;
   }
-  // Assessment completion feeds progress (Step 3).
-  await applyAssessmentResult(req.user!.id, result.attempt.courseId, {
-    assessmentId: id,
-    score: result.attempt.score,
-    passed: result.attempt.passed,
-  });
-  res.status(201).json({ data: result });
+  res.status(201).json({ data: outcome.result });
 }
 
-/** GET /api/assessments/:assessmentId/attempts — the student's own attempts. */
+/** GET /api/assessments/:assessmentId/attempts — the student's own submitted attempts. */
 export async function myAttempts(req: Request, res: Response): Promise<void> {
   const id = idSchema.parse(req.params.assessmentId);
   res.json({ data: await listAttempts(id, req.user!.id) });

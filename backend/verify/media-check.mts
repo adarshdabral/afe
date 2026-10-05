@@ -116,9 +116,13 @@ await student.post("/auth/login", { login: "student@afe.edu", password: "Student
   check("patch topic media fields (clear audio, swap subtitles)", up.status === 200 && up.json?.data?.audioUrl === "" && up.json?.data?.subtitleUrl.endsWith("b.vtt"), up.json);
   await publishModule(admin, m.id);
   await admin.post(`/admin/courses/${c.id}/publish`);
+  // Learners' course trees carry no media links; the topic endpoint serves them
+  // once the topic is unlocked for the student.
   const pub = await student.get(`/courses/${c.slug}`);
-  const seen = pub.json?.data?.modules?.[0]?.lessons?.[0]?.topics?.[0];
-  check("students receive topic subtitleUrl/audioUrl in the course tree", seen?.subtitleUrl?.endsWith("b.vtt") && seen?.audioUrl === "", seen);
+  const listed = pub.json?.data?.modules?.[0]?.lessons?.[0]?.topics?.[0];
+  check("course tree withholds media links from students", listed && listed.videoUrl === "" && listed.subtitleUrl === "" && listed.hasVideo === true, listed);
+  const seen = (await student.get(`/courses/${c.slug}/topics/${topic.id}`)).json?.data?.topic;
+  check("students receive topic subtitleUrl/audioUrl from the topic endpoint", seen?.subtitleUrl?.endsWith("b.vtt") && seen?.audioUrl === "", seen);
 }
 
 // 2. Presign — local mode (no R2).

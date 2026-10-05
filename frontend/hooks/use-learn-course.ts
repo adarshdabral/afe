@@ -41,13 +41,23 @@ function fetchInto<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
 }
 
 /** Cached value now (if any) + a fresh one via `onFresh` when stale or missing. */
-function revalidate<T>(key: string, fetcher: () => Promise<T>, onFresh: (v: T) => void, onError: () => void): void {
+function revalidate<T>(key: string, fetcher: () => Promise<T>, onFresh: (v: T) => void, onError: (err: unknown) => void): void {
   const e = store.get(key) as Entry<T> | undefined;
   if (e?.value !== undefined && Date.now() - e.at < FRESH_MS) return;
-  fetchInto(key, fetcher).then(onFresh, () => {
-    if (peek(key) === undefined) onError(); // keep showing cached data on refresh failure
+  fetchInto(key, fetcher).then(onFresh, (err) => {
+    if (peek(key) === undefined) onError(err); // keep showing cached data on refresh failure
   });
 }
+
+/** Why a fetch failed: HTTP status (403 = locked for this student) + the server's message. */
+export interface LoadError {
+  status: number | null;
+  message: string;
+}
+const loadError = (err: unknown): LoadError => ({
+  status: (err as { response?: { status?: number } })?.response?.status ?? null,
+  message: err instanceof Error ? err.message : "Could not load.",
+});
 
 const treeKey = (slug: string) => `tree:${slug}`;
 const topicKey = (slug: string, topicId: string) => `topic:${slug}:${topicId}`;
@@ -116,20 +126,25 @@ export function useLearnCourse(slug: string): { tree: CourseTree | null; status:
   return { tree, status };
 }
 
-/** One topic's full content (cached; the next topic is prefetched by the caller). */
-export function useLearnTopic(slug: string, topicId: string): { data: TopicInCourse | null; failed: boolean } {
+/** One topic's full content (cached; the next topic is prefetched by the caller).
+ *  `reload()` refetches — e.g. after completing the previous item unlocks it. */
+export function useLearnTopic(
+  slug: string,
+  topicId: string,
+): { data: TopicInCourse | null; error: LoadError | null; reload: () => void } {
   const [data, setData] = useState<TopicInCourse | null>(() => peek<TopicInCourse>(topicKey(slug, topicId)) ?? null);
-  const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<LoadError | null>(null);
+  const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
     let live = true;
     setData(peek<TopicInCourse>(topicKey(slug, topicId)) ?? null);
-    setFailed(false);
-    revalidate(topicKey(slug, topicId), loadTopic(slug, topicId), (d) => live && setData(d), () => live && setFailed(true));
+    setError(null);
+    revalidate(topicKey(slug, topicId), loadTopic(slug, topicId), (d) => live && setData(d), (err) => live && setError(loadError(err)));
     return () => {
       live = false;
     };
-  }, [slug, topicId]);
+  }, [slug, topicId, nonce]);
 
-  return { data, failed };
+  return { data, error, reload: () => setNonce((n) => n + 1) };
 }

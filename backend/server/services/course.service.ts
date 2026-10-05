@@ -17,12 +17,26 @@ import type { Role } from "../shared/access";
 import { cachedContent } from "../cache/content-cache";
 
 /** A lesson (container) with its topics (learning units), in order. */
-export type LessonNode = LessonView & { topics: TopicView[] };
+/** A lesson assignment as it appears in the course tree (students: published only). */
+export interface AssignmentSummary {
+  id: string;
+  title: string;
+  isGraded: boolean;
+  isRequired: boolean;
+  isPublished: boolean;
+  timeLimitMinutes: number;
+  estimatedDurationMinutes: number;
+}
+
+/** A lesson (container) with its topics (learning units), in order, and its assignment. */
+export type LessonNode = LessonView & { topics: TopicView[]; assignment: AssignmentSummary | null };
 
 export type ModuleNode = ModuleView & {
   lessons: LessonNode[];
   /** Published assessment id for this module (admins also see unpublished), else null. */
   assessmentId: string | null;
+  /** Module assessment timer in minutes (0 = untimed). */
+  assessmentTimeLimitMinutes: number;
   /** Estimated minutes for that assessment (0 = not estimated / no assessment). */
   assessmentDurationMinutes: number;
   /** Admin tree only: what the module still needs before it can be published. */
@@ -255,8 +269,25 @@ async function buildTree(course: CourseView, includeUnpublished: boolean): Promi
     Lesson.find({ courseId: course.id }).sort({ order: 1, createdAt: 1 }).lean(),
     Topic.find({ courseId: course.id }).sort({ order: 1, createdAt: 1 }).lean(),
     listSections(course.id),
-    Assessment.find(assessmentFilter).select("_id moduleId isPublished estimatedDurationMinutes").lean(),
+    Assessment.find(assessmentFilter)
+      .select("_id kind moduleId lessonId title isPublished isGraded isRequired timeLimitMinutes estimatedDurationMinutes")
+      .lean(),
   ]);
+  // Lesson assignments vs the one module assessment per module.
+  const assignmentByLesson = new Map<string, AssignmentSummary>();
+  for (const a of assessments) {
+    if (a.kind !== "lesson" || !a.lessonId) continue;
+    assignmentByLesson.set(a.lessonId, {
+      id: String(a._id),
+      title: a.title,
+      isGraded: a.isGraded === true,
+      isRequired: a.isRequired !== false,
+      isPublished: a.isPublished === true,
+      timeLimitMinutes: a.timeLimitMinutes ?? 0,
+      estimatedDurationMinutes: a.estimatedDurationMinutes ?? 0,
+    });
+  }
+  const moduleAssessments = assessments.filter((a) => a.kind !== "lesson");
 
   const topicsByLesson = new Map<string, TopicView[]>();
   for (const t of topics) {
@@ -268,22 +299,22 @@ async function buildTree(course: CourseView, includeUnpublished: boolean): Promi
   for (const l of lessons) {
     const v = toLesson(l as unknown as LessonDoc);
     if (!byModule.has(v.moduleId)) byModule.set(v.moduleId, []);
-    byModule.get(v.moduleId)!.push({ ...v, topics: topicsByLesson.get(v.id) ?? [] });
+    byModule.get(v.moduleId)!.push({ ...v, topics: topicsByLesson.get(v.id) ?? [], assignment: assignmentByLesson.get(v.id) ?? null });
   }
 
   const assessmentByModule = new Map<string, string>();
-  for (const a of assessments) assessmentByModule.set(a.moduleId, String(a._id));
+  for (const a of moduleAssessments) assessmentByModule.set(a.moduleId, String(a._id));
 
   // Admin builder: per-module readiness (description, objectives, assessment + questions).
   const questionCounts = new Map<string, number>();
-  if (includeUnpublished && assessments.length) {
+  if (includeUnpublished && moduleAssessments.length) {
     const counts = await Question.aggregate<{ _id: string; n: number }>([
-      { $match: { assessmentId: { $in: assessments.map((a) => String(a._id)) } } },
+      { $match: { assessmentId: { $in: moduleAssessments.map((a) => String(a._id)) } } },
       { $group: { _id: "$assessmentId", n: { $sum: 1 } } },
     ]);
     for (const c of counts) questionCounts.set(c._id, c.n);
   }
-  const assessmentDocByModule = new Map(assessments.map((a) => [a.moduleId, a]));
+  const assessmentDocByModule = new Map(moduleAssessments.map((a) => [a.moduleId, a]));
 
   return {
     ...course,
@@ -295,6 +326,7 @@ async function buildTree(course: CourseView, includeUnpublished: boolean): Promi
         lessons: byModule.get(mv.id) ?? [],
         assessmentId: assessmentByModule.get(mv.id) ?? null,
         assessmentDurationMinutes: assessmentDocByModule.get(mv.id)?.estimatedDurationMinutes ?? 0,
+        assessmentTimeLimitMinutes: assessmentDocByModule.get(mv.id)?.timeLimitMinutes ?? 0,
         ...(includeUnpublished
           ? {
               readiness: readinessFrom(
@@ -339,23 +371,50 @@ export async function getCourseBySlug(slug: string, role: Role | null): Promise<
   return isAdmin ? load() : cachedContent(`tree:${slugify(slug)}`, load);
 }
 
-/**
- * The tree without topic TEXT bodies (`content` → ""), for learner navigation:
- * sidebar, module pages and progress summaries need titles, formats, media URLs
- * and durations, not every topic's markdown. A topic's body is fetched on its own
- * (getTopicInCourse). Returns new objects — the cached tree is never mutated.
- */
-export function outlineOf(tree: CourseTree): CourseTree {
+/** Staff (teachers, platform admins) see full content; everyone else gets learner views. */
+export const isStaffRole = (role: Role | null) => role === "teacher" || role === "platform_admin";
+
+/** A topic without its text body (navigation views). */
+const withoutBody = (t: TopicView): TopicView => ({ ...t, content: "" });
+
+/** A topic without ANY content — no text, no media links, no discussion text — for
+ *  learners' course trees: locked content must not leak through the outline. Each
+ *  topic's content is served on its own, after the student's access check. */
+const withoutContent = (t: TopicView): TopicView => ({
+  ...t,
+  content: "",
+  audioUrl: "",
+  documentUrl: "",
+  videoUrl: "",
+  subtitleUrl: "",
+  discussion: { ...t.discussion, prompt: "", instructions: "", questions: [] },
+});
+
+function mapTopics(tree: CourseTree, f: (t: TopicView) => TopicView): CourseTree {
   return {
     ...tree,
     modules: tree.modules.map((m) => ({
       ...m,
-      lessons: m.lessons.map((l) => ({ ...l, topics: l.topics.map((t) => ({ ...t, content: "" })) })),
+      lessons: m.lessons.map((l) => ({ ...l, topics: l.topics.map(f) })),
     })),
   };
 }
 
+/**
+ * The tree without topic TEXT bodies (`content` → ""), for staff navigation.
+ * Returns new objects — the cached tree is never mutated.
+ */
+export function outlineOf(tree: CourseTree): CourseTree {
+  return mapTopics(tree, withoutBody);
+}
+
+/** The learner view of a tree: topics carry no content (see withoutContent). */
+export function learnerViewOf(tree: CourseTree): CourseTree {
+  return mapTopics(tree, withoutContent);
+}
+
 export interface TopicInCourse {
+  courseId: string;
   courseSlug: string;
   courseTitle: string;
   moduleId: string;
@@ -388,6 +447,7 @@ export async function getTopicInCourse(
   const owningModule = tree.modules.find((m) => m.lessons.some((l) => l.topics.some((t) => t.id === topicId)))!;
   const owningLesson = owningModule.lessons.find((l) => l.topics.some((t) => t.id === topicId))!;
   return {
+    courseId: tree.id,
     courseSlug: tree.slug,
     courseTitle: tree.title,
     moduleId: owningModule.id,

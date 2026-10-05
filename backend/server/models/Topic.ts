@@ -12,6 +12,20 @@ import { contentFieldsSchema, toContentFields, type ContentFieldsView } from "./
 
 export { CONTENT_TYPES as TOPIC_CONTENT_TYPES, type ContentType as TopicContentType } from "./content";
 
+/** Settings of a "discussion" topic. Participation happens in its linked forum thread. */
+export interface DiscussionView {
+  prompt: string;
+  instructions: string;
+  /** Optional guiding questions. */
+  questions: string[];
+  /** Another topic this discussion is about (optional). */
+  relatedTopicId: string | null;
+  /** The student must post in the thread before the topic can be completed. */
+  required: boolean;
+}
+
+export const EMPTY_DISCUSSION: DiscussionView = { prompt: "", instructions: "", questions: [], relatedTopicId: null, required: false };
+
 export interface TopicView extends ContentFieldsView {
   id: string;
   lessonId: string;
@@ -22,6 +36,11 @@ export interface TopicView extends ContentFieldsView {
   order: number;
   estimatedDurationMinutes: number;
   isPreview: boolean;
+  /** Students may download this topic's text/media (admin-controlled; default off). */
+  allowDownload: boolean;
+  /** True when the topic has a video (kept even when media URLs are withheld). */
+  hasVideo: boolean;
+  discussion: DiscussionView;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,6 +56,14 @@ const topicSchema = new Schema(
     ...contentFieldsSchema,
     estimatedDurationMinutes: { type: Number, default: 0 },
     isPreview: { type: Boolean, default: false },
+    allowDownload: { type: Boolean, default: false },
+    discussion: {
+      prompt: { type: String, default: "" },
+      instructions: { type: String, default: "" },
+      questions: { type: [String], default: [] },
+      relatedTopicId: { type: String, default: null },
+      required: { type: Boolean, default: false },
+    },
   },
   { timestamps: true },
 );
@@ -64,6 +91,15 @@ export function toTopic(doc: TopicDoc): TopicView {
     ...toContentFields(doc),
     estimatedDurationMinutes: doc.estimatedDurationMinutes ?? 0,
     isPreview: doc.isPreview === true,
+    allowDownload: doc.allowDownload === true,
+    hasVideo: !!doc.videoUrl,
+    discussion: {
+      prompt: doc.discussion?.prompt ?? "",
+      instructions: doc.discussion?.instructions ?? "",
+      questions: [...(doc.discussion?.questions ?? [])],
+      relatedTopicId: doc.discussion?.relatedTopicId ?? null,
+      required: doc.discussion?.required === true,
+    },
     createdAt: ts.createdAt?.toISOString() ?? new Date(0).toISOString(),
     updatedAt: ts.updatedAt?.toISOString() ?? new Date(0).toISOString(),
   };

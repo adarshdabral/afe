@@ -12,8 +12,11 @@ import {
   listThreads,
   setPostHidden,
   setThreadHidden,
+  threadDiscussion,
   type Author,
 } from "../services/forum.service";
+import { checkItemAccess } from "../services/progress.service";
+import { HttpError } from "../http/errors";
 import { getUserById } from "../services/auth.service";
 import type { Role } from "../shared/access";
 
@@ -73,6 +76,15 @@ const replySchema = z.object({
 export async function reply(req: Request, res: Response): Promise<void> {
   const threadId = z.string().min(1).parse(req.params.id);
   const data = replySchema.parse(req.body);
+  // A course discussion's thread follows the learning sequence: students can only
+  // post once its topic is unlocked for them.
+  if (req.user!.role === "student") {
+    const d = await threadDiscussion(threadId);
+    if (d) {
+      const access = await checkItemAccess(req.user!.id, d.courseId, d.topicId);
+      if (!access.ok) throw new HttpError(403, access.message);
+    }
+  }
   const author = await authorOf(req);
   // `asAnswer` is only honored for staff (enforced again in the service).
   const post = await addReply(author, { threadId, body: data.body, asAnswer: data.asAnswer });

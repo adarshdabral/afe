@@ -126,7 +126,9 @@ console.log("[6] Sequential learning");
   check("complete L2 → next L3", c2.json?.data?.nextTopicId === L3, c2.json?.data);
   const c3 = await s.post(`/progress/${courseId}/topics/${L3}/complete`);
   check("complete L3 → module topics done (next=null)", c3.json?.data?.nextTopicId === null, c3.json?.data);
-  check("module marked complete", (c3.json?.data?.progress?.completedModules ?? []).includes(m1), c3.json?.data?.progress?.completedModules);
+  // A module completes only once its graded assessment is passed too (section 8).
+  check("module NOT complete before its assessment", !(c3.json?.data?.progress?.completedModules ?? []).includes(m1), c3.json?.data?.progress?.completedModules);
+  check("next item is the module assessment", c3.json?.data?.nextItem?.id === aId && c3.json?.data?.nextItem?.kind === "assessment", c3.json?.data?.nextItem);
 }
 
 // ---- 7. Assessment ----

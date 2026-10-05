@@ -16,6 +16,7 @@ export const CONTENT_TYPES = [
   "case_study",
   "reflection",
   "activity",
+  "discussion",
 ] as const;
 /** The primary-format label of a piece of content. */
 export type ContentType = (typeof CONTENT_TYPES)[number];

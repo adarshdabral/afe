@@ -5,6 +5,7 @@
 
 import { Module } from "../models/Module";
 import { Lesson, toLesson, type LessonView } from "../models/Lesson";
+import { deleteAssessmentsWhere } from "./assessment.service";
 import { Topic } from "../models/Topic";
 
 export interface CreateLessonInput {
@@ -42,6 +43,7 @@ export async function deleteLesson(lessonId: string): Promise<boolean> {
   const doc = await Lesson.findById(lessonId).catch(() => null);
   if (!doc) return false;
   await Topic.deleteMany({ lessonId });
+  await deleteAssessmentsWhere({ lessonId }); // its assignment, questions and attempts
   await doc.deleteOne();
   return true;
 }

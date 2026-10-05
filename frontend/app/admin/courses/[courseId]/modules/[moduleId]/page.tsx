@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Circle, Eye, EyeOff, Plus, Save } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, Eye, EyeOff, NotebookPen, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,8 @@ export default function ModuleEditor() {
   const [lessons, setLessons] = useState<ModuleWithLessons["lessons"]>([]);
   const [lessonDirty, setLessonDirty] = useState(false);
   const [editingTopic, setEditingTopic] = useState<{ lessonId: string; topic?: Topic } | null>(null);
+  /** The lesson whose assignment panel is open. */
+  const [openAssignment, setOpenAssignment] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -242,6 +244,7 @@ export default function ModuleEditor() {
                       {editingTopic.topic ? "Edit topic" : "New topic"}
                     </h2>
                     <TopicEditor
+                      relatedOptions={lessons.flatMap((l) => l.topics.map((t) => ({ id: t.id, title: t.title })))}
                       topic={editingTopic.topic}
                       onSave={(input) => saveTopic(editingTopic.lessonId, editingTopic.topic, input)}
                       onCancel={() => setEditingTopic(null)}
@@ -305,6 +308,11 @@ export default function ModuleEditor() {
                                 renderItem={(topic) => (
                                   <div className="flex items-center gap-2 py-1.5 pl-3">
                                     <span className="text-sm text-foreground flex-1 truncate">{topic.title}</span>
+                                    <span className="text-[11px] text-muted-foreground shrink-0">
+                                      {topic.contentType.replace("_", " ")}
+                                      {topic.allowDownload ? " · downloadable" : ""}
+                                      {topic.contentType === "discussion" && topic.discussion?.required ? " · required" : ""}
+                                    </span>
                                     <button onClick={() => setEditingTopic({ lessonId: lesson.id, topic })} className="text-xs text-muted-foreground hover:text-foreground">Edit</button>
                                     <button onClick={async () => {
                                       if (!confirm(`Delete topic “${topic.title}”?`)) return;
@@ -315,6 +323,37 @@ export default function ModuleEditor() {
                                 )}
                               />
                             )}
+                            <div className="mt-2 ml-3 rounded-xl border border-border bg-secondary/40 px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <NotebookPen className="w-4 h-4 text-violet-600 shrink-0" aria-hidden />
+                                <span className="text-sm text-foreground flex-1 truncate">
+                                  {lesson.assignment ? (
+                                    <>
+                                      Assignment: {lesson.assignment.title}
+                                      <span className="text-[11px] text-muted-foreground">
+                                        {" · "}
+                                        {lesson.assignment.isGraded ? "graded" : "not graded"}
+                                        {lesson.assignment.isRequired ? " · required" : " · optional"}
+                                        {lesson.assignment.isPublished ? " · published" : " · draft"}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-muted-foreground">No assignment after this lesson</span>
+                                  )}
+                                </span>
+                                <button
+                                  onClick={() => setOpenAssignment((id) => (id === lesson.id ? null : lesson.id))}
+                                  className="text-xs text-violet-600 hover:underline shrink-0"
+                                >
+                                  {openAssignment === lesson.id ? "Close" : lesson.assignment ? "Edit assignment" : "Add assignment"}
+                                </button>
+                              </div>
+                              {openAssignment === lesson.id && (
+                                <div className="mt-3 border-t border-border pt-3">
+                                  <AssessmentBuilder lessonId={lesson.id} onChange={() => void refresh()} />
+                                </div>
+                              )}
+                            </div>
                           </article>
                         )}
                       />
@@ -325,10 +364,10 @@ export default function ModuleEditor() {
 
               <section className="bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 mt-6">
                 <h2 className="font-semibold text-foreground">
-                  Module assessment <span className="text-red-500">*</span>
+                  Graded module assessment <span className="text-red-500">*</span>
                 </h2>
                 <p className="text-[12px] text-muted-foreground mt-0.5 mb-3">
-                  One test for the whole module (not per topic). Learners take it after the module content.
+                  One test for the whole module. Learners take it after every lesson (and required assignment); passing it completes the module and unlocks the next one.
                 </p>
                 <AssessmentBuilder moduleId={moduleId} onChange={() => void refresh()} />
               </section>
