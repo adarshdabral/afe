@@ -398,7 +398,7 @@ function QuestionList({
           </div>
           {q.type === "mcq" ? (
             <div className="mt-4 space-y-2 pl-10" role="radiogroup">
-              {q.options.map((opt) => {
+              {q.options.map((opt, oi) => {
                 const selected = answers[q.id] === opt;
                 return (
                   <label
@@ -411,6 +411,7 @@ function QuestionList({
                       {selected && <span className="w-2.5 h-2.5 rounded-full bg-violet-600" />}
                     </span>
                     <input type="radio" name={q.id} className="sr-only" checked={selected} disabled={disabled} onChange={() => onChange(q.id, opt)} />
+                    <span className="font-semibold text-muted-foreground tabular-nums">{"ABCDEFGHIJ"[oi]}.</span>
                     {opt}
                   </label>
                 );

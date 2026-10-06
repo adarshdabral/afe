@@ -191,7 +191,7 @@ export function AssessmentBuilder({
                   <p className="text-sm text-foreground">{q.question}</p>
                   <p className="text-[11px] text-muted-foreground">
                     {q.type} · {q.marks} mark{q.marks === 1 ? "" : "s"}
-                    {q.type === "mcq" && q.correctAnswer ? ` · answer: ${q.correctAnswer}` : ""}
+                    {q.type === "mcq" && q.correctAnswer ? ` · answer: ${answerLabel(q)}` : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -363,6 +363,23 @@ function SettingsForm({
   );
 }
 
+/** Option letters: A, B, C, … (the API allows up to 10 options). */
+export const OPTION_LETTERS = "ABCDEFGHIJ".split("");
+const MAX_OPTIONS = OPTION_LETTERS.length;
+const MIN_OPTIONS = 2;
+const DEFAULT_OPTIONS = 4; // A–D
+
+/** "B · Narrow" for the admin question list. */
+export function answerLabel(q: Pick<Question, "options" | "correctAnswer">): string {
+  const i = q.options.indexOf(q.correctAnswer);
+  return i >= 0 ? `${OPTION_LETTERS[i]} · ${q.correctAnswer}` : q.correctAnswer;
+}
+
+/**
+ * Question editor. MCQ: the question, then option rows labelled A, B, C, D (add more
+ * with "Add option", up to J); the admin picks the correct LETTER. The API stores
+ * the chosen option's text as the answer key (that is what students submit).
+ */
 function QuestionForm({
   initial,
   busy,
@@ -376,57 +393,152 @@ function QuestionForm({
   onSubmit: (input: CreateQuestionInput) => Promise<void> | void;
   onCancel?: () => void;
 }) {
-  const blank = { type: "mcq" as QuestionType, question: "", options: "", correctAnswer: "", explanation: "", marks: 1 };
-  const [form, setForm] = useState(
-    initial
-      ? { type: initial.type, question: initial.question, options: initial.options.join(", "), correctAnswer: initial.correctAnswer, explanation: initial.explanation, marks: initial.marks }
-      : blank,
-  );
+  const fresh = () => ({
+    type: "mcq" as QuestionType,
+    question: "",
+    options: Array.from({ length: DEFAULT_OPTIONS }, () => ""),
+    correct: -1,
+    explanation: "",
+    marks: 1,
+  });
+  const [form, setForm] = useState(() => {
+    if (!initial) return fresh();
+    const options = initial.type === "mcq" && initial.options.length ? [...initial.options] : fresh().options;
+    return {
+      type: initial.type,
+      question: initial.question,
+      options,
+      correct: initial.type === "mcq" ? options.indexOf(initial.correctAnswer) : -1,
+      explanation: initial.explanation,
+      marks: initial.marks,
+    };
+  });
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
   const isMcq = form.type === "mcq";
 
+  const setOption = (i: number, v: string) => setForm((f) => ({ ...f, options: f.options.map((o, j) => (j === i ? v : o)) }));
+  const addOption = () => setForm((f) => (f.options.length >= MAX_OPTIONS ? f : { ...f, options: [...f.options, ""] }));
+  const removeOption = (i: number) =>
+    setForm((f) => {
+      if (f.options.length <= MIN_OPTIONS) return f;
+      const correct = f.correct === i ? -1 : f.correct > i ? f.correct - 1 : f.correct;
+      return { ...f, options: f.options.filter((_, j) => j !== i), correct };
+    });
+  const useTrueFalse = () => setForm((f) => ({ ...f, options: ["True", "False"], correct: -1 }));
+
   const submit = async () => {
     if (!form.question.trim()) return toast.error("Question text is required");
-    const options = isMcq ? form.options.split(",").map((o) => o.trim()).filter(Boolean) : [];
-    if (isMcq && options.length < 2) return toast.error("Give at least two options");
-    if (isMcq && !options.includes(form.correctAnswer.trim())) return toast.error("The correct answer must be one of the options");
+    let options: string[] = [];
+    let correctAnswer = "";
+    if (isMcq) {
+      options = form.options.map((o) => o.trim());
+      const blankAt = options.findIndex((o) => !o);
+      if (blankAt >= 0) return toast.error(`Option ${OPTION_LETTERS[blankAt]} is empty — fill it in or remove it`);
+      if (new Set(options.map((o) => o.toLowerCase())).size !== options.length) return toast.error("Options must all be different");
+      if (form.correct < 0 || form.correct >= options.length) return toast.error("Select the correct answer (A, B, C…)");
+      correctAnswer = options[form.correct];
+    }
     await onSubmit({
       type: form.type,
       question: form.question.trim(),
-      options: isMcq ? options : [],
-      correctAnswer: isMcq ? form.correctAnswer.trim() : "",
+      options,
+      correctAnswer,
       explanation: form.explanation.trim(),
       marks: form.marks,
     });
-    if (!initial) setForm(blank);
+    if (!initial) setForm(fresh());
   };
 
   return (
     <div className="rounded-xl border border-dashed border-input p-3 space-y-3">
       <p className="text-sm font-medium text-foreground">{initial ? "Edit question" : "Add question"}</p>
+
       <div className="grid gap-2 sm:grid-cols-[140px_1fr]">
         <select value={form.type} onChange={(e) => set("type", e.target.value as QuestionType)} className={selectClass} aria-label="Question type">
           {QUESTION_TYPES.map((t) => (
-            <option key={t} value={t}>{t}</option>
+            <option key={t} value={t}>
+              {t === "mcq" ? "Multiple choice" : t.charAt(0).toUpperCase() + t.slice(1)}
+            </option>
           ))}
         </select>
-        <Input value={form.question} onChange={(e) => set("question", e.target.value)} placeholder="Question text" className="rounded-xl h-10" />
-      </div>
-      {isMcq && (
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <Label className="text-xs">Options (comma-separated; True, False for true/false)</Label>
-            <Input value={form.options} onChange={(e) => set("options", e.target.value)} placeholder="A, B, C" className="rounded-xl h-10 mt-1" />
-          </div>
-          <div>
-            <Label className="text-xs">Correct answer</Label>
-            <Input value={form.correctAnswer} onChange={(e) => set("correctAnswer", e.target.value)} placeholder="A" className="rounded-xl h-10 mt-1" />
-          </div>
+        <div>
+          <Label className="text-xs sr-only">Question</Label>
+          <textarea
+            value={form.question}
+            onChange={(e) => set("question", e.target.value)}
+            rows={2}
+            placeholder="Question"
+            aria-label="Question"
+            className="w-full rounded-xl border border-input bg-card px-3 py-2 text-sm text-foreground"
+          />
         </div>
+      </div>
+
+      {isMcq && (
+        <fieldset className="space-y-2">
+          <legend className="text-xs font-medium text-foreground mb-1">
+            Options <span className="font-normal text-muted-foreground">— select the correct answer</span>
+          </legend>
+          {form.options.map((opt, i) => {
+            const letter = OPTION_LETTERS[i];
+            const isCorrect = form.correct === i;
+            return (
+              <div key={i} className="flex items-center gap-2">
+                <label
+                  className={`shrink-0 w-9 h-9 rounded-full border-2 flex items-center justify-center text-sm font-semibold cursor-pointer transition-colors ${
+                    isCorrect ? "border-green-600 bg-green-600 text-white" : "border-input text-muted-foreground hover:border-violet-600 hover:text-violet-600"
+                  }`}
+                  title={`Mark ${letter} as the correct answer`}
+                >
+                  <input
+                    type="radio"
+                    name={`correct-${initial?.id ?? "new"}`}
+                    className="sr-only"
+                    checked={isCorrect}
+                    onChange={() => set("correct", i)}
+                    aria-label={`Option ${letter} is correct`}
+                  />
+                  {letter}
+                </label>
+                <Input
+                  value={opt}
+                  onChange={(e) => setOption(i, e.target.value)}
+                  placeholder={`Option ${letter}`}
+                  aria-label={`Option ${letter}`}
+                  className={`rounded-xl h-10 flex-1 ${isCorrect ? "ring-1 ring-green-600/50" : ""}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeOption(i)}
+                  disabled={form.options.length <= MIN_OPTIONS}
+                  aria-label={`Remove option ${letter}`}
+                  className="shrink-0 p-2 text-muted-foreground hover:text-red-600 disabled:opacity-30 disabled:hover:text-muted-foreground"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <Button type="button" size="sm" variant="outline" className="rounded-xl h-8" onClick={addOption} disabled={form.options.length >= MAX_OPTIONS}>
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add option
+            </Button>
+            <button type="button" onClick={useTrueFalse} className="text-xs text-violet-600 hover:underline">
+              Use True / False
+            </button>
+            <span className="text-xs text-muted-foreground">
+              {form.correct >= 0 ? `Correct answer: ${OPTION_LETTERS[form.correct]}` : "No correct answer selected yet"}
+            </span>
+          </div>
+        </fieldset>
       )}
-      <div className="grid gap-2 sm:grid-cols-[1fr_100px]">
-        <Input value={form.explanation} onChange={(e) => set("explanation", e.target.value)} placeholder="Explanation (optional)" className="rounded-xl h-10" />
-        <Input type="number" min={0} aria-label="Marks" value={form.marks} onChange={(e) => set("marks", Math.max(0, Number(e.target.value) || 0))} className="rounded-xl h-10" />
+
+      <div className="grid gap-2 sm:grid-cols-[1fr_120px]">
+        <Input value={form.explanation} onChange={(e) => set("explanation", e.target.value)} placeholder="Explanation shown after submitting (optional)" className="rounded-xl h-10" />
+        <div className="flex items-center gap-2">
+          <Label className="text-xs shrink-0">Marks</Label>
+          <Input type="number" min={0} aria-label="Marks" value={form.marks} onChange={(e) => set("marks", Math.max(0, Number(e.target.value) || 0))} className="rounded-xl h-10" />
+        </div>
       </div>
       <div className="flex gap-2">
         <Button size="sm" disabled={busy} onClick={() => void submit()} className="rounded-xl bg-violet-600 hover:bg-violet-700 text-white">
