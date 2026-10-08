@@ -95,7 +95,8 @@ const mods: string[] = [];
   });
   check("edit module (title, description, learning objectives) → 200", e.json?.data?.title === "Mod A (edited)" && e.json?.data?.learningObjectives?.length === 2, e.json?.data);
   const early = await admin.patch(`/admin/courses/modules/${mods[0]}`, { isPublished: true });
-  check("publish module before it has an assessment → 409 naming what's missing", early.status === 409 && /module assessment/.test(early.json?.error?.message ?? ""), early.json);
+  check("publish module with description + objectives but no assessment → 200 (assessment optional)", early.status === 200 && early.json?.data?.isPublished === true, early.json);
+  await admin.patch(`/admin/courses/modules/${mods[0]}`, { isPublished: false });
   const re = await admin.post(`/admin/courses/${courseId}/modules/reorder`, { orderedIds: [mods[2], mods[0], mods[1]] });
   const order = (re.json?.data ?? []).map((m: any) => m.id);
   check("reorder modules persists", order[0] === mods[2] && order[1] === mods[0], order);
@@ -137,7 +138,7 @@ let aId = "";
   const tree = (await admin.get(`/admin/courses/${courseId}`)).json?.data;
   const modA = tree?.modules?.find((m: any) => m.id === mods[0]);
   const modB = tree?.modules?.find((m: any) => m.id === mods[1]);
-  check("admin tree reports readiness (A ready, B missing items)", modA?.readiness?.ready === true && modB?.readiness?.ready === false && modB?.readiness?.missing?.length === 3, { a: modA?.readiness, b: modB?.readiness });
+  check("admin tree reports readiness (A ready, B missing description + objectives only)", modA?.readiness?.ready === true && modB?.readiness?.ready === false && JSON.stringify(modB?.readiness?.missing) === JSON.stringify(["a module description", "at least one learning objective"]), { a: modA?.readiness, b: modB?.readiness });
 }
 
 // ---- 7. Certificate management ----

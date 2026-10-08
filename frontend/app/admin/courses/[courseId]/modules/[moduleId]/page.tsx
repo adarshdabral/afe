@@ -364,10 +364,10 @@ export default function ModuleEditor() {
 
               <section className="bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 mt-6">
                 <h2 className="font-semibold text-foreground">
-                  Graded module assessment <span className="text-red-500">*</span>
+                  Graded module assessment <span className="text-[12px] font-normal text-muted-foreground">(optional)</span>
                 </h2>
                 <p className="text-[12px] text-muted-foreground mt-0.5 mb-3">
-                  One test for the whole module. Learners take it after every lesson (and required assignment); passing it completes the module and unlocks the next one.
+                  One test for the whole module. When published, learners take it after every lesson (and required assignment), and passing it completes the module and unlocks the next one.
                 </p>
                 <AssessmentBuilder moduleId={moduleId} onChange={() => void refresh()} />
               </section>
@@ -379,16 +379,19 @@ export default function ModuleEditor() {
   );
 }
 
-/** Publish checklist: description, objectives, assessment (with questions, published). */
+/** Publish checklist: description + objectives are required; the module assessment is
+ *  optional (shown for information — if published, students must pass it). */
 function PublishPanel({ module, busy, onToggle }: { module: ModuleWithLessons; busy: boolean; onToggle: () => void }) {
   const r = module.readiness;
   const items = [
     { ok: !!r?.hasDescription, label: "Module description" },
     { ok: !!r?.hasObjectives, label: "At least one learning objective" },
-    { ok: !!r?.hasAssessment, label: "Module assessment created" },
-    { ok: (r?.questionCount ?? 0) > 0, label: `Assessment has questions${r?.questionCount ? ` (${r.questionCount})` : ""}` },
-    { ok: !!r?.assessmentPublished, label: "Assessment published" },
   ];
+  const assessmentNote = !r?.hasAssessment
+    ? "No module assessment — optional. The module completes once its lessons are done."
+    : r.assessmentPublished
+      ? `Module assessment published (${r.questionCount} question${r.questionCount === 1 ? "" : "s"}) — students must pass it to complete the module.`
+      : "Module assessment is a draft — students won't see it until it's published (optional).";
   const ready = !!r?.ready;
   return (
     <section
@@ -406,7 +409,7 @@ function PublishPanel({ module, busy, onToggle }: { module: ModuleWithLessons; b
             {module.isPublished ? "Published — visible to students" : ready ? "Ready to publish" : "Not ready to publish"}
           </p>
           <p className="text-[12px] text-muted-foreground mt-0.5">
-            Every module needs a description, learning objectives and a published module assessment.
+            A module needs a description and at least one learning objective. Lesson assignments and the module assessment are optional.
           </p>
         </div>
         <Button
@@ -428,6 +431,7 @@ function PublishPanel({ module, busy, onToggle }: { module: ModuleWithLessons; b
           </li>
         ))}
       </ul>
+      <p className="mt-2 text-[12px] text-muted-foreground">{assessmentNote}</p>
     </section>
   );
 }

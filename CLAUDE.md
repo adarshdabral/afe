@@ -176,16 +176,17 @@ Consistent per-feature layering under `backend/` — follow it for new features:
   `status` is `draft | published | archived`; courses
   are **soft-deleted** (`deletedAt`). `slug` is unique and the public lookup key.
   Students only ever see published content (role-scoped in `course.service.ts`).
-- **Every module has a description, learning objectives (`learningObjectives:
-  string[]`, 1–20, ≤300 chars each) and exactly ONE module assessment** (tests are per
-  module, never per lesson — `Assessment.moduleId` is unique). **Publishing a module
-  requires all three** (assessment published with ≥1 question): enforced in
-  `module.service.ts` (`moduleReadiness`/`readinessFrom`, 409 listing what's
-  missing; a module can't be created already-published). A published module can't
-  lose them: clearing its description/objectives → 409; unpublishing/deleting its
-  assessment, or deleting its last question → 409 (hide the module first). ADDING
-  content to a published module is always allowed (older modules were published
-  before objectives existed). `defineModel` re-registers a model whose schema fields
+- **Every module has a description and learning objectives (`learningObjectives:
+  string[]`, 1–20, ≤300 chars each), and AT MOST ONE module assessment** (kind
+  "module"; lesson assignments are separate). **Publishing a module requires only the
+  description + ≥1 objective** — the module assessment and lesson assignments are
+  optional (`module.service.ts` `moduleReadiness`/`readinessFrom`, 409 listing what's
+  missing; a module may be created already-published once it has both). A module
+  with a published assessment completes only when it is passed; without one it
+  completes when its lessons (and required assignments) are done. A published module
+  can't lose its description/objectives (409); its assessment can be unpublished or
+  deleted any time; a published assessment can't lose its last question (409). ADDING
+  content to a published module is always allowed. `defineModel` re-registers a model whose schema fields
   changed, so `next dev` hot-reload never keeps a stale model that drops new fields. The admin
   course tree carries `modules[].readiness`; the CMS shows a publish checklist.
   Verify harnesses publish modules via `verify/_fixtures.mts` (`publishModule`).

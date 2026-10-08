@@ -115,14 +115,18 @@ const modIds: string[] = [];
   check("reorder modules persists new order", re.status === 200 && order[0] === modIds[2] && order[1] === modIds[0] && order[2] === modIds[1], order);
 }
 
-// 5b. Module requirements: description + learning objectives + ONE module assessment.
+// 5b. Module requirements: description + learning objectives. The module assessment
+//     (one per module) and lesson assignments are OPTIONAL for publishing.
 {
   const born = await admin.post(`/admin/courses/${courseId}/modules`, { title: "Born published", isPublished: true });
-  check("create module already published → 409 (no assessment yet)", born.status === 409, born.json);
+  check("create module already published without description/objectives → 409", born.status === 409, born.json);
+  const bornReady = await admin.post(`/admin/courses/${courseId}/modules`, { title: "Born ready", isPublished: true, ...MODULE_CONTENT });
+  check("create module already published WITH description + objectives (no assessment) → 201", bornReady.status === 201 && bornReady.json?.data?.isPublished === true, bornReady.json);
+  if (bornReady.json?.data?.id) await admin.del(`/admin/courses/modules/${bornReady.json.data.id}`);
 
   const early = await admin.patch(`/admin/courses/modules/${modIds[0]}`, { isPublished: true });
   const msg: string = early.json?.error?.message ?? "";
-  check("publish incomplete module → 409 listing description, objectives, assessment", early.status === 409 && /description/.test(msg) && /learning objective/.test(msg) && /module assessment/.test(msg), early.json);
+  check("publish incomplete module → 409 listing description + objectives (not the assessment)", early.status === 409 && /description/.test(msg) && /learning objective/.test(msg) && !/assessment/.test(msg), early.json);
 
   check("blank learning objective → 400", (await admin.patch(`/admin/courses/modules/${modIds[0]}`, { learningObjectives: ["  "] })).status === 400);
   check("more than 20 objectives → 400", (await admin.patch(`/admin/courses/modules/${modIds[0]}`, { learningObjectives: Array.from({ length: 21 }, (_, i) => `Objective ${i}`) })).status === 400);
@@ -132,7 +136,9 @@ const modIds: string[] = [];
   const aRes = await admin.post("/admin/assessments", { moduleId: modIds[0], title: "Module A assessment" });
   const aId = aRes.json?.data?.id;
   check("assessment with no questions can't be published → 409", (await admin.post(`/admin/assessments/${aId}/publish`)).status === 409);
-  check("still can't publish the module (assessment empty/unpublished) → 409", (await admin.patch(`/admin/courses/modules/${modIds[0]}`, { isPublished: true })).status === 409);
+  const noQuiz = await admin.patch(`/admin/courses/modules/${modIds[0]}`, { isPublished: true });
+  check("module publishes with its assessment still a draft (assessment optional) → 200", noQuiz.status === 200 && noQuiz.json?.data?.isPublished === true, noQuiz.json);
+  await admin.patch(`/admin/courses/modules/${modIds[0]}`, { isPublished: false });
 
   await publishModule(admin, modIds[0]);
   const pubMod = (await admin.get(`/admin/courses/${courseId}`)).json?.data?.modules?.find((m: any) => m.id === modIds[0]);

@@ -12,6 +12,10 @@ import { Question } from "../models/Question";
 import { HttpError } from "../http/errors";
 
 // ---- Readiness: what a module needs before it can be published ----
+// Required: a description and at least one learning objective. The module
+// assessment is OPTIONAL: when a module has a published one, students must pass it
+// to complete the module (and unlock the next); without one, the module completes
+// once its lessons (and required lesson assignments) are done.
 export interface ModuleReadiness {
   hasDescription: boolean;
   hasObjectives: boolean;
@@ -35,11 +39,6 @@ export function readinessFrom(
   const missing: string[] = [];
   if (!hasDescription) missing.push("a module description");
   if (!hasObjectives) missing.push("at least one learning objective");
-  if (!hasAssessment) missing.push("a module assessment");
-  else {
-    if (questionCount === 0) missing.push("questions in the module assessment");
-    if (!assessmentPublished) missing.push("a published module assessment");
-  }
   return { hasDescription, hasObjectives, hasAssessment, assessmentPublished, questionCount, ready: missing.length === 0, missing };
 }
 
@@ -79,9 +78,10 @@ export async function createModule(
   input: CreateModuleInput,
 ): Promise<ModuleView | null> {
   if (!(await courseExists(courseId))) return null;
-  // A brand-new module has no assessment yet, so it can never start out published.
+  // A module may start out published once it has a description and objectives.
   if (input.isPublished) {
-    throw notReady(readinessFrom(input, null));
+    const r = readinessFrom(input, null);
+    if (!r.ready) throw notReady(r);
   }
   const last = await Module.findOne({ courseId }).sort({ order: -1 });
   const order = last ? (last.order ?? 0) + 1 : 0;

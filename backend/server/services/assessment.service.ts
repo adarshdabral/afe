@@ -131,19 +131,9 @@ export async function updateAssessment(id: string, patch: AssessmentConfigInput)
   return toAssessment(doc);
 }
 
-/** A published module must keep a published assessment with questions. */
-async function assertModuleNotPublished(doc: AssessmentDoc, action: string): Promise<void> {
-  if (doc.kind === "lesson") return; // lesson assignments don't gate module publishing
-  const m = await Module.findById(doc.moduleId).catch(() => null);
-  if (m?.isPublished) {
-    throw new HttpError(409, `Can't ${action}: its module is published, and every published module needs its assessment. Hide the module first.`);
-  }
-}
-
 export async function setAssessmentPublished(id: string, isPublished: boolean): Promise<AssessmentView | null> {
   const doc = await Assessment.findById(id).catch(() => null);
   if (!doc) return null;
-  if (!isPublished && doc.isPublished) await assertModuleNotPublished(doc, "unpublish this assessment");
   if (isPublished && (await Question.countDocuments({ assessmentId: id })) === 0) {
     throw new HttpError(409, "Add at least one question before publishing.");
   }
@@ -155,7 +145,6 @@ export async function setAssessmentPublished(id: string, isPublished: boolean): 
 export async function deleteAssessment(id: string): Promise<boolean> {
   const doc = await Assessment.findById(id).catch(() => null);
   if (!doc) return false;
-  await assertModuleNotPublished(doc, "delete this assessment");
   await Question.deleteMany({ assessmentId: id });
   await Attempt.deleteMany({ assessmentId: id });
   await doc.deleteOne();

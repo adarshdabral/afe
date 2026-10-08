@@ -300,6 +300,29 @@ await admin.patch(`/admin/courses/modules/${m2}`, { isPublished: true });
   void s;
 }
 
+// ── A module with NO assessment (optional) completes after its lessons ─────────
+{
+  const slug = "no-quiz-course";
+  const cid = (await admin.post("/admin/courses", { title: "No Quiz Course", slug })).json.data.id;
+  const mA = (await admin.post(`/admin/courses/${cid}/modules`, { title: "A", description: "Module A.", learningObjectives: ["Do A."] })).json.data.id;
+  const mB = (await admin.post(`/admin/courses/${cid}/modules`, { title: "B", description: "Module B.", learningObjectives: ["Do B."] })).json.data.id;
+  const la = (await admin.post(`/admin/courses/modules/${mA}/lessons`, { title: "LA" })).json.data.id;
+  const lb = (await admin.post(`/admin/courses/modules/${mB}/lessons`, { title: "LB" })).json.data.id;
+  const ta = (await admin.post(`/admin/courses/lessons/${la}/topics`, { title: "TA", contentType: "rich_text", content: "a" })).json.data.id;
+  const tb = (await admin.post(`/admin/courses/lessons/${lb}/topics`, { title: "TB", contentType: "rich_text", content: "b" })).json.data.id;
+  const pa = await admin.patch(`/admin/courses/modules/${mA}`, { isPublished: true });
+  check("module without any assessment or assignments publishes → 200", pa.status === 200 && pa.json?.data?.isPublished === true, pa.json);
+  await admin.patch(`/admin/courses/modules/${mB}`, { isPublished: true });
+  await admin.post(`/admin/courses/${cid}/publish`);
+  const s = await newStudent("noquiz");
+  check("next module locked until module A's lessons are done", (await s.get(`/courses/${slug}/topics/${tb}`)).status === 403);
+  const done = await s.post(`/progress/${cid}/topics/${ta}/complete`);
+  check("module A complete after its lessons (no assessment needed)", done.json?.data?.progress?.completedModules?.includes(mA), done.json?.data?.progress?.completedModules);
+  check("…and module B unlocks", (await s.get(`/courses/${slug}/topics/${tb}`)).status === 200);
+  const fin = await s.post(`/progress/${cid}/topics/${tb}/complete`);
+  check("course with no assessments → certificate-eligible after all topics", fin.json?.data?.progress?.certificateEligible === true, fin.json?.data?.progress);
+}
+
 console.log(`\nLEARNING FLOW CHECKS: ${pass} passed, ${fail} failed`);
 if (fail) console.log("Failures:\n - " + failures.join("\n - "));
 await db.close();

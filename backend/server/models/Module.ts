@@ -2,10 +2,9 @@
 // sequenced by `order` (ascending). Deleting a module cascades to its lessons and their topics
 // (see module.service). `isPublished` gates a module from the public course tree.
 //
-// Every module carries a description and its learning objectives, and is assessed
-// by exactly ONE module-level assessment (Assessment.moduleId is unique — tests are
-// per module, never per lesson). A module can only be published once all three are
-// in place (see moduleReadiness in module.service).
+// Every module carries a description and its learning objectives (both required to
+// publish — see moduleReadiness in module.service). It may have ONE module-level
+// assessment (optional); when published, students must pass it to complete the module.
 
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";

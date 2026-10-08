@@ -140,12 +140,14 @@ let q1 = "", q2 = "";
   check("teacher cannot attempt (student-only) → 403", (await teacher.post(`/assessments/${assessmentId}/attempt`, { answers: [] })).status === 403);
 }
 
-// 10. A published module keeps its assessment: unpublish/delete refused until the module is hidden.
+// 10. The module assessment is optional: it can be unpublished while its module is
+//     published (students then complete the module without it), and re-published.
 {
   const un = await admin.post(`/admin/assessments/${assessmentId}/unpublish`);
-  check("unpublish assessment of a published module → 409", un.status === 409 && /module is published/i.test(un.json?.error?.message ?? ""), un.json);
-  const delBlocked = await admin.del(`/admin/assessments/${assessmentId}`);
-  check("delete assessment of a published module → 409", delBlocked.status === 409, delBlocked.status);
+  check("unpublish assessment of a published module → 200 (assessment optional)", un.status === 200 && un.json?.data?.isPublished === false, un.json);
+  check("student can't see it while unpublished → 404", (await student.get(`/assessments/${assessmentId}`)).status === 404);
+  const re = await admin.post(`/admin/assessments/${assessmentId}/publish`);
+  check("re-publish assessment → 200", re.status === 200 && re.json?.data?.isPublished === true, re.json);
   const hide = await admin.patch(`/admin/courses/modules/${moduleId}`, { isPublished: false });
   check("hide module → 200", hide.status === 200 && hide.json?.data?.isPublished === false);
 }

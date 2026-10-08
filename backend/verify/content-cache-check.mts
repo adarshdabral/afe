@@ -126,15 +126,14 @@ check("unpublished module hidden immediately", JSON.stringify(titles(await tree(
 await admin.patch(`/admin/courses/modules/${m2}`, { isPublished: true });
 check("re-published module back immediately", titles(await tree())?.length === 2, titles(await tree()));
 
-// Assessment visibility (module M1 must be hidden to unpublish its assessment).
-await admin.patch(`/admin/courses/modules/${m1}`, { isPublished: false });
+// Assessment visibility: the module assessment is optional, so it can be unpublished
+// while the module stays published — the tree must drop it at once, then show it again.
 await admin.post(`/admin/assessments/${a1}/unpublish`);
-await admin.patch(`/admin/courses/modules/${m1}`, { isPublished: true }).then(async (r) => {
-  // Publishing requires a published assessment — expected to be refused (409).
-  check("module publish refused without a published assessment (409)", r.status === 409, r.status);
-});
+{
+  const M1 = (await tree())?.modules?.find((m: any) => m.id === m1);
+  check("unpublished assessment disappears from the tree immediately (module stays published)", M1 && M1.assessmentId === null, M1?.assessmentId);
+}
 await admin.post(`/admin/assessments/${a1}/publish`);
-await admin.patch(`/admin/courses/modules/${m1}`, { isPublished: true });
 {
   const t = await tree();
   const M1 = t?.modules?.find((m: any) => m.id === m1);
