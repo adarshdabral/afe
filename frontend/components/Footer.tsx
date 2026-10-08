@@ -6,7 +6,7 @@ import { FLAGSHIP_SLUG, PLATFORM_NAME } from "@/lib/course";
 import { BrandMark } from "@/components/BrandMark";
 
 const ATTRIBUTION =
-  "Developed by: Centre of Excellence in Logistics & Supply Chain Management, Doon University under financial aid by UCOST, Government of Uttarakhand";
+  "Mentored by: Center of Excellence in Logistics and Supply Chain Management, School of Management, Doon University";
 
 /** Public pages get the full product footer; app surfaces (dashboards, the
  *  course player) keep the compact institutional attribution line. */
