@@ -7,7 +7,8 @@
 import { useState } from "react";
 import { ArrowUpRight, BadgeCheck, Building2, Sparkles, Wrench } from "lucide-react";
 import { resolveUploadUrl } from "@/lib/api/uploads";
-import { initials, type CourseOutline } from "@/lib/course";
+import { initials, PLATFORM_NAME, type CourseOutline } from "@/lib/course";
+import { BrandMark } from "@/components/BrandMark";
 import { cn } from "@/lib/utils";
 
 /** Avatar + name + "Instructor" badge (+ credential line when set). */
@@ -56,7 +57,10 @@ export function OfferedByCard({ course, className }: { course: CourseOutline; cl
   if (!o.name) return null;
   const body = (
     <>
-      {o.logoUrl && !logoFailed ? (
+      {!o.logoUrl && o.name === PLATFORM_NAME ? (
+        // Offered by the platform itself → its brand logo (Admin → Branding).
+        <BrandMark size="lg" className="shrink-0" />
+      ) : o.logoUrl && !logoFailed ? (
         // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided origin (R2 / backend / external)
         <img
           src={resolveUploadUrl(o.logoUrl)}

@@ -821,11 +821,18 @@ export const AI_COURSE_META = {
     "MLOps tools",
   ],
   offeredBy: {
-    name: "Doon University",
+    name: "AI on Wheels",
     logoUrl: "",
-    description: "Centre of Excellence in Logistics & Supply Chain Management",
-    url: "https://doonuniversity.ac.in",
+    description: "",
+    url: "",
   },
+  // Course-level learning outcomes ("What you'll learn" on the course pages).
+  learningObjectives: [
+    "Understand AI and how it learns: Recognise AI in everyday life, distinguish it from simple automation, and explore how systems learn patterns from data.",
+    "Use AI to support learning: Write clear prompts, create useful study materials, and check AI-generated answers against reliable information.",
+    "Develop solutions for familiar problems: Explore applications in schools and communities, and plan a small AI-supported solution with clear goals and measures of success.",
+    "Make responsible choices: Identify errors, bias, and privacy concerns while building critical thinking, collaboration, and human judgement skills.",
+  ],
 };
 
 /** Estimated minutes per module assessment (10 MCQs, 5 True/False, 2 scenarios). */

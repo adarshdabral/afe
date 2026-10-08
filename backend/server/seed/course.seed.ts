@@ -82,6 +82,7 @@ export async function seedAiCourse({
     skills: AI_COURSE_META.skills,
     tools: AI_COURSE_META.tools,
     offeredBy: AI_COURSE_META.offeredBy,
+    learningObjectives: AI_COURSE_META.learningObjectives,
     status: "published" as const,
     deletedAt: null,
   };

@@ -115,16 +115,17 @@ function lastSpan(n: number): string {
 export function LearningOutcomes({ course }: { course: CourseOutline }) {
   const outcomes = learningOutcomes(course);
   if (outcomes.length === 0) return null;
+  const fromCourse = course.learningObjectives.length > 0;
   return (
     <section aria-labelledby="learn-heading" className="py-20 md:py-24">
-      <SectionHeading id="learn-heading" eyebrow="What you'll learn" title="Real AI literacy, from first principles to responsible practice">
-        Each outcome below comes straight from a module of the course.
+      <SectionHeading id="learn-heading" eyebrow="Learning outcomes" title="What you'll learn">
+        {fromCourse ? "By the end of the course, you will be able to:" : "Each outcome below comes straight from a module of the course."}
       </SectionHeading>
       <ul className="mt-10 grid md:grid-cols-2 gap-x-10 gap-y-5">
         {outcomes.map((o, i) => (
           <li key={i} className="flex gap-3.5">
             <CheckCircle2 className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" aria-hidden />
-            <span className="text-[15px] text-foreground leading-relaxed">{o}</span>
+            <OutcomeText text={o} />
           </li>
         ))}
       </ul>
@@ -139,6 +140,18 @@ export function LearningOutcomes({ course }: { course: CourseOutline }) {
         </div>
       )}
     </section>
+  );
+}
+
+/** "Heading: explanation" → the heading in bold, then the explanation. */
+function OutcomeText({ text }: { text: string }) {
+  const i = text.indexOf(":");
+  if (i <= 0 || i > 80) return <span className="text-[15px] text-foreground leading-relaxed">{text}</span>;
+  return (
+    <span className="text-[15px] text-foreground leading-relaxed">
+      <span className="font-semibold">{text.slice(0, i)}:</span>
+      {text.slice(i + 1)}
+    </span>
   );
 }
 
