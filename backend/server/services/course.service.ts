@@ -14,9 +14,9 @@ import { Assessment } from "../models/Assessment";
 import { Question } from "../models/Question";
 import { readinessFrom, type ModuleReadiness } from "./module.service";
 import type { Role } from "../shared/access";
+import { withoutAdminFields, type ContentStatus } from "../models/importFields";
 import { cachedContent } from "../cache/content-cache";
 
-/** A lesson (container) with its topics (learning units), in order. */
 /** A lesson assignment as it appears in the course tree (students: published only). */
 export interface AssignmentSummary {
   id: string;
@@ -26,10 +26,17 @@ export interface AssignmentSummary {
   isPublished: boolean;
   timeLimitMinutes: number;
   estimatedDurationMinutes: number;
+  /** Position among the lesson's topics (Topic.order scale; null = after them). */
+  order: number | null;
+  /** Admin tree only. */
+  contentStatus?: ContentStatus;
+  adminNote?: string;
+  importKey?: string | null;
+  gradeCategory?: string;
 }
 
-/** A lesson (container) with its topics (learning units), in order, and its assignment. */
-export type LessonNode = LessonView & { topics: TopicView[]; assignment: AssignmentSummary | null };
+/** A lesson (container) with its topics (learning units) and its assignments, in order. */
+export type LessonNode = LessonView & { topics: TopicView[]; assignments: AssignmentSummary[] };
 
 export type ModuleNode = ModuleView & {
   lessons: LessonNode[];
@@ -41,6 +48,8 @@ export type ModuleNode = ModuleView & {
   assessmentDurationMinutes: number;
   /** Admin tree only: what the module still needs before it can be published. */
   readiness?: ModuleReadiness;
+  /** Admin tree only: items in this module flagged "needs content" (imports). */
+  needsContent?: number;
 };
 
 export interface CourseTree extends CourseView {
@@ -123,6 +132,7 @@ export interface CreateCourseInput {
   skills?: string[];
   tools?: string[];
   offeredBy?: Partial<OfferedBy>;
+  gradingWeights?: { category: string; weight: number }[];
 }
 
 const EMPTY_OFFERED_BY: OfferedBy = { name: "", logoUrl: "", description: "", url: "" };
@@ -190,6 +200,7 @@ export async function updateCourse(
   if (patch.prerequisites !== undefined) doc.prerequisites = patch.prerequisites;
   if (patch.tags !== undefined) doc.tags = patch.tags;
   if (patch.skills !== undefined) doc.set("skills", patch.skills);
+  if (patch.gradingWeights !== undefined) doc.set("gradingWeights", patch.gradingWeights);
   if (patch.tools !== undefined) doc.set("tools", patch.tools);
   if (patch.offeredBy !== undefined) {
     // Merge: omitted keys keep their stored value.
@@ -248,7 +259,8 @@ export async function listCourses(input: ListInput, role: Role | null): Promise<
     .limit(pageSize);
 
   return {
-    courses: docs.map(toCourse),
+    // Admin-only fields (import key/notes) never leave the admin view.
+    courses: docs.map((d) => (role === "platform_admin" ? toCourse(d) : (withoutAdminFields(toCourse(d)) as CourseView))),
     total,
     page,
     pageSize,
@@ -264,20 +276,25 @@ async function buildTree(course: CourseView, includeUnpublished: boolean): Promi
   // Published assessments only for non-admins.
   const assessmentFilter: Record<string, unknown> = { courseId: course.id };
   if (!includeUnpublished) assessmentFilter.isPublished = true;
+  const topicFilter: Record<string, unknown> = { courseId: course.id };
+  if (!includeUnpublished) topicFilter.isPublished = { $ne: false }; // draft topics: admins only
   const [modules, lessons, topics, sections, assessments] = await Promise.all([
     Module.find(moduleFilter).sort({ order: 1, createdAt: 1 }).lean(),
     Lesson.find({ courseId: course.id }).sort({ order: 1, createdAt: 1 }).lean(),
-    Topic.find({ courseId: course.id }).sort({ order: 1, createdAt: 1 }).lean(),
+    Topic.find(topicFilter).sort({ order: 1, createdAt: 1 }).lean(),
     listSections(course.id),
     Assessment.find(assessmentFilter)
-      .select("_id kind moduleId lessonId title isPublished isGraded isRequired timeLimitMinutes estimatedDurationMinutes")
+      .sort({ order: 1, createdAt: 1 })
+      .select(
+        "_id kind moduleId lessonId title isPublished isGraded isRequired timeLimitMinutes estimatedDurationMinutes order contentStatus adminNote importKey gradeCategory",
+      )
       .lean(),
   ]);
-  // Lesson assignments vs the one module assessment per module.
-  const assignmentByLesson = new Map<string, AssignmentSummary>();
+  // Lesson assignments (several per lesson, positioned) vs the one module assessment.
+  const assignmentsByLesson = new Map<string, AssignmentSummary[]>();
   for (const a of assessments) {
     if (a.kind !== "lesson" || !a.lessonId) continue;
-    assignmentByLesson.set(a.lessonId, {
+    const summary: AssignmentSummary = {
       id: String(a._id),
       title: a.title,
       isGraded: a.isGraded === true,
@@ -285,21 +302,34 @@ async function buildTree(course: CourseView, includeUnpublished: boolean): Promi
       isPublished: a.isPublished === true,
       timeLimitMinutes: a.timeLimitMinutes ?? 0,
       estimatedDurationMinutes: a.estimatedDurationMinutes ?? 0,
-    });
+      order: typeof a.order === "number" ? a.order : null,
+      ...(includeUnpublished
+        ? {
+            contentStatus: a.contentStatus === "needs_content" ? "needs_content" : "complete",
+            adminNote: a.adminNote ?? "",
+            importKey: a.importKey ?? null,
+            gradeCategory: a.gradeCategory ?? "",
+          }
+        : {}),
+    };
+    if (!assignmentsByLesson.has(a.lessonId)) assignmentsByLesson.set(a.lessonId, []);
+    assignmentsByLesson.get(a.lessonId)!.push(summary);
   }
   const moduleAssessments = assessments.filter((a) => a.kind !== "lesson");
 
+  // Non-admins (students, teachers, visitors) never see admin-only fields.
+  const scrub = <T extends object>(v: T) => (includeUnpublished ? v : (withoutAdminFields(v) as T));
   const topicsByLesson = new Map<string, TopicView[]>();
   for (const t of topics) {
-    const v = toTopic(t as unknown as TopicDoc);
+    const v = scrub(toTopic(t as unknown as TopicDoc));
     if (!topicsByLesson.has(v.lessonId)) topicsByLesson.set(v.lessonId, []);
     topicsByLesson.get(v.lessonId)!.push(v);
   }
   const byModule = new Map<string, LessonNode[]>();
   for (const l of lessons) {
-    const v = toLesson(l as unknown as LessonDoc);
+    const v = scrub(toLesson(l as unknown as LessonDoc));
     if (!byModule.has(v.moduleId)) byModule.set(v.moduleId, []);
-    byModule.get(v.moduleId)!.push({ ...v, topics: topicsByLesson.get(v.id) ?? [], assignment: assignmentByLesson.get(v.id) ?? null });
+    byModule.get(v.moduleId)!.push({ ...v, topics: topicsByLesson.get(v.id) ?? [], assignments: assignmentsByLesson.get(v.id) ?? [] });
   }
 
   const assessmentByModule = new Map<string, string>();
@@ -315,12 +345,18 @@ async function buildTree(course: CourseView, includeUnpublished: boolean): Promi
     for (const c of counts) questionCounts.set(c._id, c.n);
   }
   const assessmentDocByModule = new Map(moduleAssessments.map((a) => [a.moduleId, a]));
+  const needsContentByModule = new Map<string, number>();
+  if (includeUnpublished) {
+    for (const x of [...topics, ...assessments]) {
+      if (x.contentStatus === "needs_content") needsContentByModule.set(x.moduleId, (needsContentByModule.get(x.moduleId) ?? 0) + 1);
+    }
+  }
 
   return {
-    ...course,
+    ...scrub(course),
     sections,
     modules: modules.map((m) => {
-      const mv = toModule(m as unknown as ModuleDoc);
+      const mv = scrub(toModule(m as unknown as ModuleDoc));
       return {
         ...mv,
         lessons: byModule.get(mv.id) ?? [],
@@ -338,6 +374,7 @@ async function buildTree(course: CourseView, includeUnpublished: boolean): Promi
                     }
                   : null,
               ),
+              needsContent: needsContentByModule.get(mv.id) ?? 0,
             }
           : {}),
       };

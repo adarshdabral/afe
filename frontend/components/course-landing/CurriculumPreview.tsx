@@ -89,13 +89,13 @@ export function CurriculumPreview({ course, defaultOpen = true }: { course: Cour
                               </span>
                             </li>
                           ))}
-                          {lesson.assignment && (
-                            <li className="flex items-center gap-3 text-[13px] text-foreground">
+                          {lesson.assignments.map((a, ai) => (
+                            <li key={`a-${ai}`} className="flex items-center gap-3 text-[13px] text-foreground">
                               <NotebookPen className="w-3.5 h-3.5 text-violet-600 shrink-0" aria-hidden />
-                              <span className="flex-1 min-w-0">Assignment: {lesson.assignment.title}</span>
-                              <span className="shrink-0 text-[12px] text-muted-foreground">{lesson.assignment.isGraded ? "Graded" : "Practice"}</span>
+                              <span className="flex-1 min-w-0">Assignment: {a.title}</span>
+                              <span className="shrink-0 text-[12px] text-muted-foreground">{a.isGraded ? "Graded" : "Practice"}</span>
                             </li>
-                          )}
+                          ))}
                         </ul>
                       </li>
                     ))}

@@ -12,7 +12,8 @@
     "r2:cors": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/r2-cors.ts",
     "backfill:objectives": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx server/seed/backfill-objectives.ts",
     "backfill:course-meta": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx server/seed/backfill-course-meta.ts",
-    "enable:downloads": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx server/seed/enable-downloads.ts"
+    "enable:downloads": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx server/seed/enable-downloads.ts",
+    "import:course": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx server/seed/import-course.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1145.0",

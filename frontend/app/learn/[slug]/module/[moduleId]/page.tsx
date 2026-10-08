@@ -10,7 +10,7 @@ import { ModuleProgressSummary } from "@/components/learn/ModuleProgressSummary"
 import { useApp } from "@/context/AppContext";
 import { useLearning } from "@/context/LearningContext";
 import { pad2 } from "@/lib/course";
-import { learnSequence, moduleLock } from "@/lib/learn";
+import { learnSequence, moduleLock, orderedLessonRows } from "@/lib/learn";
 import { useLearnCourse } from "@/hooks/use-learn-course";
 
 export default function ModuleOverview() {
@@ -85,35 +85,36 @@ export default function ModuleOverview() {
                     <h3 className="font-medium text-foreground">{lesson.title}</h3>
                     {lesson.description && <p className="text-xs text-muted-foreground mt-1">{lesson.description}</p>}
                     <ul className="mt-2 divide-y divide-border">
-                      {lesson.topics.map((topic) => {
-                        const unlocked = !isStudent || isUnlocked(sequence, topic.id);
-                        const topicDone = completedTopics.has(topic.id);
-                        return (
-                          <li key={topic.id} className="flex items-center gap-3 py-3">
-                            {topicDone ? (
-                              <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            ) : topic.contentType === "discussion" ? (
-                              <MessagesSquare className="w-4 h-4 text-muted-foreground" aria-label="Discussion" />
-                            ) : (
-                              <span className="w-4 h-4 rounded-full border border-muted-foreground/40" />
-                            )}
-                            <span className="text-sm text-foreground flex-1 truncate">{topic.title}</span>
-                            {unlocked ? (
-                              <Link href={`/learn/${slug}/topic/${topic.id}`}>
-                                <Button size="sm" variant="outline" className="rounded-lg h-8">
-                                  <PlayCircle className="w-4 h-4 mr-1" /> Open
-                                </Button>
-                              </Link>
-                            ) : <span className="inline-flex items-center gap-1 text-xs text-muted-foreground" title="Complete the previous item to unlock"><Lock className="w-3.5 h-3.5" /> Locked</span>}
-                          </li>
-                        );
-                      })}
-                      {lesson.assignment && (() => {
-                        const a = lesson.assignment;
+                      {orderedLessonRows(lesson).map((row) => {
+                        if (row.kind === "topic") {
+                          const topic = row.topic;
+                          const unlocked = !isStudent || isUnlocked(sequence, topic.id);
+                          const topicDone = completedTopics.has(topic.id);
+                          return (
+                            <li key={topic.id} className="flex items-center gap-3 py-3">
+                              {topicDone ? (
+                                <CheckCircle2 className="w-4 h-4 text-green-600" />
+                              ) : topic.contentType === "discussion" ? (
+                                <MessagesSquare className="w-4 h-4 text-muted-foreground" aria-label="Discussion" />
+                              ) : (
+                                <span className="w-4 h-4 rounded-full border border-muted-foreground/40" />
+                              )}
+                              <span className="text-sm text-foreground flex-1 truncate">{topic.title}</span>
+                              {unlocked ? (
+                                <Link href={`/learn/${slug}/topic/${topic.id}`}>
+                                  <Button size="sm" variant="outline" className="rounded-lg h-8">
+                                    <PlayCircle className="w-4 h-4 mr-1" /> Open
+                                  </Button>
+                                </Link>
+                              ) : <span className="inline-flex items-center gap-1 text-xs text-muted-foreground" title="Complete the previous item to unlock"><Lock className="w-3.5 h-3.5" /> Locked</span>}
+                            </li>
+                          );
+                        }
+                        const a = row.assignment;
                         const aDone = done.has(a.id);
                         const unlocked = !isStudent || isUnlocked(sequence, a.id, mod.id);
                         return (
-                          <li className="flex items-center gap-3 py-3">
+                          <li key={a.id} className="flex items-center gap-3 py-3">
                             {aDone ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <NotebookPen className="w-4 h-4 text-violet-600" aria-hidden />}
                             <span className="text-sm text-foreground flex-1 min-w-0">
                               <span className="block truncate">Assignment: {a.title}</span>
@@ -129,10 +130,10 @@ export default function ModuleOverview() {
                                   {aDone ? "Review" : "Open"}
                                 </Button>
                               </Link>
-                            ) : <span className="inline-flex items-center gap-1 text-xs text-muted-foreground" title="Complete the lesson's topics first"><Lock className="w-3.5 h-3.5" /> Locked</span>}
+                            ) : <span className="inline-flex items-center gap-1 text-xs text-muted-foreground" title="Complete the previous item to unlock"><Lock className="w-3.5 h-3.5" /> Locked</span>}
                           </li>
                         );
-                      })()}
+                      })}
                     </ul>
                   </section>
                 ))}

@@ -3,14 +3,16 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Circle, Eye, EyeOff, NotebookPen, Plus, Save } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, CheckCircle2, Circle, Eye, EyeOff, NotebookPen, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TopicEditor } from "@/components/course/TopicEditor";
-import { AssessmentBuilder } from "@/components/course/AssessmentBuilder";
+import { AssessmentBuilder, NeedsContentBadge } from "@/components/course/AssessmentBuilder";
+import { createAssessment } from "@/lib/api/assessments";
+import { orderedLessonRows } from "@/lib/learn";
 import { ObjectivesEditor } from "@/components/course/ObjectivesEditor";
 import { Reorderable, move } from "@/components/course/Reorderable";
 import { useApp } from "@/context/AppContext";
@@ -20,8 +22,8 @@ import {
   createTopic,
   deleteLesson,
   deleteTopic,
+  reorderLessonItems,
   reorderLessons,
-  reorderTopics,
   updateLesson,
   updateTopic,
   updateModule,
@@ -280,80 +282,40 @@ export default function ModuleEditor() {
                             <div className="flex items-center gap-2">
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium text-foreground truncate">{lesson.title}</p>
-                                <p className="text-[11px] text-muted-foreground">{lesson.topics.length} topics</p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  {lesson.topics.length} topics · {lesson.assignments.length} assignment{lesson.assignments.length === 1 ? "" : "s"}
+                                </p>
                               </div>
                               <button onClick={() => void saveLesson(lesson)} className="text-xs text-muted-foreground hover:text-foreground">Rename</button>
                               <button onClick={() => removeLesson(lesson)} className="text-xs text-red-600 hover:underline">Delete</button>
                               <Button size="sm" variant="outline" className="h-8" onClick={() => setEditingTopic({ lessonId: lesson.id })}>
                                 <Plus className="w-3.5 h-3.5 mr-1" /> Add topic
                               </Button>
-                            </div>
-                            {lesson.topics.length > 0 && (
-                              <Reorderable
-                                items={lesson.topics}
-                                onMove={async (from, to) => {
-                                  const topics = [...lesson.topics];
-                                  const [moved] = topics.splice(from, 1);
-                                  topics.splice(to, 0, moved);
-                                  setBusy(true);
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8"
+                                onClick={async () => {
                                   try {
-                                    await reorderTopics(lesson.id, topics.map((topic) => topic.id));
+                                    const a = await createAssessment({ lessonId: lesson.id, title: "Lesson assignment" });
+                                    toast.success("Assignment added at the end of the lesson.");
+                                    setOpenAssignment(a.id);
                                     await refresh();
                                   } catch (err) {
-                                    toast.error(err instanceof Error ? err.message : "Could not reorder topics");
-                                  } finally {
-                                    setBusy(false);
+                                    toast.error(err instanceof Error ? err.message : "Could not add assignment");
                                   }
                                 }}
-                                renderItem={(topic) => (
-                                  <div className="flex items-center gap-2 py-1.5 pl-3">
-                                    <span className="text-sm text-foreground flex-1 truncate">{topic.title}</span>
-                                    <span className="text-[11px] text-muted-foreground shrink-0">
-                                      {topic.contentType.replace("_", " ")}
-                                      {topic.allowDownload ? " · downloadable" : ""}
-                                      {topic.contentType === "discussion" && topic.discussion?.required ? " · required" : ""}
-                                    </span>
-                                    <button onClick={() => setEditingTopic({ lessonId: lesson.id, topic })} className="text-xs text-muted-foreground hover:text-foreground">Edit</button>
-                                    <button onClick={async () => {
-                                      if (!confirm(`Delete topic “${topic.title}”?`)) return;
-                                      await deleteTopic(topic.id);
-                                      await refresh();
-                                    }} className="text-xs text-red-600 hover:underline">Delete</button>
-                                  </div>
-                                )}
-                              />
-                            )}
-                            <div className="mt-2 ml-3 rounded-xl border border-border bg-secondary/40 px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <NotebookPen className="w-4 h-4 text-violet-600 shrink-0" aria-hidden />
-                                <span className="text-sm text-foreground flex-1 truncate">
-                                  {lesson.assignment ? (
-                                    <>
-                                      Assignment: {lesson.assignment.title}
-                                      <span className="text-[11px] text-muted-foreground">
-                                        {" · "}
-                                        {lesson.assignment.isGraded ? "graded" : "not graded"}
-                                        {lesson.assignment.isRequired ? " · required" : " · optional"}
-                                        {lesson.assignment.isPublished ? " · published" : " · draft"}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <span className="text-muted-foreground">No assignment after this lesson</span>
-                                  )}
-                                </span>
-                                <button
-                                  onClick={() => setOpenAssignment((id) => (id === lesson.id ? null : lesson.id))}
-                                  className="text-xs text-violet-600 hover:underline shrink-0"
-                                >
-                                  {openAssignment === lesson.id ? "Close" : lesson.assignment ? "Edit assignment" : "Add assignment"}
-                                </button>
-                              </div>
-                              {openAssignment === lesson.id && (
-                                <div className="mt-3 border-t border-border pt-3">
-                                  <AssessmentBuilder lessonId={lesson.id} onChange={() => void refresh()} />
-                                </div>
-                              )}
+                              >
+                                <NotebookPen className="w-3.5 h-3.5 mr-1" /> Add assignment
+                              </Button>
                             </div>
+                            <LessonItemsEditor
+                              lesson={lesson}
+                              openAssignment={openAssignment}
+                              setOpenAssignment={setOpenAssignment}
+                              onEditTopic={(topic) => setEditingTopic({ lessonId: lesson.id, topic })}
+                              onChanged={refresh}
+                            />
                           </article>
                         )}
                       />
@@ -433,5 +395,125 @@ function PublishPanel({ module, busy, onToggle }: { module: ModuleWithLessons; b
       </ul>
       <p className="mt-2 text-[12px] text-muted-foreground">{assessmentNote}</p>
     </section>
+  );
+}
+
+/**
+ * A lesson's topics AND assignments in their real order (drafts included), with
+ * move up/down (one combined order), edit/delete, and each assignment's builder
+ * inline. Draft topics and "needs content" items are flagged (admin-only).
+ */
+function LessonItemsEditor({
+  lesson,
+  openAssignment,
+  setOpenAssignment,
+  onEditTopic,
+  onChanged,
+}: {
+  lesson: ModuleWithLessons["lessons"][number];
+  openAssignment: string | null;
+  setOpenAssignment: (id: string | null) => void;
+  onEditTopic: (topic: Topic) => void;
+  onChanged: () => Promise<void>;
+}) {
+  const rows = orderedLessonRows(lesson, true);
+  const [busy, setBusy] = useState(false);
+  if (rows.length === 0) return <p className="text-[12px] text-muted-foreground pl-3 mt-2">No topics or assignments yet.</p>;
+
+  const moveRow = async (from: number, to: number) => {
+    if (to < 0 || to >= rows.length) return;
+    const next = [...rows];
+    const [m] = next.splice(from, 1);
+    next.splice(to, 0, m);
+    setBusy(true);
+    try {
+      await reorderLessonItems(
+        lesson.id,
+        next.map((r) => (r.kind === "topic" ? { kind: "topic" as const, id: r.topic.id } : { kind: "assignment" as const, id: r.assignment.id })),
+      );
+      await onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not reorder");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <ul className="mt-2 space-y-1">
+      {rows.map((row, i) => {
+        const id = row.kind === "topic" ? row.topic.id : row.assignment.id;
+        const arrows = (
+          <span className="flex items-center shrink-0">
+            <button aria-label="Move up" disabled={busy || i === 0} onClick={() => void moveRow(i, i - 1)} className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30">
+              <ArrowUp className="w-3.5 h-3.5" />
+            </button>
+            <button aria-label="Move down" disabled={busy || i === rows.length - 1} onClick={() => void moveRow(i, i + 1)} className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30">
+              <ArrowDown className="w-3.5 h-3.5" />
+            </button>
+          </span>
+        );
+        if (row.kind === "topic") {
+          const topic = row.topic;
+          return (
+            <li key={id} className="flex items-center gap-2 py-1.5 pl-3 rounded-lg hover:bg-secondary/40">
+              {arrows}
+              <span className="text-sm text-foreground flex-1 min-w-0">
+                <span className="flex items-center gap-2 flex-wrap">
+                  <span className="truncate">{topic.title}</span>
+                  {topic.isPublished === false && <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">Draft · hidden from students</span>}
+                  {topic.contentStatus === "needs_content" && <NeedsContentBadge note={topic.adminNote} />}
+                </span>
+                {topic.adminNote && <span className="block text-[11px] text-muted-foreground whitespace-pre-line">{topic.adminNote}</span>}
+              </span>
+              <span className="text-[11px] text-muted-foreground shrink-0">
+                {topic.contentType.replace("_", " ")}
+                {topic.contentType === "discussion" && topic.discussion?.required ? " · required" : ""}
+              </span>
+              <button onClick={() => onEditTopic(topic)} className="text-xs text-muted-foreground hover:text-foreground">Edit</button>
+              <button
+                onClick={async () => {
+                  if (!confirm(`Delete topic “${topic.title}”?`)) return;
+                  await deleteTopic(topic.id);
+                  await onChanged();
+                }}
+                className="text-xs text-red-600 hover:underline"
+              >
+                Delete
+              </button>
+            </li>
+          );
+        }
+        const a = row.assignment;
+        const open = openAssignment === a.id;
+        return (
+          <li key={id} className="rounded-xl border border-border bg-secondary/40 pl-3 pr-2 py-2">
+            <div className="flex items-center gap-2">
+              {arrows}
+              <NotebookPen className="w-4 h-4 text-violet-600 shrink-0" aria-hidden />
+              <span className="text-sm text-foreground flex-1 min-w-0">
+                <span className="flex items-center gap-2 flex-wrap">
+                  <span className="truncate">Assignment: {a.title}</span>
+                  {a.contentStatus === "needs_content" && <NeedsContentBadge note={a.adminNote} />}
+                </span>
+                <span className="block text-[11px] text-muted-foreground">
+                  {a.isGraded ? "graded" : "not graded"}
+                  {a.isRequired ? " · required" : " · optional"}
+                  {a.isPublished ? " · published" : " · draft"}
+                </span>
+              </span>
+              <button onClick={() => setOpenAssignment(open ? null : a.id)} className="text-xs text-violet-600 hover:underline shrink-0">
+                {open ? "Close" : "Edit"}
+              </button>
+            </div>
+            {open && (
+              <div className="mt-3 border-t border-border pt-3">
+                <AssessmentBuilder assessmentId={a.id} onChange={() => void onChanged()} />
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }

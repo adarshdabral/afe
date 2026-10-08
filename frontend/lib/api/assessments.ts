@@ -9,6 +9,13 @@ export type QuestionType = (typeof QUESTION_TYPES)[number];
 export type AssessmentKind = "module" | "lesson";
 
 export interface Assessment {
+  /** Admin views only. */
+  importKey?: string | null;
+  contentStatus?: "complete" | "needs_content";
+  adminNote?: string;
+  gradeCategory?: string;
+  /** Lesson assignments: position among the lesson's topics (null = at the end). */
+  order?: number | null;
   id: string;
   kind: AssessmentKind;
   moduleId: string;
@@ -55,7 +62,7 @@ export type AssessmentConfig = Pick<
   | "shuffleQuestions"
   | "shuffleOptions"
   | "autoSubmitOnTimeout"
->;
+> & { contentStatus?: "complete" | "needs_content"; adminNote?: string; gradeCategory?: string; order?: number | null };
 
 export interface Question {
   id: string;
@@ -145,8 +152,14 @@ export async function getModuleAssessment(moduleId: string): Promise<Bundle> {
   const { data } = await api.get<{ data: Bundle }>(`${ADMIN}/module/${moduleId}`);
   return data.data;
 }
-export async function getLessonAssignment(lessonId: string): Promise<Bundle> {
-  const { data } = await api.get<{ data: Bundle }>(`${ADMIN}/lesson/${lessonId}`);
+/** A lesson's assignments (several allowed, in position order). */
+export async function getLessonAssignments(lessonId: string): Promise<Bundle[]> {
+  const { data } = await api.get<{ data: Bundle & { assignments: Bundle[] } }>(`${ADMIN}/lesson/${lessonId}`);
+  return data.data.assignments ?? [];
+}
+/** One assessment with its questions (answer keys included — admin only). */
+export async function getAdminAssessment(id: string): Promise<Bundle> {
+  const { data } = await api.get<{ data: Bundle }>(`${ADMIN}/${id}`);
   return data.data;
 }
 export async function createAssessment(input: CreateAssessmentInput): Promise<Assessment> {

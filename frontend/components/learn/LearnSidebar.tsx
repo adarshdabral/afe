@@ -6,7 +6,7 @@ import { useApp } from "@/context/AppContext";
 import { useLearning } from "@/context/LearningContext";
 import type { CourseTree, SectionKind } from "@/lib/api/courses";
 import { pad2 } from "@/lib/course";
-import { learnSequence, moduleLock, type SequenceItem } from "@/lib/learn";
+import { learnSequence, moduleLock, orderedLessonRows, type SequenceItem } from "@/lib/learn";
 
 /** The ordered learning items of a tree (topics → assignments → module assessments). */
 export function topicSequence(tree: CourseTree): SequenceItem[] {
@@ -113,27 +113,28 @@ export function LearnSidebar({
                   <div key={l.id} className="mt-1">
                     <p className="px-2.5 pt-1 text-[12px] font-medium text-foreground/80 truncate">{l.title}</p>
                     <ul className="mt-0.5 space-y-0.5">
-                      {l.topics.map((t) => (
-                        <li key={t.id}>
-                          <Row
-                            id={t.id}
-                            moduleId={m.id}
-                            href={`/learn/${tree.slug}/topic/${t.id}`}
-                            label={t.title}
-                            icon={t.contentType === "discussion" ? MessagesSquare : Circle}
-                          />
-                        </li>
-                      ))}
-                      {l.assignment && (
-                        <li>
-                          <Row
-                            id={l.assignment.id}
-                            moduleId={m.id}
-                            href={`/learn/${tree.slug}/assessment/${l.assignment.id}`}
-                            label={`Assignment${l.assignment.isGraded ? " (graded)" : ""}: ${l.assignment.title}`}
-                            icon={NotebookPen}
-                          />
-                        </li>
+                      {orderedLessonRows(l).map((row) =>
+                        row.kind === "topic" ? (
+                          <li key={row.topic.id}>
+                            <Row
+                              id={row.topic.id}
+                              moduleId={m.id}
+                              href={`/learn/${tree.slug}/topic/${row.topic.id}`}
+                              label={row.topic.title}
+                              icon={row.topic.contentType === "discussion" ? MessagesSquare : Circle}
+                            />
+                          </li>
+                        ) : (
+                          <li key={row.assignment.id}>
+                            <Row
+                              id={row.assignment.id}
+                              moduleId={m.id}
+                              href={`/learn/${tree.slug}/assessment/${row.assignment.id}`}
+                              label={`Assignment${row.assignment.isGraded ? " (graded)" : ""}: ${row.assignment.title}`}
+                              icon={NotebookPen}
+                            />
+                          </li>
+                        ),
                       )}
                     </ul>
                   </div>

@@ -20,6 +20,12 @@ export interface OfferedBy {
   url: string;
 }
 
+/** One assessment category and its share of the course grade (percent). */
+export interface GradingWeight {
+  category: string;
+  weight: number;
+}
+
 export interface CourseView {
   id: string;
   title: string;
@@ -42,6 +48,12 @@ export interface CourseView {
   /** "Tools you'll learn" chips. */
   tools: string[];
   offeredBy: OfferedBy;
+  /** Assessment categories and their weights (shown on the course page). Items are
+   *  tagged with a category (Topic/Assessment.gradeCategory). */
+  gradingWeights: GradingWeight[];
+  /** Admin-only: import source key + notes (e.g. source inconsistencies). */
+  importKey: string | null;
+  adminNote: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -71,12 +83,18 @@ const courseSchema = new Schema(
       description: { type: String, default: "" },
       url: { type: String, default: "" },
     },
+    gradingWeights: { type: [{ category: String, weight: Number, _id: false }], default: [] },
+    importKey: { type: String, default: null },
+    adminNote: { type: String, default: "" },
     createdBy: { type: String, required: true },
     // Soft delete — a non-null timestamp hides the course everywhere.
     deletedAt: { type: Date, default: null, index: true },
   },
   { timestamps: true },
 );
+
+// One course per import source key (only for courses that have one).
+courseSchema.index({ importKey: 1 }, { unique: true, partialFilterExpression: { importKey: { $type: "string" } } });
 
 export type CourseSchemaType = InferSchemaType<typeof courseSchema>;
 export type CourseDoc = HydratedDocument<CourseSchemaType>;
@@ -111,6 +129,9 @@ export function toCourse(doc: CourseDoc): CourseView {
       description: doc.offeredBy?.description ?? "",
       url: doc.offeredBy?.url ?? "",
     },
+    gradingWeights: (doc.gradingWeights ?? []).map((w) => ({ category: w.category ?? "", weight: w.weight ?? 0 })),
+    importKey: doc.importKey ?? null,
+    adminNote: doc.adminNote ?? "",
     createdBy: doc.createdBy,
     createdAt: ts.createdAt?.toISOString() ?? new Date(0).toISOString(),
     updatedAt: ts.updatedAt?.toISOString() ?? new Date(0).toISOString(),

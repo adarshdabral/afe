@@ -13,6 +13,7 @@ import { CourseHighlights, InstructorBadge } from "./CourseHighlights";
 import { CourseCta } from "./CourseCta";
 import { CurriculumPreview } from "./CurriculumPreview";
 import {
+  AssessmentWeights,
   CertificateSection,
   CourseFacts,
   courseFaq,
@@ -193,6 +194,11 @@ export function CourseDetailView({ slug, initial }: { slug: string; initial: Cou
               </div>
             </section>
 
+            {course.gradingWeights.length > 0 && (
+              <div className="border-t border-border">
+                <AssessmentWeights course={course} />
+              </div>
+            )}
             <div className="border-t border-border">
               <InstructorSection course={course} />
             </div>

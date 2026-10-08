@@ -5,6 +5,7 @@
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
 import { invalidateOnWrite } from "../cache/content-cache";
+import { indexImportKey } from "./importFields";
 
 export const QUESTION_TYPES = ["mcq", "reflection", "scenario"] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
@@ -20,10 +21,12 @@ export interface QuestionView {
   explanation: string;
   marks: number;
   order: number;
+  /** Stable id from an import source (admin-only), e.g. "1.1.6#1". */
+  importKey: string | null;
 }
 
 /** Student-facing question (answer key removed). */
-export type QuestionPublicView = Omit<QuestionView, "correctAnswer" | "explanation">;
+export type QuestionPublicView = Omit<QuestionView, "correctAnswer" | "explanation" | "importKey">;
 
 const questionSchema = new Schema(
   {
@@ -36,9 +39,12 @@ const questionSchema = new Schema(
     explanation: { type: String, default: "" },
     marks: { type: Number, default: 1, min: 0 },
     order: { type: Number, required: true, default: 0, index: true },
+    importKey: { type: String, default: null },
   },
   { timestamps: true },
 );
+
+indexImportKey(questionSchema);
 
 export type QuestionSchemaType = InferSchemaType<typeof questionSchema>;
 export type QuestionDoc = HydratedDocument<QuestionSchemaType>;
@@ -58,13 +64,15 @@ export function toQuestion(doc: QuestionDoc): QuestionView {
     explanation: doc.explanation ?? "",
     marks: doc.marks ?? 1,
     order: doc.order ?? 0,
+    importKey: doc.importKey ?? null,
   };
 }
 
 /** Strip the answer key for student consumption. */
 export function toPublicQuestion(doc: QuestionDoc): QuestionPublicView {
-  const { correctAnswer: _c, explanation: _e, ...rest } = toQuestion(doc);
+  const { correctAnswer: _c, explanation: _e, importKey: _k, ...rest } = toQuestion(doc);
   void _c;
   void _e;
+  void _k;
   return rest;
 }

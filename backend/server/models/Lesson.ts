@@ -6,6 +6,7 @@
 
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
+import { indexImportKey } from "./importFields";
 import { invalidateOnWrite } from "../cache/content-cache";
 
 export interface LessonView {
@@ -15,6 +16,8 @@ export interface LessonView {
   title: string;
   description: string;
   order: number;
+  /** Stable id from an import source (admin-only). */
+  importKey: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,12 +29,14 @@ const lessonSchema = new Schema(
     title: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
     order: { type: Number, required: true, default: 0, index: true },
+    importKey: { type: String, default: null },
   },
   { timestamps: true },
 );
 
 // Course tree + progress sequence read a whole course sorted by order.
 lessonSchema.index({ courseId: 1, order: 1 });
+indexImportKey(lessonSchema);
 
 export type LessonSchemaType = InferSchemaType<typeof lessonSchema>;
 export type LessonDoc = HydratedDocument<LessonSchemaType>;
@@ -49,6 +54,7 @@ export function toLesson(doc: LessonDoc): LessonView {
     title: doc.title,
     description: doc.description ?? "",
     order: doc.order ?? 0,
+    importKey: doc.importKey ?? null,
     createdAt: ts.createdAt?.toISOString() ?? new Date(0).toISOString(),
     updatedAt: ts.updatedAt?.toISOString() ?? new Date(0).toISOString(),
   };

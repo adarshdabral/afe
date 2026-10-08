@@ -8,9 +8,10 @@
 
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
+import { importFieldsSchema, indexImportKey, toImportFields, type ImportFieldsView } from "./importFields";
 import { invalidateOnWrite } from "../cache/content-cache";
 
-export interface ModuleView {
+export interface ModuleView extends ImportFieldsView {
   id: string;
   courseId: string;
   title: string;
@@ -33,12 +34,14 @@ const moduleSchema = new Schema(
     order: { type: Number, required: true, default: 0, index: true },
     estimatedDurationMinutes: { type: Number, default: 0 },
     isPublished: { type: Boolean, default: false },
+    ...importFieldsSchema,
   },
   { timestamps: true },
 );
 
 // Course tree + progress sequence read a whole course sorted by order.
 moduleSchema.index({ courseId: 1, order: 1 });
+indexImportKey(moduleSchema);
 
 export type ModuleSchemaType = InferSchemaType<typeof moduleSchema>;
 export type ModuleDoc = HydratedDocument<ModuleSchemaType>;
@@ -58,6 +61,7 @@ export function toModule(doc: ModuleDoc): ModuleView {
     order: doc.order ?? 0,
     estimatedDurationMinutes: doc.estimatedDurationMinutes ?? 0,
     isPublished: doc.isPublished === true,
+    ...toImportFields(doc),
     createdAt: ts.createdAt?.toISOString() ?? new Date(0).toISOString(),
     updatedAt: ts.updatedAt?.toISOString() ?? new Date(0).toISOString(),
   };

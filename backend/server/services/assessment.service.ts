@@ -27,6 +27,11 @@ import { Module } from "../models/Module";
 import { Lesson } from "../models/Lesson";
 import { HttpError } from "../http/errors";
 import { cachedContent } from "../cache/content-cache";
+import { nextLessonPosition } from "./topic.service";
+import { withoutAdminFields } from "../models/importFields";
+
+/** What students/teachers may see of an assessment (no import keys, notes or categories). */
+const publicAssessment = (doc: AssessmentDoc) => withoutAdminFields(toAssessment(doc)) as AssessmentView;
 
 /** Network slack allowed after the deadline for the client's own auto-submit. */
 export const GRACE_MS = 5_000;
@@ -46,6 +51,11 @@ export interface AssessmentConfigInput {
   shuffleQuestions?: boolean;
   shuffleOptions?: boolean;
   autoSubmitOnTimeout?: boolean;
+  /** Lesson assignments: position among the lesson's topics (null = at the end). */
+  order?: number | null;
+  gradeCategory?: string;
+  contentStatus?: "complete" | "needs_content";
+  adminNote?: string;
 }
 
 export interface CreateAssessmentInput extends AssessmentConfigInput {
@@ -68,6 +78,10 @@ const CONFIG_KEYS = [
   "shuffleQuestions",
   "shuffleOptions",
   "autoSubmitOnTimeout",
+  "order",
+  "gradeCategory",
+  "contentStatus",
+  "adminNote",
 ] as const;
 
 const toDate = (v: string | null | undefined) => (v ? new Date(v) : null);
@@ -77,9 +91,10 @@ export async function moduleHasAssessment(moduleId: string): Promise<boolean> {
   return !!(await Assessment.exists({ moduleId, ...MODULE_KIND }));
 }
 
-/** True if the lesson already has its assignment. */
-export async function lessonHasAssignment(lessonId: string): Promise<boolean> {
-  return !!(await Assessment.exists({ lessonId, kind: "lesson" }));
+/** A lesson's assignments, in position order (several are allowed). */
+export async function getAssignmentsForLesson(lessonId: string): Promise<AssessmentView[]> {
+  const docs = await Assessment.find({ lessonId, kind: "lesson" }).sort({ order: 1, createdAt: 1 });
+  return docs.map(toAssessment);
 }
 
 /** Create a module assessment (moduleId) or a lesson assignment (lessonId). Null if the parent doesn't exist. */
@@ -101,6 +116,8 @@ export async function createAssessment(input: CreateAssessmentInput): Promise<As
     ...Object.fromEntries(CONFIG_KEYS.filter((k) => k !== "isGraded" && input[k] !== undefined).map((k) => [k, input[k]])),
     availableFrom: toDate(input.availableFrom),
     availableUntil: toDate(input.availableUntil),
+    // A new lesson assignment goes after the lesson's last item unless positioned.
+    ...(parent.kind === "lesson" && input.order === undefined ? { order: await nextLessonPosition(parent.lessonId!) } : {}),
   });
   return toAssessment(doc);
 }
@@ -115,8 +132,9 @@ export async function getAssessmentForModule(moduleId: string): Promise<Assessme
   return doc ? toAssessment(doc) : null;
 }
 
+/** The lesson's first assignment (back-compat for single-assignment callers). */
 export async function getAssessmentForLesson(lessonId: string): Promise<AssessmentView | null> {
-  const doc = await Assessment.findOne({ lessonId, kind: "lesson" });
+  const doc = await Assessment.findOne({ lessonId, kind: "lesson" }).sort({ order: 1, createdAt: 1 });
   return doc ? toAssessment(doc) : null;
 }
 
@@ -475,7 +493,7 @@ export async function getStudentAssessment(
   const timed = (assessment.timeLimitMinutes ?? 0) > 0;
   if (!studentId) {
     return {
-      value: { assessment: toAssessment(assessment), questions: await questionsFor(assessment, null), state: await stateFor(assessment, "", null) },
+      value: { assessment: publicAssessment(assessment), questions: await questionsFor(assessment, null), state: await stateFor(assessment, "", null) },
       expired: [],
     };
   }
@@ -483,7 +501,7 @@ export async function getStudentAssessment(
   const state = await stateFor(assessment, studentId, active);
   // A timed assessment's questions are only revealed once its clock is running.
   const questions = timed && !active ? [] : await questionsFor(assessment, active);
-  return { value: { assessment: toAssessment(assessment), questions, state }, expired };
+  return { value: { assessment: publicAssessment(assessment), questions, state }, expired };
 }
 
 /** Start (or resume) an attempt. Timed attempts get their server-side deadline here. */
@@ -521,7 +539,7 @@ export async function startAttempt(assessmentId: string, studentId: string): Pro
     }
   }
   const state = await stateFor(assessment, studentId, active);
-  return { value: { assessment: toAssessment(assessment), questions: await questionsFor(assessment, active), state }, expired };
+  return { value: { assessment: publicAssessment(assessment), questions: await questionsFor(assessment, active), state }, expired };
 }
 
 export type DraftOutcome =

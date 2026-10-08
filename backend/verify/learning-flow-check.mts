@@ -44,6 +44,7 @@ function client() {
     post: (p: string, b?: unknown) => req("POST", p, b),
     patch: (p: string, b?: unknown) => req("PATCH", p, b),
     put: (p: string, b?: unknown) => req("PUT", p, b),
+    del: (p: string) => req("DELETE", p),
     login: (l: string, pw: string) => req("POST", "/auth/login", { login: l, password: pw }),
   };
 }
@@ -83,7 +84,7 @@ console.log("[Learning flow checks]");
 {
   const col = db.db().collection("assessments");
   const idx = await col.indexes();
-  check("migration: legacy unique moduleId index replaced", !idx.some((i) => i.name === "moduleId_1" && i.unique) && idx.some((i) => i.name === "module_assessment_unique") && idx.some((i) => i.name === "lesson_assignment_unique"), idx.map((i) => [i.name, !!i.unique]));
+  check("migration: legacy unique moduleId index replaced", !idx.some((i) => i.name === "moduleId_1" && i.unique) && idx.some((i) => i.name === "module_assessment_unique") && !idx.some((i) => i.name === "lesson_assignment_unique"), idx.map((i) => [i.name, !!i.unique]));
   const legacy = await col.findOne({ title: "Legacy quiz" });
   check("migration: legacy assessment marked as a module assessment", legacy?.kind === "module" && legacy?.lessonId === null, legacy);
 }
@@ -120,7 +121,12 @@ const a1r = await admin.post("/admin/assessments", { lessonId: L1, title: "L1 as
 const A1 = a1r.json?.data?.id;
 check("create lesson assignment → 201, kind lesson", a1r.status === 201 && a1r.json.data.kind === "lesson" && a1r.json.data.lessonId === L1 && a1r.json.data.moduleId === m1, a1r.json);
 check("assignments are non-graded by default", a1r.json?.data?.isGraded === false && a1r.json?.data?.isRequired === true);
-check("second assignment on the same lesson → 409", (await admin.post("/admin/assessments", { lessonId: L1, title: "dup" })).status === 409);
+{
+  // Lessons may hold several assignments (each positioned among the topics).
+  const second = await admin.post("/admin/assessments", { lessonId: L1, title: "Second assignment" });
+  check("a second assignment on the same lesson → 201, placed after the lesson's items", second.status === 201 && typeof second.json?.data?.order === "number", second.json);
+  await admin.del(`/admin/assessments/${second.json?.data?.id}`);
+}
 check("moduleId AND lessonId together → 400", (await admin.post("/admin/assessments", { lessonId: L2, moduleId: m1, title: "x" })).status === 400);
 check("publish assignment without questions → 409", (await admin.post(`/admin/assessments/${A1}/publish`)).status === 409);
 await admin.post(`/admin/assessments/${A1}/questions`, { type: "reflection", question: "Reflect.", marks: 2 });
@@ -149,7 +155,7 @@ const student = await newStudent("a");
   const t = (await student.get(`/courses/${SLUG}`)).json?.data;
   const lessons = t?.modules?.flatMap((m: any) => m.lessons) ?? [];
   const topics = lessons.flatMap((l: any) => l.topics);
-  check("tree: L1 carries its assignment summary", lessons.find((l: any) => l.id === L1)?.assignment?.id === A1);
+  check("tree: L1 carries its assignment summary", lessons.find((l: any) => l.id === L1)?.assignments?.[0]?.id === A1);
   check("learner tree has no topic text/media/discussion text", topics.every((x: any) => !x.content && !x.videoUrl && !x.documentUrl && !x.discussion.prompt), topics.map((x: any) => [x.title, x.content, x.videoUrl]));
   check("learner tree keeps hasVideo", topics.find((x: any) => x.id === T3)?.hasVideo === true);
   const staff = (await admin.get(`/courses/${SLUG}`)).json?.data;

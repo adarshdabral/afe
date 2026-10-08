@@ -46,6 +46,8 @@ npm run start        # next start (respects $PORT — Render sets it)
 npm run typecheck    # tsc --noEmit
 npm run seed         # demo users + standardize content to the single "Demystifying AI for Everyone" course
 npm run seed:flagship # same, but leaves every other course untouched (--keep-others)
+npm run import:course -- --dry-run   # plan the import of server/data/imports/demystifying-ai-five-week.json (no writes)
+npm run import:course                # idempotent, additive import into the flagship (see "Course import" below)
 
 # --- frontend/ (UI, http://localhost:3000) — config in frontend/.env.local ---
 npm install
@@ -93,6 +95,7 @@ npx tsx verify/reviews-check.mts         # reviews & ratings
 npx tsx verify/course-overview-check.mts # course-page metadata (skills/tools/offered by) + per-student module "left" summary
 npx tsx verify/content-cache-check.mts   # content cache: every admin write type is visible on the next read; ?view=outline
 npx tsx verify/learning-flow-check.mts   # lesson assignments, sequence/module locks, server-timed attempts, discussions, downloads, index migration
+npx tsx verify/course-import-check.mts   # course importer: counts/order/answers vs the JSON, idempotent re-run, merge into hand-built course, no student leaks
 npx tsx verify/perf-bench.mts            # NOT pass/fail: latency + DB round trips per hot endpoint (DB_RTT_MS=50 default)
 npx tsx verify/feature-check.mts         # seed identities / self-registration rules
 npx tsx verify/branding-check.mts        # logo: public read, admin-only write, URL validation, SVG CSP
@@ -243,6 +246,24 @@ Consistent per-feature layering under `backend/` — follow it for new features:
   with `MODULE_KIND` (legacy docs have no `kind`); `migrations/assessment-kinds.ts`
   (startup) backfills `kind` and swaps the old unique `moduleId_1` index for partial
   unique indexes. Non-graded: any submission counts as `passed`.
+- **Course import** (`server/seed/course-import.ts`, CLI `import-course.ts`): imports a
+  structured JSON course plan into the existing CMS models. Idempotent via `importKey`
+  (source ids such as `1.1.6`, `week-2-graded`, `1.1.6#3` for questions; unique per
+  course — `models/importFields.ts`). First run MATCHES hand-built content (modules by
+  week/title, lessons by topic overlap, topics by normalised title, questions by
+  wording containment) and only stamps keys; never edits existing text/media/questions
+  or reorders. New items go to their source position (fractional `order`); new topics
+  in a published module and every shell are DRAFTS (`Topic.isPublished=false`); new
+  assessments are unpublished. Missing source content → `contentStatus:
+  "needs_content"` + `adminNote` (admin-only; stripped from student/teacher views by
+  `withoutAdminFields`). Activities/projects become `activity` topics (no submission
+  feature yet). `--dry-run` reports exactly what a real run would do.
+- **Several assignments per lesson**: lesson assignments carry `order` on the same scale
+  as `Topic.order`; `lessonItems()` (shared sequence) interleaves them. Admin reorders a
+  lesson's combined items via `POST /api/admin/courses/lessons/:id/items/reorder`.
+  Course trees expose `lessons[].assignments[]` (ordered). Draft topics are admin-only.
+- **Grading weights**: `Course.gradingWeights` (shown on the course page) + per-item
+  `gradeCategory` (admin-only). Completion stays pass/fail; no weighted score is computed.
 - **Learning sequence** (`backend/server/shared/sequence.ts` ⇄ `frontend/lib/sequence.ts`,
   **identical — change both**): per module, each lesson's topics → its required
   assignment → the module assessment. An item opens only when the previous one is done,

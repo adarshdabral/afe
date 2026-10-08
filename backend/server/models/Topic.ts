@@ -7,6 +7,7 @@
 
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
+import { importFieldsSchema, indexImportKey, toImportFields, type ImportFieldsView } from "./importFields";
 import { invalidateOnWrite } from "../cache/content-cache";
 import { contentFieldsSchema, toContentFields, type ContentFieldsView } from "./content";
 
@@ -26,7 +27,7 @@ export interface DiscussionView {
 
 export const EMPTY_DISCUSSION: DiscussionView = { prompt: "", instructions: "", questions: [], relatedTopicId: null, required: false };
 
-export interface TopicView extends ContentFieldsView {
+export interface TopicView extends ContentFieldsView, ImportFieldsView {
   id: string;
   lessonId: string;
   moduleId: string;
@@ -41,6 +42,10 @@ export interface TopicView extends ContentFieldsView {
   /** True when the topic has a video (kept even when media URLs are withheld). */
   hasVideo: boolean;
   discussion: DiscussionView;
+  /** Shown to students (and part of their learning sequence). Drafts are admin-only. */
+  isPublished: boolean;
+  /** Grading category this item counts towards (Course.gradingWeights; admin-only). */
+  gradeCategory: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,6 +62,9 @@ const topicSchema = new Schema(
     estimatedDurationMinutes: { type: Number, default: 0 },
     isPreview: { type: Boolean, default: false },
     allowDownload: { type: Boolean, default: true }, // admins can switch it off per topic
+    isPublished: { type: Boolean, default: true }, // existing topics stay visible
+    gradeCategory: { type: String, default: "" },
+    ...importFieldsSchema,
     discussion: {
       prompt: { type: String, default: "" },
       instructions: { type: String, default: "" },
@@ -70,6 +78,8 @@ const topicSchema = new Schema(
 
 // Course tree + progress sequence read a whole course sorted by order.
 topicSchema.index({ courseId: 1, order: 1 });
+
+indexImportKey(topicSchema);
 
 export type TopicSchemaType = InferSchemaType<typeof topicSchema>;
 export type TopicDoc = HydratedDocument<TopicSchemaType>;
@@ -92,6 +102,9 @@ export function toTopic(doc: TopicDoc): TopicView {
     estimatedDurationMinutes: doc.estimatedDurationMinutes ?? 0,
     isPreview: doc.isPreview === true,
     allowDownload: doc.allowDownload !== false,
+    isPublished: doc.isPublished !== false,
+    gradeCategory: doc.gradeCategory ?? "",
+    ...toImportFields(doc),
     hasVideo: !!doc.videoUrl,
     discussion: {
       prompt: doc.discussion?.prompt ?? "",

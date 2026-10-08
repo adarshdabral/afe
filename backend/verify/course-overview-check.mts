@@ -121,7 +121,7 @@ const eq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 // ── Per-student, live (sequence: T1 → graded assignment A → T2 → T3 → module assessment)
 {
   const s = await summary(alice, M1);
-  check("tree lists the lesson assignment", M1?.lessons?.[0]?.assignment?.id === A && M1.lessons[0].assignment.isGraded === true, M1?.lessons?.[0]?.assignment);
+  check("tree lists the lesson assignment", M1?.lessons?.[0]?.assignments?.[0]?.id === A && M1.lessons[0].assignments[0].isGraded === true, M1?.lessons?.[0]?.assignments);
   check("fresh student: 2 graded · 3 lessons · 36m left", eq(s, { graded: 2, lessons: 3, minutes: 36 }), s);
 }
 await alice.post(`/progress/${courseId}/topics/${T1}/complete`);

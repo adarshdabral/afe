@@ -3,7 +3,8 @@
 // lesson assignments. This migration (idempotent, run at startup):
 //   1. marks every assessment without a `kind` as a module assessment, and
 //   2. replaces the old unique `moduleId_1` index with the schema's partial unique
-//      indexes (one module assessment per module, one assignment per lesson).
+//      index (one module assessment per module), and drops the later
+//      one-assignment-per-lesson index (lessons may hold several assignments).
 // Existing assessments, questions, attempts and progress are untouched.
 
 import { Assessment } from "../models/Assessment";
@@ -20,6 +21,11 @@ export async function migrateAssessmentKinds(): Promise<void> {
   if (legacy) {
     await Assessment.collection.dropIndex("moduleId_1");
     console.log("[migrate] dropped the legacy unique index assessments.moduleId_1");
+  }
+  // Lessons may now hold several assignments: drop the one-per-lesson index.
+  if (indexes.some((i) => i.name === "lesson_assignment_unique")) {
+    await Assessment.collection.dropIndex("lesson_assignment_unique");
+    console.log("[migrate] dropped assessments.lesson_assignment_unique (several assignments per lesson)");
   }
   // (Re)create the schema's indexes — the non-unique moduleId_1 and the partial
   // unique ones (a no-op when they already exist).

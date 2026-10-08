@@ -10,6 +10,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { updateCourse, type Course } from "@/lib/api/courses";
 import { uploadFile, uploadErrorMessage } from "@/lib/api/uploads";
 
+/** "Category | 40" per line → [{category, weight}] (lines without a number are skipped). */
+function parseWeights(text: string): { category: string; weight: number }[] {
+  return text
+    .split("\n")
+    .map((l) => l.split("|"))
+    .filter((p) => p.length >= 2 && p[0].trim() && !Number.isNaN(Number(p[1].replace("%", "").trim())))
+    .map((p) => ({ category: p[0].trim(), weight: Number(p[1].replace("%", "").trim()) }));
+}
+
 /** One chip per line (commas also split), trimmed, blanks and duplicates dropped. */
 function parseChips(text: string): string[] {
   return [...new Set(text.split(/[\n,]/).map((s) => s.trim()).filter(Boolean))];
@@ -25,6 +34,7 @@ function formFrom(c: Course) {
     offeredDescription: c.offeredBy?.description ?? "",
     offeredUrl: c.offeredBy?.url ?? "",
     offeredLogoUrl: c.offeredBy?.logoUrl ?? "",
+    weights: (c.gradingWeights ?? []).map((w) => `${w.category} | ${w.weight}`).join("\n"),
   };
 }
 
@@ -46,6 +56,7 @@ export function CourseDetailsEditor({ course, onSaved }: { course: Course; onSav
         instructorTitle: form.instructorTitle.trim(),
         skills: parseChips(form.skills),
         tools: parseChips(form.tools),
+        gradingWeights: parseWeights(form.weights),
         offeredBy: {
           name: form.offeredName.trim(),
           description: form.offeredDescription.trim(),
@@ -85,7 +96,7 @@ export function CourseDetailsEditor({ course, onSaved }: { course: Course; onSav
       >
         <span>
           <span className="block text-sm font-semibold text-foreground">Course page details</span>
-          <span className="block text-xs text-muted-foreground">Instructor, skills, tools and &ldquo;Offered by&rdquo;</span>
+          <span className="block text-xs text-muted-foreground">Instructor, skills, tools, &ldquo;Offered by&rdquo; and assessment weights</span>
         </span>
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
       </button>
@@ -145,6 +156,20 @@ export function CourseDetailsEditor({ course, onSaved }: { course: Course; onSav
                 />
               </label>
             </div>
+          </div>
+          <div className="space-y-1.5 md:col-span-2">
+            <Label htmlFor="cd-weights">How students are assessed — one per line: category | weight %</Label>
+            <Textarea
+              id="cd-weights"
+              rows={4}
+              value={form.weights}
+              onChange={(e) => set("weights", e.target.value)}
+              placeholder={"Weekly quizzes | 40\nFinal project | 30"}
+            />
+            {(() => {
+              const total = parseWeights(form.weights).reduce((n, w) => n + w.weight, 0);
+              return total > 0 && total !== 100 ? <p className="text-xs text-amber-700 dark:text-amber-400">Weights add up to {total}% (not 100%).</p> : null;
+            })()}
           </div>
           <div className="md:col-span-2 flex justify-end">
             <Button onClick={save} disabled={busy || uploading} className="rounded-xl bg-violet-600 hover:bg-violet-700 text-white">

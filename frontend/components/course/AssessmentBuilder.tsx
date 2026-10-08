@@ -11,7 +11,8 @@ import {
   createAssessment,
   deleteAssessment,
   deleteQuestion,
-  getLessonAssignment,
+  getAdminAssessment,
+  getLessonAssignments,
   getModuleAssessment,
   publishAssessment,
   reorderQuestions,
@@ -37,13 +38,19 @@ const areaClass = "mt-1 w-full rounded-xl border border-input bg-card px-3 py-2 
 export function AssessmentBuilder({
   moduleId,
   lessonId,
+  assessmentId,
   onChange,
 }: {
+  /** The module's (one) assessment. */
   moduleId?: string;
+  /** Legacy: a lesson's first assignment. Prefer `assessmentId`. */
   lessonId?: string;
+  /** One specific assessment/assignment (lessons can have several). */
+  assessmentId?: string;
   onChange?: () => void;
 }) {
-  const isAssignment = !!lessonId;
+  const [kind, setKind] = useState<"module" | "lesson">(lessonId || assessmentId ? "lesson" : "module");
+  const isAssignment = kind === "lesson";
   const noun = isAssignment ? "assignment" : "assessment";
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -53,16 +60,22 @@ export function AssessmentBuilder({
 
   const refresh = () => {
     setLoading(true);
-    (lessonId ? getLessonAssignment(lessonId) : getModuleAssessment(moduleId!))
+    const load = assessmentId
+      ? getAdminAssessment(assessmentId)
+      : lessonId
+        ? getLessonAssignments(lessonId).then((all) => all[0] ?? { assessment: null, questions: [] })
+        : getModuleAssessment(moduleId!);
+    load
       .then((d) => {
         setAssessment(d.assessment);
         setQuestions(d.questions);
+        if (d.assessment) setKind(d.assessment.kind);
       })
       .catch(() => toast.error(`Could not load the ${noun}`))
       .finally(() => setLoading(false));
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(refresh, [moduleId, lessonId]);
+  useEffect(refresh, [moduleId, lessonId, assessmentId]);
 
   const run = async (fn: () => Promise<unknown>, msg: string) => {
     setBusy(true);
@@ -117,7 +130,11 @@ export function AssessmentBuilder({
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
-          <p className="font-medium text-foreground">{assessment.title}</p>
+          <p className="font-medium text-foreground flex items-center gap-2 flex-wrap">
+            {assessment.title}
+            {assessment.contentStatus === "needs_content" && <NeedsContentBadge />}
+            {assessment.importKey && <span className="text-[11px] font-normal text-muted-foreground">#{assessment.importKey}</span>}
+          </p>
           <p className="text-xs text-muted-foreground">
             {assessment.isGraded ? `Graded · pass ${assessment.passingScore}%` : "Not graded"}
             {assessment.timeLimitMinutes > 0 ? ` · ${assessment.timeLimitMinutes} min` : " · untimed"}
@@ -256,6 +273,9 @@ function SettingsForm({
     availableUntil: toLocalInput(assessment.availableUntil),
     shuffleQuestions: assessment.shuffleQuestions,
     shuffleOptions: assessment.shuffleOptions,
+    contentComplete: assessment.contentStatus !== "needs_content",
+    adminNote: assessment.adminNote ?? "",
+    gradeCategory: assessment.gradeCategory ?? "",
   });
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
   const num = (v: string) => Math.max(0, Math.round(Number(v) || 0));
@@ -266,15 +286,17 @@ function SettingsForm({
     if (f.availableFrom && f.availableUntil && new Date(f.availableFrom) >= new Date(f.availableUntil)) {
       return toast.error("The availability end must be after its start");
     }
+    const { contentComplete, ...rest } = f;
     onSave({
-      ...f,
+      ...rest,
       title: f.title.trim(),
       availableFrom: fromLocalInput(f.availableFrom),
       availableUntil: fromLocalInput(f.availableUntil),
+      contentStatus: contentComplete ? "complete" : "needs_content",
     });
   };
 
-  const Check = ({ k, label, hint }: { k: "isGraded" | "isRequired" | "autoSubmitOnTimeout" | "shuffleQuestions" | "shuffleOptions"; label: string; hint?: string }) => (
+  const Check = ({ k, label, hint }: { k: "isGraded" | "isRequired" | "autoSubmitOnTimeout" | "shuffleQuestions" | "shuffleOptions" | "contentComplete"; label: string; hint?: string }) => (
     <label className="flex items-start gap-2 text-sm text-foreground">
       <input type="checkbox" checked={f[k]} onChange={(e) => set(k, e.target.checked)} className="h-4 w-4 mt-0.5 accent-violet-600" />
       <span>
@@ -353,6 +375,19 @@ function SettingsForm({
         <div className="grid gap-3 sm:grid-cols-2">
           <Check k="shuffleQuestions" label="Shuffle question order" hint="A new order per attempt (kept on resume)." />
           <Check k="shuffleOptions" label="Shuffle answer options" />
+        </div>
+
+        <div className="rounded-xl border border-dashed border-amber-500/40 bg-amber-500/[0.04] p-3 space-y-3">
+          <p className="text-xs font-semibold text-foreground">Admin only — never shown to students</p>
+          <Check k="contentComplete" label="Content complete" hint="Untick to flag this as needing content (e.g. imported without its question bank or answer key)." />
+          <div>
+            <Label className="text-xs">Grading category</Label>
+            <Input value={f.gradeCategory} onChange={(e) => set("gradeCategory", e.target.value)} placeholder="e.g. Weekly quizzes, Weeks 1–4" className="rounded-xl h-10 mt-1" />
+          </div>
+          <div>
+            <Label className="text-xs">Admin note</Label>
+            <textarea value={f.adminNote} onChange={(e) => set("adminNote", e.target.value)} rows={3} className={areaClass} />
+          </div>
         </div>
 
         <Button size="sm" disabled={busy} onClick={save} className="rounded-xl bg-violet-600 hover:bg-violet-700 text-white">
@@ -551,5 +586,17 @@ function QuestionForm({
         )}
       </div>
     </div>
+  );
+}
+
+/** "Needs content" flag for admins (imported shells, missing answer keys…). */
+export function NeedsContentBadge({ note }: { note?: string }) {
+  return (
+    <span
+      title={note || "This item was imported without some of its content — add it before publishing."}
+      className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400"
+    >
+      Needs content
+    </span>
   );
 }

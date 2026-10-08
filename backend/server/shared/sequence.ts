@@ -3,7 +3,8 @@
 // frontend/lib/sequence.ts (like access.ts): if you change one, change the other.
 //
 // Per module, in order:
-//   for each lesson: its topics (in order), then its REQUIRED assignment (if any)
+//   for each lesson: its topics and REQUIRED assignments, interleaved by `order`
+//     (an assignment without a position comes after the lesson's topics)
 //   then the module's graded assessment (if any)
 // Rule: an item is unlocked when it is the first item, is already complete, or the
 // item before it is complete. A module is unlocked when its first item is, and is
@@ -29,18 +30,31 @@ export interface SequenceInput {
   assessmentId: string | null;
   lessons: {
     id: string;
-    topics: { id: string }[];
-    /** Published lesson assignment (null if none). */
-    assignment: { id: string; isRequired: boolean } | null;
+    /** Visible topics, in order (`order` = position within the lesson). */
+    topics: { id: string; order?: number }[];
+    /** Published lesson assignments; `order` on the same scale as topics (null = at the end). */
+    assignments: { id: string; isRequired: boolean; order: number | null }[];
   }[];
+}
+
+/** A lesson's topics and assignments merged by position (ties: topics first). */
+export function lessonItems(lesson: SequenceInput["lessons"][number]): { id: string; kind: "topic" | "assignment"; isRequired: boolean }[] {
+  const rows = [
+    ...lesson.topics.map((t, i) => ({ id: t.id, kind: "topic" as const, isRequired: true, pos: t.order ?? i, tie: 0, seq: i })),
+    ...lesson.assignments.map((a, i) => ({ id: a.id, kind: "assignment" as const, isRequired: a.isRequired, pos: a.order ?? Number.POSITIVE_INFINITY, tie: 1, seq: i })),
+  ];
+  rows.sort((x, y) => x.pos - y.pos || x.tie - y.tie || x.seq - y.seq);
+  return rows.map(({ id, kind, isRequired }) => ({ id, kind, isRequired }));
 }
 
 export function buildSequence(modules: SequenceInput[]): SequenceItem[] {
   const items: SequenceItem[] = [];
   for (const m of modules) {
     for (const l of m.lessons) {
-      for (const t of l.topics) items.push({ id: t.id, kind: "topic", moduleId: m.id, lessonId: l.id });
-      if (l.assignment?.isRequired) items.push({ id: l.assignment.id, kind: "assignment", moduleId: m.id, lessonId: l.id });
+      for (const it of lessonItems(l)) {
+        if (it.kind === "assignment" && !it.isRequired) continue; // optional: not gating
+        items.push({ id: it.id, kind: it.kind, moduleId: m.id, lessonId: l.id });
+      }
     }
     if (m.assessmentId) items.push({ id: m.assessmentId, kind: "assessment", moduleId: m.id, lessonId: null });
   }

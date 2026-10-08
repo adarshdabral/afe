@@ -213,6 +213,24 @@ export default function CourseBuilder() {
       </section>
 
       <CourseDetailsEditor course={tree} onSaved={() => void refresh()} />
+      {(tree.adminNote || tree.modules.some((m) => (m.needsContent ?? 0) > 0)) && (
+        <details className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/[0.04] p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-foreground">
+            Import notes (admin only){" "}
+            <span className="font-normal text-muted-foreground">
+              · {tree.modules.reduce((n, m) => n + (m.needsContent ?? 0), 0)} item(s) need content
+            </span>
+          </summary>
+          {tree.adminNote && <pre className="mt-3 whitespace-pre-wrap text-[12px] text-foreground font-sans leading-relaxed">{tree.adminNote}</pre>}
+          <ul className="mt-3 space-y-1 text-[12px] text-muted-foreground">
+            {tree.modules.filter((m) => (m.needsContent ?? 0) > 0).map((m) => (
+              <li key={m.id}>
+                <Link href={`/admin/courses/${courseId}/modules/${m.id}`} className="text-violet-600 hover:underline">{m.title}</Link>: {m.needsContent} item(s) flagged “Needs content”
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         {/* Left: modules */}
@@ -250,7 +268,7 @@ export default function CourseBuilder() {
                       if (!r) return null;
                       return r.ready ? (
                         <span className="mt-0.5 inline-block text-[10px] font-medium text-green-700 dark:text-green-400">
-                          ✓ description · objectives · assessment
+                          ✓ ready to publish (description · objectives)
                         </span>
                       ) : (
                         <span className="mt-0.5 block text-[10px] font-medium text-amber-700 dark:text-amber-400">
@@ -258,6 +276,11 @@ export default function CourseBuilder() {
                         </span>
                       );
                     })()}
+                    {(tree.modules.find((x) => x.id === m.id)?.needsContent ?? 0) > 0 && (
+                      <span className="mt-0.5 block text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                        {tree.modules.find((x) => x.id === m.id)!.needsContent} item(s) need content
+                      </span>
+                    )}
                   </button>
                   <div className="flex gap-1 mt-1">
                     <MiniBtn onClick={() => renameModule(m)}>Rename</MiniBtn>

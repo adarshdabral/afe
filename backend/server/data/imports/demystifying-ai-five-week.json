@@ -1,0 +1,1203 @@
+{
+  "course": {
+    "title": "Demystifying AI for Everyone",
+    "source_document": "Demystifying AI for Everyone: Five-Week MOOC Plan",
+    "target_group": "Classes 9–12, including PM SHRI Schools and Kendriya Vidyalayas",
+    "planned_duration": "30 hours: 5 modules × 6 hours",
+    "delivery": "Online MOOC with optional classroom facilitation",
+    "platform_structure": {
+      "Q1": "Video lectures",
+      "Q2": "Downloadable reading/e-content",
+      "Q3": "Self-assessment",
+      "Q4": "Discussion forum"
+    },
+    "assessment_weights": {
+      "Weekly quizzes, Weeks 1–4": "40%",
+      "Applied activities, Weeks 1–4": "20%",
+      "Final project and explanation": "30%",
+      "Discussion participation and peer feedback": "10%"
+    },
+    "source_notes": [
+      "The opening course plan describes 5 modules / 30 hours.",
+      "The detailed content in the supplied document fully specifies Weeks/Modules 1–4; Module 5 is described at the planning level as the Student Project and AI Showcase, but its detailed lesson/question bank is not present in the supplied document.",
+      "The course introduction later says 'six weeks' in one passage, which conflicts with the opening five-week plan. This import preserves the five-module plan and does not silently reconcile the inconsistency."
+    ]
+  },
+  "modules": [
+    {
+      "id": "module-1",
+      "week": 1,
+      "title": "Understanding AI and How It Learns",
+      "planned_title": "Foundations of AI and Generative AI",
+      "learning_outcome": "Students can explain basic AI terms, distinguish AI from generative AI, and recognise where human judgment is needed.",
+      "lessons": [
+        {
+          "id": "1.1",
+          "title": "Understanding AI and Where We Encounter It",
+          "content_items": [
+            "1.1.1 What is Artificial Intelligence",
+            "1.1.2 From Rules to Learning: A brief Journal of AI",
+            "1.1.3 AI around us",
+            "1.1.4 Reimagining AI in Everyday Life",
+            "1.1.5 Guided Discussion: Is Every Smart Device Using AI?",
+            "1.1.6 Practice Assignment: Spot the AI",
+            "1.1.7 Recommended Reading: An Illustrated Timeline of AI"
+          ]
+        },
+        {
+          "id": "1.2",
+          "title": "How AI Learns from Data",
+          "content_items": [
+            "1.2.1 Data: The Starting Point for AI",
+            "1.2.2 Machine Learning Explained through Examples",
+            "1.2.3 Deep Learning and Neural Networks Explained Visually",
+            "1.2.4 Training, Testing, and Why AI Gets Things Wrong",
+            "1.2.5 Demonstration: Teaching a System to Recognize Patterns",
+            "1.2.6 Essential Reading: AI, Machine Learning, and Deep Learning",
+            "1.2.7 Practice Assignment: How Does the System Learn?"
+          ]
+        }
+      ],
+      "assignments": [
+        {
+          "id": "1.1.5",
+          "title": "Is Every Smart Device Using AI?",
+          "type": "discussion",
+          "grading": "ungraded",
+          "requirements": "Initial response 100–150 words comparing three situations; then one peer response of 40–60 words.",
+          "prompt": "Which situations demonstrate fixed-rule automation, and which describes learning-based AI? Explain your reasoning.",
+          "notes": "Situations A and B are fixed-rule automation; Situation C is machine learning."
+        },
+        {
+          "id": "1.1.6",
+          "title": "Spot the AI",
+          "type": "quiz",
+          "grading": "ungraded",
+          "attempts": "unlimited",
+          "duration_minutes": 10,
+          "questions": [
+            {
+              "question": "A school bell rings at fixed times entered by an administrator. Nothing in the description indicates that it learns, reasons, or makes predictions. Which statement is most appropriate?",
+              "options": {
+                "A": "It must use AI because it operates automatically.",
+                "B": "It is an example of fixed-schedule automation that does not require AI.",
+                "C": "It uses machine learning because it remembers the timetable.",
+                "D": "It becomes AI when connected to the internet."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "Which example most clearly describes machine learning?",
+              "options": {
+                "A": "A light switches on when a motion sensor triggers a fixed rule.",
+                "B": "A calculator follows programmed arithmetic operations.",
+                "C": "An email filter learns patterns from messages labelled as spam or legitimate and uses them to classify new messages.",
+                "D": "A sprinkler starts every morning at a preset time."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            },
+            {
+              "question": "A video platform uses viewing activity and similarities among videos to suggest content. What does its recommendation most reasonably represent?",
+              "options": {
+                "A": "A guarantee that the suggested video is accurate.",
+                "B": "Proof that the platform understands the learner as a teacher would.",
+                "C": "Confirmation that the video is appropriate for every student.",
+                "D": "An estimate of relevance based on available information."
+              },
+              "correct_answer": "D",
+              "feedback": null
+            },
+            {
+              "question": "An application translates “The examination was a piece of cake” as though the speaker were discussing food. What is the best response?",
+              "options": {
+                "A": "Review the intended meaning and revise the translation because context matters.",
+                "B": "Accept the translation because AI outputs are always correct.",
+                "C": "Conclude that translation applications can never be useful.",
+                "D": "Assume that grammatically correct wording guarantees accurate meaning."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "A peer says, “If a system does not learn from data, it cannot be AI.” Which response is most accurate?",
+              "options": {
+                "A": "Correct; all AI systems must learn continuously during use.",
+                "B": "Correct; AI and machine learning mean exactly the same thing.",
+                "C": "Incorrect; AI also includes approaches using represented knowledge, reasoning, and search.",
+                "D": "Incorrect; every system containing programmed rules is AI."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            }
+          ]
+        },
+        {
+          "id": "1.2.7",
+          "title": "How Does the System Learn?",
+          "type": "quiz",
+          "grading": "ungraded",
+          "attempts": "unlimited",
+          "duration_minutes": 10,
+          "questions": [
+            {
+              "question": "A fruit dataset records colour, weight, texture, and the fruit name for each example. The model will learn to predict the fruit name. Which statement correctly identifies the features and label?",
+              "options": {
+                "A": "All four recorded values are labels; the dataset has no features.",
+                "B": "All four recorded values are features; the dataset has no label.",
+                "C": "Colour, weight, and texture are the features; the fruit name is the label.",
+                "D": "The fruit name is the feature; colour, weight, and texture are the labels."
+              },
+              "correct_answer": null,
+              "feedback": null
+            },
+            {
+              "question": "A trained fruit-recognition model receives a new image and predicts “apple.” Its parameters remain unchanged. What is happening?",
+              "options": {
+                "A": "Labelling: a person supplies the correct answer for this image.",
+                "B": "Training: the model updates its parameters from this image.",
+                "C": "Clustering: the model groups this image with unlabelled examples.",
+                "D": "Inference: the model uses learned patterns to predict an answer."
+              },
+              "correct_answer": null,
+              "feedback": null
+            },
+            {
+              "question": "Which statement correctly describes the relationship between artificial intelligence, machine learning, and deep learning?",
+              "options": {
+                "A": "AI is a subset of machine learning, which is a subset of deep learning.",
+                "B": "Machine learning is a subset of deep learning, which is a subset of AI.",
+                "C": "Deep learning is a subset of machine learning, which is a subset of AI.",
+                "D": "AI, machine learning, and deep learning are interchangeable names."
+              },
+              "correct_answer": null,
+              "feedback": null
+            },
+            {
+              "question": "A team checks a model on a test dataset, then repeatedly changes the model to improve its results on that same dataset. How should the team evaluate the final model?",
+              "options": {
+                "A": "Add the test examples to training and report results on those examples.",
+                "B": "Report its training results as the final measure of performance.",
+                "C": "Reuse the same test dataset because its examples are familiar.",
+                "D": "Evaluate it on a fresh, relevant dataset kept separate from development."
+              },
+              "correct_answer": null,
+              "feedback": null
+            },
+            {
+              "question": "A test dataset contains 90 apples and 10 oranges. A model predicts “apple” for every example and achieves 90% accuracy. What is the best interpretation?",
+              "options": {
+                "A": "The model correctly identifies 90% of both apples and oranges.",
+                "B": "The model gets a high overall score while failing to identify any oranges.",
+                "C": "The model will achieve 90% accuracy on every future fruit dataset.",
+                "D": "The model must have learned useful differences between the two fruits."
+              },
+              "correct_answer": null,
+              "feedback": null
+            }
+          ]
+        },
+        {
+          "id": "week-1-graded",
+          "title": "Week 1 Graded Assessment",
+          "type": "quiz",
+          "grading": "graded",
+          "marks": 10,
+          "questions": [
+            {
+              "question": "Which description best captures the meaning of artificial intelligence in this course?",
+              "options": {
+                "A": "Any electronic device that connects to the internet.",
+                "B": "Computer systems performing tasks such as recognition, prediction, or language understanding.",
+                "C": "Machines that possess human emotions and consciousness.",
+                "D": "Software that stores information without processing it."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "A lamp switches on whenever a sensor reading falls below a fixed brightness threshold. No model learns from examples. What can you conclude?",
+              "options": {
+                "A": "The lamp learns because it receives sensor data.",
+                "B": "The lamp uses deep learning because it responds automatically.",
+                "C": "The lamp improves its model whenever it switches on.",
+                "D": "The lamp follows a fixed rule; this does not demonstrate machine learning."
+              },
+              "correct_answer": "D",
+              "feedback": null
+            },
+            {
+              "question": "Two email filters are developed differently. Filter X uses manually written keyword rules. Filter Y is trained on emails labelled “spam” or “not spam.” Which comparison is accurate?",
+              "options": {
+                "A": "X follows specified rules; Y learns patterns from labelled examples.",
+                "B": "X learns from examples; Y follows manually written keyword rules.",
+                "C": "Both learn because both process incoming emails.",
+                "D": "Neither learns because people helped develop both filters."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "A model predicts whether a fruit is an apple or an orange using its weight and texture. In the training dataset, what role does the recorded fruit category play?",
+              "options": {
+                "A": "It is an input feature describing the fruit’s weight.",
+                "B": "It is the algorithm used to adjust the model.",
+                "C": "It is the label supplying the target category.",
+                "D": "It is the accuracy score used to evaluate the model."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            },
+            {
+              "question": "A school trains a model on past journeys and their actual travel times to predict how many minutes a new journey will take. What type of task is this?",
+              "options": {
+                "A": "Supervised classification, because it predicts a named category.",
+                "B": "Supervised regression, because it predicts a numerical quantity.",
+                "C": "Unsupervised clustering, because it receives no target answers.",
+                "D": "Reinforcement learning, because it learns through rewards for actions."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "A trained image-recognition model predicts a fruit category for a new photograph without changing its parameters. Which process is occurring?",
+              "options": {
+                "A": "Inference: applying the trained model to a new input.",
+                "B": "Training: updating the model from a new labelled example.",
+                "C": "Data labelling: a person assigning the correct fruit category.",
+                "D": "Model evaluation: calculating accuracy across a labelled test set."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "Which statement about deep learning is accurate?",
+              "options": {
+                "A": "Every machine-learning model is a deep-learning model.",
+                "B": "Deep learning requires a system to think like a human.",
+                "C": "Adding more layers guarantees better results on new data.",
+                "D": "Deep learning uses neural networks with multiple layers within machine learning."
+              },
+              "correct_answer": "D",
+              "feedback": null
+            },
+            {
+              "question": "A model performs very well on its training examples but poorly on relevant unseen examples. Which problem does this pattern most strongly suggest?",
+              "options": {
+                "A": "Underfitting, because it performs poorly on both datasets.",
+                "B": "Successful generalization, because training performance is high.",
+                "C": "Overfitting, because its training performance does not transfer well.",
+                "D": "Reliable prediction, because familiar examples establish future success."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            },
+            {
+              "question": "A team evaluates a model using photographs that are near-duplicates of its training photographs. What is the main concern?",
+              "options": {
+                "A": "The evaluation is too difficult because the photographs are similar.",
+                "B": "The score may overstate performance because the datasets are not sufficiently independent.",
+                "C": "The model must be underfitting because photographs appear in both datasets.",
+                "D": "The score proves the model will work in different lighting conditions."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "An email test set contains 95 ordinary messages and 5 spam messages. A filter predicts “ordinary” for every message. Which evaluation is most useful?",
+              "options": {
+                "A": "It has 95% accuracy but misses all spam; inspect category results and error consequences.",
+                "B": "It has 95% accuracy, so it correctly detects nearly all spam messages.",
+                "C": "It has 5% accuracy because only spam messages count in the calculation.",
+                "D": "It has 100% accuracy because it produces an answer for every message."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            }
+          ]
+        },
+        {
+          "id": "week-1-applied",
+          "title": "My Everyday AI Map",
+          "type": "applied_activity",
+          "grading": "applied",
+          "requirements": "Select three familiar applications and describe their purposes, likely inputs, outputs, possible errors, and human review they may need. Clearly identify assumptions when unsure."
+        }
+      ]
+    },
+    {
+      "id": "module-2",
+      "week": 2,
+      "title": "AI Applications in Society",
+      "learning_outcome": "Students can identify suitable AI applications and describe the data, benefit and possible risk in each case.",
+      "lessons": [
+        {
+          "id": "2.1",
+          "title": "Understanding AI Applications in Society",
+          "content_items": [
+            "2.1.1 Understanding AI Applications: From a Problem to a Useful Output",
+            "2.1.2 Essential Reading: AI Across Sectors",
+            "2.1.3 Lens: Problem, Data, AI Output, and Human Decision",
+            "2.1.4 Recommended Reading: Understanding Maps, Sensors, and GIS",
+            "2.1.5 Essential Reading: Disaster Alerts and Smart Cities—Two Illustrated Caselets",
+            "2.1.6 Practice Assignment: Understanding AI Applications in Society"
+          ]
+        },
+        {
+          "id": "2.2",
+          "title": "Applying AI to Community and Everyday Challenges",
+          "content_items": [
+            "2.2.1 The Community Problem: Where Could AI Help?",
+            "2.2.2 Essential Reading: When an AI Application May Be Unsuitable",
+            "2.2.3 AI in Disaster Management and Smart Cities",
+            "2.2.4 AI in Healthcare and Agriculture",
+            "2.2.5 Practical Scenario: AI-Supported Flood Awareness or Crop Information",
+            "2.2.6 Essential Reading: Healthcare and Agriculture—Benefits, Errors, and Expert Review",
+            "2.2.7 AI in Logistics and Supply Chains",
+            "2.2.8 AI in Education and Accessibility",
+            "2.2.9 Practical Scenario: AI for School Transport or Learning Support",
+            "2.2.10 Essential Reading: Everyday Services—Delivery, Learning, and Accessibility",
+            "2.2.11 AI in Climate, Energy, and Finance",
+            "2.2.12 Reflections on AI Applications: Benefits, Risks, and Human Judgment",
+            "2.2.13 Recommended Reading: AI for My Community—Application Worksheet and Checklist",
+            "2.2.14 Practice Assignment: Applying AI to Community and Everyday Challenges",
+            "2.2.15 Week Summary",
+            "2.2.16 Week 2 (Graded): AI Applications in Society"
+          ]
+        }
+      ],
+      "assignments": [
+        {
+          "id": "2.1.6",
+          "title": "Understanding AI Applications in Society",
+          "type": "quiz",
+          "grading": "ungraded",
+          "attempts": "unlimited",
+          "duration_minutes": 15,
+          "questions": [
+            {
+              "question": "A school wants to explore AI for its canteen. Which statement provides the clearest problem to investigate?",
+              "options": {
+                "A": "Introduce the latest technology throughout the canteen.",
+                "B": "Help the manager estimate daily meal demand to support preparation.",
+                "C": "Collect all available student information before selecting a task.",
+                "D": "Install a dashboard to make the canteen appear more modern."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "A dashboard displays an upstream river-level reading recorded three hours ago. No new reading has arrived. What should the reviewer do?",
+              "options": {
+                "A": "Assume the river level has remained unchanged.",
+                "B": "Treat the displayed value as a current observation.",
+                "C": "Replace the missing update with an invented measurement.",
+                "D": "Flag the outdated reading and consider other available current evidence."
+              },
+              "correct_answer": "D",
+              "feedback": null
+            },
+            {
+              "question": "A town displays roads and traffic observations in a GIS. A separate trained model predicts tomorrow’s congestion. Which statement correctly describes their roles?",
+              "options": {
+                "A": "GIS organises location-linked information; the model estimates future congestion.",
+                "B": "GIS guarantees road safety; the model determines traffic policy.",
+                "C": "GIS measures passing vehicles; the model creates those measurements.",
+                "D": "GIS predicts every traffic event; the model confirms its predictions."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "A model estimates that a library book will receive 30 requests next month. How should the librarian use this result?",
+              "options": {
+                "A": "Purchase exactly 30 copies because requests equal required copies.",
+                "B": "Treat 30 requests as a confirmed future observation.",
+                "C": "Consider the estimate alongside existing copies, budget, and curriculum needs.",
+                "D": "Remove other books because predicted popularity determines educational value."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            },
+            {
+              "question": "A school traffic model predicts vehicle counts accurately on independent days. Staff use its estimates to revise arrival arrangements. What additional evaluation is needed?",
+              "options": {
+                "A": "Whether the dashboard displays more decimal places.",
+                "B": "Whether queues, waiting times, and pedestrian access improve.",
+                "C": "Whether the model produces an identical estimate every day.",
+                "D": "Whether the model is larger than neighbouring schools’ models."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            }
+          ]
+        },
+        {
+          "id": "2.2.5",
+          "title": "AI-Supported Flood Awareness or Crop Information",
+          "type": "practical_scenario",
+          "grading": "ungraded",
+          "duration_minutes": 45,
+          "requirements": "Choose flood-awareness or crop-information scenario; define the problem, complete the worksheet, answer the challenge question in 60–80 words, and prepare a simple visual explanation. Use fictional information; no coding or additional research required."
+        },
+        {
+          "id": "2.2.9",
+          "title": "AI for School Transport or Learning Support",
+          "type": "practical_scenario",
+          "grading": "ungraded",
+          "duration_minutes": 45,
+          "requirements": "Apply the problem–data–AI output–human decision framework to a school transport or learning-support scenario."
+        },
+        {
+          "id": "2.2.14",
+          "title": "Applying AI to Community and Everyday Challenges",
+          "type": "quiz",
+          "grading": "ungraded",
+          "attempts": "unlimited",
+          "duration_minutes": 15,
+          "questions": [
+            {
+              "question": "Students propose an AI-supported system to help a community understand possible flooding. Which approach is most appropriate?",
+              "options": {
+                "A": "Generate reassuring messages without checking rainfall or river conditions.",
+                "B": "Use relevant, current information to support risk estimates, while directing people to official warnings.",
+                "C": "Treat past flood records as proof that flooding will occur on the same dates.",
+                "D": "Let an AI-generated risk estimate replace official emergency instructions."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "An AI tool examines a photograph of a crop leaf and suggests a possible disease. What should happen next?",
+              "options": {
+                "A": "Apply the suggested treatment because image recognition establishes the cause.",
+                "B": "Assume the crop is healthy if a second photograph produces a different answer.",
+                "C": "Share the suggestion as a confirmed diagnosis with neighbouring farmers.",
+                "D": "Have an agricultural expert assess the suggestion using the photograph and relevant field information."
+              },
+              "correct_answer": "D",
+              "feedback": null
+            },
+            {
+              "question": "A school wants to estimate journey times for a proposed transport service. Which information is most relevant?",
+              "options": {
+                "A": "Route distances, recorded travel times, road conditions, and departure times.",
+                "B": "Students’ examination marks, favourite subjects, and classroom seating positions.",
+                "C": "Vehicle colours, school uniform designs, and students’ favourite sports.",
+                "D": "Teachers’ qualifications, library loan records, and club membership lists."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "A student uses an AI tool to simplify a teacher-provided science passage. Which check best establishes whether the result supports learning?",
+              "options": {
+                "A": "Whether it is shorter than the original passage, regardless of what it leaves out.",
+                "B": "Whether it uses impressive scientific terms, even if the student finds them confusing.",
+                "C": "Whether it preserves the important meaning and is understandable to the intended learner.",
+                "D": "Whether the tool describes its own response as accurate and accessible."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            },
+            {
+              "question": "A school needs to tell students that the library opens Monday to Friday from 9 a.m. to 3 p.m. These hours rarely change. What is the most appropriate starting solution?",
+              "options": {
+                "A": "Train a prediction model to estimate the opening hours each day.",
+                "B": "Publish a clear timetable and provide a librarian contact for questions.",
+                "C": "Generate a different opening-hours response for every student.",
+                "D": "Collect students’ personal records before displaying the schedule."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            }
+          ]
+        },
+        {
+          "id": "week-2-graded",
+          "title": "Week 2 (Graded): AI Applications in Society",
+          "type": "quiz",
+          "grading": "graded",
+          "duration_minutes": 30,
+          "marks": 10,
+          "questions": [
+            {
+              "question": "A school wants to introduce an AI-supported service. What should it establish first?",
+              "options": {
+                "A": "Which tool produces the longest responses.",
+                "B": "How many personal records it can collect.",
+                "C": "What difficulty students face and what improvement is needed.",
+                "D": "Which tool has the most colourful interface."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            },
+            {
+              "question": "A digital map displays village roads and school locations. No information is provided about how its features operate. What can students reasonably conclude?",
+              "options": {
+                "A": "Displaying geographical information alone does not establish that the map uses AI.",
+                "B": "Every digital map learns automatically from the people who view it.",
+                "C": "Showing school locations proves that the map uses deep learning.",
+                "D": "Any application containing location data must use machine learning."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "An AI-supported system estimates an increased possibility of flooding using recent rainfall and river-level information. How should its output be used?",
+              "options": {
+                "A": "As proof that flooding will occur at a precise time.",
+                "B": "As a replacement for official emergency instructions.",
+                "C": "As permission to ignore warnings if the estimate later decreases.",
+                "D": "As supporting information considered alongside official warnings and responsible authorities."
+              },
+              "correct_answer": "D",
+              "feedback": null
+            },
+            {
+              "question": "A crop-image tool suggests a possible leaf disease. Which additional information would most help an agricultural expert evaluate the suggestion?",
+              "options": {
+                "A": "The farmer’s preferred phone colour and usual messaging application.",
+                "B": "The crop type, field conditions, recent symptoms, and image quality.",
+                "C": "The number of people who liked the photograph online.",
+                "D": "The length and confidence of the tool’s explanation."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "A proposed AI application helps healthcare staff identify images that may need closer examination. Which description best defines its role?",
+              "options": {
+                "A": "It can highlight possible concerns for qualified staff to assess.",
+                "B": "It can establish a diagnosis from every image without further information.",
+                "C": "It can replace professional judgement whenever it produces a score.",
+                "D": "It can guarantee that an unflagged image contains no concern."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "A transport model estimates a journey time of 40 minutes from relevant past records. A road closure occurs after the information was collected. What is the best interpretation?",
+              "options": {
+                "A": "The estimate remains exact because it was produced by a model.",
+                "B": "Past records prove that road closures cannot affect this journey.",
+                "C": "Changed conditions may make the estimate unsuitable; check current route information.",
+                "D": "Producing an estimate means the system has already checked every road condition."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            },
+            {
+              "question": "An AI tool creates a revision guide from a teacher-provided passage. Before sharing it, what should students check?",
+              "options": {
+                "A": "Whether it contains more words than the passage.",
+                "B": "Whether it introduces facts absent from the source to sound more complete.",
+                "C": "Whether the tool describes the guide as suitable for examinations.",
+                "D": "Whether it preserves key ideas, avoids unsupported claims, and suits the intended learners."
+              },
+              "correct_answer": "D",
+              "feedback": null
+            },
+            {
+              "question": "A school-information assistant gives accurate answers, but only through long English responses on a smartphone application. What should its designers investigate?",
+              "options": {
+                "A": "Whether longer answers would make the information more accessible.",
+                "B": "Whether language, device access, and presentation prevent some students from using it.",
+                "C": "Whether accuracy means all intended users can already benefit equally.",
+                "D": "Whether students should be excluded if they cannot access the application."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "A payment-monitoring system flags a transaction as unusual. What does the flag establish?",
+              "options": {
+                "A": "The transaction deserves investigation; the flag alone does not prove fraud.",
+                "B": "The person making the payment has certainly committed fraud.",
+                "C": "Every unflagged transaction is legitimate.",
+                "D": "The system can determine the person’s intentions from the flag."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "A school wants students to find fixed library hours and borrowing rules. Which approach best matches this need?",
+              "options": {
+                "A": "Collect students’ health and family records to personalise opening hours.",
+                "B": "Train a model to predict rules that the librarian has already established.",
+                "C": "Provide a clear information sheet and a librarian contact for unanswered questions.",
+                "D": "Ask a generative tool to invent missing rules so every question receives an answer."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            }
+          ]
+        },
+        {
+          "id": "week-2-discussion",
+          "title": "Which problem in your community could AI help address first?",
+          "type": "discussion",
+          "grading": "ungraded",
+          "prompt": "Which problem in your community could AI help address first? What information would the solution need?"
+        }
+      ]
+    },
+    {
+      "id": "module-3",
+      "week": 3,
+      "title": "From a School Problem to an AI-Supported Solution",
+      "planned_title": "Designing an AI Solution",
+      "learning_outcome": "Students can frame a real problem, propose a small pilot and decide how to judge whether the solution works.",
+      "lessons": [
+        {
+          "id": "3.1",
+          "title": "Choose a School Problem and Understand the Task",
+          "content_items": [
+            "3.1.1 Start with a School Problem",
+            "3.1.2 Essential Reading: Who Needs Help, and What Should Improve?",
+            "3.1.3 What Information Do We Need, and What Should AI Produce?",
+            "3.1.4 Recommended Reading: Predict a Number, Choose a Category, or Create Content",
+            "3.1.5 Essential Reading: A School Helpdesk and a Canteen-Planning Example",
+            "3.1.6 Practice Assignment: Choose the Right Task and Information"
+          ]
+        },
+        {
+          "id": "3.2",
+          "title": "Write, Check, and Improve Your Idea",
+          "content_items": [
+            "3.2.1 Try Your Idea on a Small Scale",
+            "3.2.2 Write a Clear Prompt: Task, Context, Instructions, and Format",
+            "3.2.3 Check the Answer and Improve the Prompt",
+            "3.2.4 Practical Scenario: Create a Study Guide or Design a School Helpdesk",
+            "3.2.5 Essential Reading: A Student’s Prompt-Writing Guide",
+            "3.2.6 Essential Reading: Is It Accurate, Clear, and Useful?",
+            "3.2.7 Learn from Mistakes Before Sharing Your Solution",
+            "3.2.8 Recommended Reading: My One-Page AI Solution Plan",
+            "3.2.9 Practice Assignment: Prompts, Checks, and Improvements",
+            "3.2.10 Would You Trust an AI Answer Without Checking It?",
+            "3.2.11 Week Summary",
+            "3.2.12 Week 3 (Graded): Planning and Checking an AI Solution"
+          ]
+        }
+      ],
+      "assignments": [
+        {
+          "id": "3.1.6",
+          "title": "Choose the Right Task and Information",
+          "type": "quiz",
+          "grading": "ungraded",
+          "attempts": "unlimited",
+          "duration_minutes": 15,
+          "questions": [
+            {
+              "question": "Which statement provides the clearest starting point for a school proposal?",
+              "options": {
+                "A": "Introduce AI wherever possible across the school.",
+                "B": "Collect student information before deciding what to improve.",
+                "C": "Help Class 9 students identify key ideas in a supplied passage for revision.",
+                "D": "Select a popular AI application and find a use for it."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            },
+            {
+              "question": "A canteen wants to estimate how many meals students may need tomorrow. Which output best matches this task?",
+              "options": {
+                "A": "A numerical estimate of tomorrow’s meal demand.",
+                "B": "A category assigned to each canteen enquiry.",
+                "C": "A generated explanation of the published menu.",
+                "D": "A list showing the canteen’s opening hours."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "Students want a revision guide for one teacher-provided science passage. Which set of inputs is most suitable?",
+              "options": {
+                "A": "Students’ home addresses, travel routes, and attendance records.",
+                "B": "An unrelated chapter, previous canteen sales, and library timings.",
+                "C": "School contact details, club schedules, and classroom locations.",
+                "D": "The passage, intended class level, and required guide format."
+              },
+              "correct_answer": "D",
+              "feedback": null
+            },
+            {
+              "question": "A helpdesk uses an approved sheet stating library hours for Monday–Friday. Saturday opening is not specified. What should it say when asked about Saturday?",
+              "options": {
+                "A": "The library follows Friday’s hours on Saturday.",
+                "B": "Saturday hours are not specified here; please contact the librarian.",
+                "C": "The library is closed because Saturday is absent from the sheet.",
+                "D": "The library opens at noon because weekend hours are usually shorter."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "A canteen prepares and sells 70 meals. It also records 8 additional requests that could not be served. What can the team conclude?",
+              "options": {
+                "A": "Exactly 70 students wanted meals because only completed sales count.",
+                "B": "Exactly 78 students wanted meals, including anyone who left without asking.",
+                "C": "The records show 78 requests, but may omit other unmet demand.",
+                "D": "The records establish that tomorrow’s demand will also be 78 meals."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            }
+          ]
+        },
+        {
+          "id": "3.2.4",
+          "title": "Create a Study Guide or Design a School Helpdesk",
+          "type": "guided_activity",
+          "grading": "ungraded",
+          "duration_minutes": 90,
+          "requirements": "Choose Study Guide or School Helpdesk. Use the same 90-minute workflow to define the problem, use supplied source information, draft/inspect an AI-supported output, check it, and state limitations/success measures."
+        },
+        {
+          "id": "3.2.9",
+          "title": "Prompts, Checks, and Improvements",
+          "type": "quiz",
+          "grading": "ungraded",
+          "attempts": "unlimited",
+          "duration_minutes": 15,
+          "questions": [
+            {
+              "question": "A student needs three practice questions from a supplied passage for Class 9 revision. Which prompt best communicates the task?",
+              "options": {
+                "A": "Write something interesting about this topic.",
+                "B": "Create three Class 9 questions answerable from the supplied passage, with a separate answer key.",
+                "C": "Write difficult questions using any information you consider relevant.",
+                "D": "Prepare a response about the passage in whichever format you prefer."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "An approved sheet states that students may borrow two books for seven days. Renewal arrangements are not specified. A response says: “You may borrow two books and automatically renew them.” What should the reviewer identify?",
+              "options": {
+                "A": "Both statements are supported by the sheet.",
+                "B": "The borrowing limit is incorrect, but renewal is supported.",
+                "C": "Renewal is supported because the sheet does not prohibit it.",
+                "D": "The borrowing limit is supported, but automatic renewal is not established."
+              },
+              "correct_answer": "D",
+              "feedback": null
+            },
+            {
+              "question": "A revision-guide draft uses difficult vocabulary. Its factual statements agree with the supplied passage. What is the most appropriate next step?",
+              "options": {
+                "A": "Specify the class level, request clearer explanations, and check the revised response.",
+                "B": "Remove the source passage so the system can write more freely.",
+                "C": "Accept the draft because factual accuracy guarantees understandable wording.",
+                "D": "Add unrelated information to make the prompt longer."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "Students repeatedly revise a helpdesk prompt using the same five enquiries. How should they conduct a fresh final check?",
+              "options": {
+                "A": "Repeat only the easiest enquiry and report general reliability.",
+                "B": "Edit the five answers manually and assume future responses will match.",
+                "C": "Use additional relevant enquiries that did not guide the revisions.",
+                "D": "Change the success criteria until every existing answer passes."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            },
+            {
+              "question": "A student reviews a supplied study-guide draft and corrects two unsupported statements. No classmates have tried the guide. Which conclusion is justified?",
+              "options": {
+                "A": "The guide improves learning for every student.",
+                "B": "I corrected two unsupported statements; learner usefulness still needs checking.",
+                "C": "The corrected draft proves that future responses will be accurate.",
+                "D": "The guide is useful because it follows the requested format."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            }
+          ]
+        },
+        {
+          "id": "3.2.10",
+          "title": "Would You Trust an AI Answer Without Checking It?",
+          "type": "discussion",
+          "grading": "ungraded",
+          "duration_minutes": 15,
+          "prompt": "Explain how source evidence, uncertainty, and the consequences of errors affect whether an AI response is ready to use. Respond to one peer."
+        },
+        {
+          "id": "week-3-graded",
+          "title": "Week 3 (Graded): Planning and Checking an AI Solution",
+          "type": "quiz",
+          "grading": "graded",
+          "duration_minutes": 30,
+          "marks": 10,
+          "attempts": 2,
+          "highest_score_retained": true,
+          "negative_marking": false,
+          "questions": [
+            {
+              "question": "Which proposal provides the clearest starting point for a small classroom trial?",
+              "options": {
+                "A": "Introduce AI into every school activity.",
+                "B": "Collect all available information before selecting a task.",
+                "C": "Help Class 9 students identify key ideas in one supplied passage.",
+                "D": "Develop a system that answers every possible school question."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            },
+            {
+              "question": "A school wants to sort enquiries into library, transport, clubs, and other. Which task best matches this requirement?",
+              "options": {
+                "A": "Classification: assign each enquiry to a defined category.",
+                "B": "Regression: estimate the number of enquiries received tomorrow.",
+                "C": "Content generation: draft a notice about school activities.",
+                "D": "Information display: show the published school calendar."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "Students plan a revision guide based on a teacher-provided history passage. Which inputs are most relevant?",
+              "options": {
+                "A": "Students’ addresses and transport arrangements.",
+                "B": "Canteen sales and previous delivery times.",
+                "C": "Club schedules and library opening hours.",
+                "D": "The passage, intended class level, and guide requirements."
+              },
+              "correct_answer": "D",
+              "feedback": null
+            },
+            {
+              "question": "A canteen prepares and sells 80 meals. It records 12 additional requests that could not be served. Which conclusion is justified?",
+              "options": {
+                "A": "Demand was exactly 80 meals because only sales count.",
+                "B": "The records show 92 requests but may omit other unmet demand.",
+                "C": "Tomorrow’s demand will be 92 meals because today establishes the pattern.",
+                "D": "The 12 unmet requests should be treated as meals sold."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "Which prompt best supports a source-based revision activity?",
+              "options": {
+                "A": "Using the supplied passage, create four Class 9 revision points and three questions with a separate answer key.",
+                "B": "Write something useful about the topic in any format.",
+                "C": "Add interesting facts from wherever you find them.",
+                "D": "Make the passage impressive and include as much as possible."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "An approved library sheet states Monday–Friday opening hours. Saturday opening is not specified. What should a helpdesk response do?",
+              "options": {
+                "A": "Apply Friday’s hours to Saturday.",
+                "B": "State that the library is closed because Saturday is omitted.",
+                "C": "Acknowledge that Saturday hours are unspecified and refer the enquiry to the librarian.",
+                "D": "Supply a plausible weekend schedule to complete the answer."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            },
+            {
+              "question": "A passage states that the science club meets on Wednesday in Room 4. A draft says it meets on Friday in Room 4 and requires monthly book purchases. Which review is accurate?",
+              "options": {
+                "A": "Both statements are supported because the room is correct.",
+                "B": "The day is an omission; purchasing is a format issue.",
+                "C": "The purchasing rule is supported because the source does not prohibit it.",
+                "D": "The day contradicts the source; the purchasing requirement is unsupported."
+              },
+              "correct_answer": "D",
+              "feedback": null
+            },
+            {
+              "question": "A study-guide draft is factually supported but uses vocabulary its intended readers do not understand. What is the best next step?",
+              "options": {
+                "A": "Remove the source so the system can choose easier content.",
+                "B": "Clarify the audience, request understandable wording, and recheck the revised draft.",
+                "C": "Accept the draft because accuracy guarantees clarity.",
+                "D": "Add unrelated context to make the prompt longer."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "A team repeatedly improves its prompt using the same five questions. What should it do before claiming broader reliability?",
+              "options": {
+                "A": "Check additional relevant questions that did not guide the revisions.",
+                "B": "Repeat only the question that consistently receives a correct answer.",
+                "C": "Correct the five answers manually and assume future answers will match.",
+                "D": "Change the criteria so that every existing answer passes."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "A student checks a guide against its source and corrects two unsupported statements. No classmates have used it. Which report is justified?",
+              "options": {
+                "A": "The guide improves understanding for every student.",
+                "B": "The corrected document proves future AI responses will be accurate.",
+                "C": "Two unsupported statements were corrected; usefulness for learners remains to be checked.",
+                "D": "The guide is useful because it has a neat layout."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            }
+          ]
+        },
+        {
+          "id": "week-3-applied",
+          "title": "One-Page AI Solution Plan",
+          "type": "project_proposal",
+          "grading": "applied",
+          "requirements": "State the problem, intended users, required information, proposed AI activity, expected benefit and two measures of success. This becomes the starting point for the final project."
+        }
+      ]
+    },
+    {
+      "id": "module-4",
+      "week": 4,
+      "title": "Using AI Responsibly and Building Future Skills",
+      "planned_title": "Responsible AI and Future Skills",
+      "learning_outcome": "Students can recognise inaccurate or biased outputs, protect personal information and propose appropriate human oversight.",
+      "lessons": [
+        {
+          "id": "4.1",
+          "title": "Recognise Errors, Bias, and Privacy Risks",
+          "content_items": [
+            "4.1.1 Lens: Who Could Be Affected by an AI Answer?",
+            "4.1.2 When AI Gets It Wrong: Mistakes and Invented Information",
+            "4.1.3 Recommended Reading: A Student’s Guide to Checking Claims and Protecting Information",
+            "4.1.4 Bias and Fairness: When Examples Leave People Out",
+            "4.1.5 Practice Assignment: Spot the Error, Bias, or Privacy Concern"
+          ]
+        },
+        {
+          "id": "4.2",
+          "title": "Make Responsible Choices and Prepare for the Future",
+          "content_items": [
+            "4.2.1 Should AI Make the Final Decision?",
+            "4.2.2 Recommended Reading: AI in School Decisions—Support, Review, and Responsibility",
+            "4.2.3 Who Checks, Who Decides, and Who Can Question the Result?",
+            "4.2.4 Essential Reading: Two Fictional Cases—AI Grading and Club Selection",
+            "4.2.5 Practice Assignment: Choose an Appropriate Human Review",
+            "4.2.6 Fair Access: Can Everyone Use the Solution?",
+            "4.2.7 Responsible Use of Personal Information",
+            "4.2.8 Practical Scenario: Review a School AI Case and Improve Your Week 3 Plan",
+            "4.2.9 Essential Reading: My Responsible-AI Checklist and Future-Skills Map",
+            "4.2.10 Future Skills: Asking Questions, Checking Evidence, and Working with Others",
+            "4.2.11 Exploring AI-Related Roles and Learning Pathways",
+            "4.2.12 Reflections: Being a Responsible AI User",
+            "4.2.13 Practice Assignment: Responsible Choices and Future Skills",
+            "4.2.14 Should an AI Score Decide a Student’s Opportunity?",
+            "4.2.15 Week Summary",
+            "4.2.16 Week 4 (Graded): Responsible AI and Future Skills"
+          ]
+        }
+      ],
+      "assignments": [
+        {
+          "id": "4.1.5",
+          "title": "Spot the Error, Bias, or Privacy Concern",
+          "type": "quiz",
+          "grading": "ungraded",
+          "duration_minutes": 15,
+          "questions": [
+            {
+              "question": "A teacher-provided information sheet states: “The school library opens Monday to Friday, from 9 a.m. to 3 p.m.” An AI helpdesk answers a student’s question by saying: “The library also opens on Saturday from 9 a.m. to noon.” What is the most appropriate response?",
+              "options": {
+                "A": "Accept the Saturday hours because they sound reasonable.",
+                "B": "Mark Saturday opening as unsupported and check with the librarian.",
+                "C": "Replace the answer with “The library is definitely closed on Saturday.”",
+                "D": "Ask the same AI tool to confirm and accept its repeated answer."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            },
+            {
+              "question": "A science club aims to help beginners develop scientific skills. An AI tool recommends applicants mainly according to the number of competitions they have previously entered. Which concern should the teacher investigate first?",
+              "options": {
+                "A": "Whether the tool should display the applicants in alphabetical order.",
+                "B": "Whether longer explanations would make the ranking more reliable.",
+                "C": "Whether previous competition records should be accepted without checking.",
+                "D": "Whether the selection criteria overlook beginners with fewer opportunities."
+              },
+              "correct_answer": "D",
+              "feedback": null
+            },
+            {
+              "question": "A student wants an AI tool to draft a general examination-preparation guide for Classes 9–12. Which input is most appropriate?",
+              "options": {
+                "A": "The intended audience, guide length, and requested topics, without classmates’ personal records.",
+                "B": "Classmates’ names and marks so the tool can personalise a general guide.",
+                "C": "Classmates’ addresses and attendance so the tool can suggest study locations.",
+                "D": "Classmates’ health and family details so the tool can include realistic examples."
+              },
+              "correct_answer": "A",
+              "feedback": null
+            },
+            {
+              "question": "A school tests an AI-supported learning assistant only with students who have personal laptops, reliable internet, and strong English reading skills. Those students find it useful. What is the best next step before recommending it for wider use?",
+              "options": {
+                "A": "Conclude that it will work equally well for every student.",
+                "B": "Repeat the same trial and treat similar results as proof of universal usefulness.",
+                "C": "Test relevant access and language needs, and consider suitable alternatives.",
+                "D": "Ask the assistant whether it is accessible and accept its response as evidence."
+              },
+              "correct_answer": "C",
+              "feedback": null
+            },
+            {
+              "question": "For a classroom AI exercise, a student removes a classmate’s name from a real record but leaves this description: “The only Class 10 student who captains the debate team and lives in Village X.” What is the best action before sharing it?",
+              "options": {
+                "A": "Share it because removing the name prevents identification.",
+                "B": "Replace it with a clearly fictional example containing only necessary details.",
+                "C": "Add more background information to make the description easier to understand.",
+                "D": "Ask the AI to keep it private and upload the unchanged record."
+              },
+              "correct_answer": "B",
+              "feedback": null
+            }
+          ]
+        },
+        {
+          "id": "4.2.5",
+          "title": "Choose an Appropriate Human Review",
+          "type": "quiz",
+          "grading": "ungraded",
+          "duration_minutes": 15,
+          "question_count": 5,
+          "source_status": "title_and_format_present_but_question_text_not_present_in_supplied_document"
+        },
+        {
+          "id": "4.2.8",
+          "title": "Review a School AI Case and Improve Your Week 3 Plan",
+          "type": "guided_activity",
+          "grading": "ungraded",
+          "duration_minutes": 90,
+          "requirements": "Choose a fictional AI-grading or club-selection case; identify the decision, affected students, information used and missing evidence; examine errors, unfair treatment, privacy and access barriers; recommend three safeguards including meaningful review and a way to question the result; improve the Week 3 plan; explain one improvement and one remaining uncertainty."
+        },
+        {
+          "id": "4.2.13",
+          "title": "Responsible Choices and Future Skills",
+          "type": "quiz",
+          "grading": "ungraded",
+          "duration_minutes": 15,
+          "question_count": 5,
+          "source_status": "title_and_format_present_but_question_text_not_present_in_supplied_document"
+        },
+        {
+          "id": "4.2.14",
+          "title": "Should an AI Score Decide a Student’s Opportunity?",
+          "type": "discussion",
+          "grading": "ungraded",
+          "duration_minutes": 15,
+          "prompt": "Discuss whether an AI score should decide a student's opportunity and what human role should remain."
+        },
+        {
+          "id": "week-4-graded",
+          "title": "Week 4 (Graded): Responsible AI and Future Skills",
+          "type": "quiz",
+          "grading": "graded",
+          "duration_minutes": 30,
+          "marks": 10,
+          "question_count": 10,
+          "source_status": "assessment title/format is present, but the learner-facing question bank and answer key are not present in the supplied document."
+        }
+      ]
+    },
+    {
+      "id": "module-5",
+      "week": 5,
+      "title": "Student Project and AI Showcase",
+      "planned_title": "Student Project and AI Showcase",
+      "learning_outcome": "Students can produce, explain and critically evaluate a small AI-assisted project.",
+      "source_status": "planned_module_only",
+      "lessons": [
+        {
+          "id": "5.1",
+          "title": "Project and Showcase",
+          "content_items": [
+            "Choosing a manageable project",
+            "Building a useful prompt",
+            "Creating a poster, study guide, chatbot concept or planning prototype",
+            "Checking accuracy and sources",
+            "Presenting a project clearly",
+            "Giving and using peer feedback"
+          ]
+        }
+      ],
+      "assignments": [
+        {
+          "id": "final-project",
+          "title": "Final Project Submission",
+          "type": "project",
+          "grading": "graded",
+          "weight": "30%",
+          "requirements": "Submit a project artifact plus a short explanation covering the problem, intended users, how AI was used, checks performed, limitations and possible improvements."
+        },
+        {
+          "id": "course-quiz",
+          "title": "Brief Course Quiz",
+          "type": "quiz",
+          "grading": "graded",
+          "source_status": "planned_in_module_5_only",
+          "question_count": "brief; exact questions not supplied"
+        },
+        {
+          "id": "self-reflection",
+          "title": "Course Self-Reflection",
+          "type": "reflection",
+          "grading": "graded",
+          "source_status": "planned_in_module_5_only"
+        },
+        {
+          "id": "peer-feedback",
+          "title": "Project Summary and Peer Feedback",
+          "type": "discussion",
+          "grading": "10% category includes discussion participation and peer feedback",
+          "requirements": "Post a project summary and give specific, respectful feedback on two peers’ projects.",
+          "prompt": "Which suggested improvement would make your own project more useful or responsible?"
+        }
+      ]
+    }
+  ],
+  "planned_module_overview": [
+    {
+      "module": 1,
+      "title": "Foundations of AI and Generative AI",
+      "q3_self_assessment": "Ten-question concept quiz plus comparison of student-written and AI-generated explanation; identify two useful features and two points needing checking.",
+      "discussion": "When, if ever, should students use generative AI for homework? Give one acceptable and one unacceptable example."
+    },
+    {
+      "module": 2,
+      "title": "AI Applications in Society",
+      "q3_self_assessment": "Scenario-based quiz plus local-challenge application worksheet and poster/infographic.",
+      "discussion": "Which problem in your community could AI help address first? What information would the solution need?"
+    },
+    {
+      "module": 3,
+      "title": "Designing an AI Solution",
+      "q3_self_assessment": "Quiz on problem selection/common implementation errors plus one-page proposal with problem, users, information, AI activity, benefit and two success measures.",
+      "discussion": "What could go wrong if a school launches an AI tool without first testing it with a small group? Respond constructively to one peer."
+    },
+    {
+      "module": 4,
+      "title": "Responsible AI and Future Skills",
+      "q3_self_assessment": "Case-based quiz plus fictional AI grading/admissions case; identify harms, recommend three safeguards and revise Week 3 proposal.",
+      "discussion": "Should AI make a final decision about a student’s marks or admission? Explain the role a teacher or school should retain."
+    },
+    {
+      "module": 5,
+      "title": "Student Project and AI Showcase",
+      "q3_self_assessment": "Final project artifact + explanation, brief course quiz and self-reflection.",
+      "discussion": "Post a project summary and give specific, respectful feedback on two peers’ projects."
+    }
+  ]
+}

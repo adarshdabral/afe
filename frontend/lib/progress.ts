@@ -45,11 +45,13 @@ interface AssignmentLike {
 }
 
 interface LessonLike {
-  topics: TopicLike[];
-  assignment?: AssignmentLike | null;
+  topics: (TopicLike & { isPublished?: boolean })[];
+  assignments?: AssignmentLike[];
 }
 
-const liveAssignment = (l: LessonLike) => (l.assignment && l.assignment.isPublished !== false ? l.assignment : null);
+/** What a learner can actually do in a lesson: visible topics + published assignments. */
+const liveTopics = (l: LessonLike) => l.topics.filter((t) => t.isPublished !== false);
+const liveAssignments = (l: LessonLike) => (l.assignments ?? []).filter((a) => a.isPublished !== false);
 
 /**
  * What's left in a course: video vs reading time (from each topic's estimated
@@ -65,14 +67,13 @@ export function remainingWork(
   const out: RemainingWork = { videos: { count: 0, minutes: 0 }, readings: { count: 0, minutes: 0 }, gradedAssessments: 0 };
   for (const m of modules) {
     for (const l of m.lessons) {
-      for (const t of l.topics) {
+      for (const t of liveTopics(l)) {
         if (completed.has(t.id)) continue;
         const bucket = t.contentType === "video" || !!t.videoUrl || !!t.hasVideo ? out.videos : out.readings;
         bucket.count += 1;
         bucket.minutes += t.estimatedDurationMinutes || 0;
       }
-      const a = liveAssignment(l);
-      if (a?.isGraded && !passedAssessmentIds.has(a.id)) out.gradedAssessments += 1;
+      for (const a of liveAssignments(l)) if (a.isGraded && !passedAssessmentIds.has(a.id)) out.gradedAssessments += 1;
     }
     if (m.assessmentId && !passedAssessmentIds.has(m.assessmentId)) out.gradedAssessments += 1;
   }
@@ -117,7 +118,7 @@ export function moduleRemaining(
 ): ModuleRemaining {
   const out: ModuleRemaining = { gradedLeft: 0, lessonsLeft: 0, minutesLeft: 0, totalGraded: 0, totalLessons: 0, totalMinutes: 0 };
   for (const l of module.lessons) {
-    for (const t of l.topics) {
+    for (const t of liveTopics(l)) {
       const minutes = t.estimatedDurationMinutes || 0;
       out.totalLessons += 1;
       out.totalMinutes += minutes;
@@ -125,8 +126,7 @@ export function moduleRemaining(
       out.lessonsLeft += 1;
       out.minutesLeft += minutes;
     }
-    const a = liveAssignment(l);
-    if (a) {
+    for (const a of liveAssignments(l)) {
       const minutes = a.estimatedDurationMinutes || 0;
       out.totalMinutes += minutes;
       if (a.isGraded) out.totalGraded += 1;

@@ -190,6 +190,28 @@ export function InstructorSection({ course }: { course: CourseOutline }) {
   );
 }
 
+// ── How you're assessed (course grading weights) ──────────────────────────────
+
+export function AssessmentWeights({ course }: { course: CourseOutline }) {
+  const weights = course.gradingWeights.filter((w) => w.category);
+  if (weights.length === 0) return null;
+  return (
+    <section aria-labelledby="assessed-heading" id="assessment" className="py-20 md:py-24">
+      <SectionHeading id="assessed-heading" eyebrow="Assessment" title="How you're assessed">
+        Each part of the course contributes to your overall result.
+      </SectionHeading>
+      <ul className="mt-8 grid sm:grid-cols-2 gap-3 max-w-3xl">
+        {weights.map((w) => (
+          <li key={w.category} className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-soft">
+            <span className="shrink-0 w-14 text-2xl font-semibold tabular-nums text-violet-600">{w.weight}%</span>
+            <span className="text-[15px] text-foreground leading-snug">{w.category}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // ── Certificate ───────────────────────────────────────────────────────────────
 
 export function CertificateSection({ course }: { course: CourseOutline }) {

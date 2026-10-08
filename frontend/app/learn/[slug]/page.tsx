@@ -20,7 +20,7 @@ import { useLearning } from "@/context/LearningContext";
 import { useLearnCourse } from "@/hooks/use-learn-course";
 import { roleHome } from "@/lib/access";
 import { pad2 } from "@/lib/course";
-import { itemHref, learnSequence, moduleLock, topicIds } from "@/lib/learn";
+import { itemHref, learnSequence, moduleLock, orderedLessonRows, topicIds } from "@/lib/learn";
 import { describeRemaining, remainingWork } from "@/lib/progress";
 
 // The "Demystifying AI for Everyone learning experience" home: course header, progress,
@@ -212,18 +212,19 @@ export default function LearnOverview() {
                       <li key={lesson.id}>
                         <p className="text-xs font-semibold text-muted-foreground">{lesson.title}</p>
                         <ul className="mt-1 space-y-0.5">
-                          {lesson.topics.map((topic) => {
-                            const topicDone = completedTopics.has(topic.id);
-                            const unlocked = !isStudent || isUnlocked(items, topic.id);
-                            const Icon = topicDone ? CheckCircle2 : unlocked ? PlayCircle : Lock;
-                            const row = <span className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 -mx-2.5 text-[14px] ${unlocked ? "text-foreground hover:bg-secondary" : "text-muted-foreground"}`}>
-                              <Icon className={`w-4 h-4 shrink-0 ${topicDone ? "text-green-600" : unlocked ? "text-violet-600" : ""}`} aria-hidden />
-                              <span className="truncate">{topic.title}</span>
-                            </span>;
-                            return <li key={topic.id}>{unlocked ? <Link href={`/learn/${slug}/topic/${topic.id}`}>{row}</Link> : <div title="Complete the previous topic to unlock">{row}</div>}</li>;
-                          })}
-                          {lesson.assignment && (() => {
-                            const a = lesson.assignment;
+                          {orderedLessonRows(lesson).map((r) => {
+                            if (r.kind === "topic") {
+                              const topic = r.topic;
+                              const topicDone = completedTopics.has(topic.id);
+                              const unlocked = !isStudent || isUnlocked(items, topic.id);
+                              const Icon = topicDone ? CheckCircle2 : unlocked ? PlayCircle : Lock;
+                              const row = <span className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 -mx-2.5 text-[14px] ${unlocked ? "text-foreground hover:bg-secondary" : "text-muted-foreground"}`}>
+                                <Icon className={`w-4 h-4 shrink-0 ${topicDone ? "text-green-600" : unlocked ? "text-violet-600" : ""}`} aria-hidden />
+                                <span className="truncate">{topic.title}</span>
+                              </span>;
+                              return <li key={topic.id}>{unlocked ? <Link href={`/learn/${slug}/topic/${topic.id}`}>{row}</Link> : <div title="Complete the previous item to unlock">{row}</div>}</li>;
+                            }
+                            const a = r.assignment;
                             const aDone = doneItems.has(a.id);
                             const unlocked = !isStudent || isUnlocked(items, a.id, m.id);
                             const Icon = aDone ? CheckCircle2 : unlocked ? NotebookPen : Lock;
@@ -232,8 +233,8 @@ export default function LearnOverview() {
                               <span className="truncate">Assignment: {a.title}</span>
                               <span className="ml-auto shrink-0 text-[12px] text-muted-foreground">{a.isGraded ? "Graded" : "Not graded"}{a.timeLimitMinutes > 0 ? ` · ${a.timeLimitMinutes} min` : ""}</span>
                             </span>;
-                            return <li key={a.id}>{unlocked ? <Link href={`/learn/${slug}/assessment/${a.id}`}>{row}</Link> : <div title="Complete the lesson's topics first">{row}</div>}</li>;
-                          })()}
+                            return <li key={a.id}>{unlocked ? <Link href={`/learn/${slug}/assessment/${a.id}`}>{row}</Link> : <div title="Complete the previous item to unlock">{row}</div>}</li>;
+                          })}
                         </ul>
                       </li>
                     ))}

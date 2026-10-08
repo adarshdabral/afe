@@ -41,6 +41,10 @@ export function TopicEditor({
     estimatedDurationMinutes: topic?.estimatedDurationMinutes ?? 0,
     isPreview: topic?.isPreview ?? false,
     allowDownload: topic?.allowDownload ?? true,
+    isPublished: topic?.isPublished ?? true,
+    gradeCategory: topic?.gradeCategory ?? "",
+    contentStatus: topic?.contentStatus ?? "complete",
+    adminNote: topic?.adminNote ?? "",
   });
   const [discussion, setDiscussion] = useState({
     prompt: topic?.discussion?.prompt ?? "",
@@ -202,6 +206,33 @@ export function TopicEditor({
           <input type="checkbox" checked={form.allowDownload ?? true} onChange={(e) => set("allowDownload", e.target.checked)} className="h-4 w-4" />
           Download allowed — students can download this topic&apos;s text and uploaded files
         </label>
+        <label className="flex items-center gap-2 text-sm text-foreground sm:col-span-2">
+          <input type="checkbox" checked={form.isPublished ?? true} onChange={(e) => set("isPublished", e.target.checked)} className="h-4 w-4" />
+          Visible to students — untick to keep it as a draft (hidden, and not part of their learning sequence)
+        </label>
+      </div>
+
+      <div className="rounded-xl border border-dashed border-amber-500/40 bg-amber-500/[0.04] p-3 space-y-3">
+        <p className="text-xs font-semibold text-foreground">Admin only — never shown to students</p>
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={form.contentStatus !== "needs_content"}
+            onChange={(e) => set("contentStatus", e.target.checked ? "complete" : "needs_content")}
+            className="h-4 w-4"
+          />
+          Content complete (untick to flag it as needing content)
+        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <Label>Grading category</Label>
+            <Input value={form.gradeCategory ?? ""} onChange={(e) => set("gradeCategory", e.target.value)} placeholder="e.g. Applied activities, Weeks 1–4" className={inputClass} />
+          </div>
+          <div>
+            <Label>Admin note</Label>
+            <Input value={form.adminNote ?? ""} onChange={(e) => set("adminNote", e.target.value)} placeholder="What still needs adding…" className={inputClass} />
+          </div>
+        </div>
       </div>
 
       <div className="flex gap-2">

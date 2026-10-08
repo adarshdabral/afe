@@ -54,6 +54,10 @@ const courseFields = {
   prerequisites: stringList.optional(),
   tags: z.array(z.string().max(60)).max(50).optional(),
   skills: chipList.optional(),
+  gradingWeights: z
+    .array(z.object({ category: z.string().trim().min(1).max(120), weight: z.coerce.number().min(0).max(100) }))
+    .max(20)
+    .optional(),
   tools: chipList.optional(),
   offeredBy: z
     .object({

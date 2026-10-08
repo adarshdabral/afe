@@ -4,7 +4,7 @@
 import { z } from "zod";
 import type { ApiRequest as Request, ApiResponse as Response } from "../http/types";
 import { TOPIC_CONTENT_TYPES } from "../models/Topic";
-import { createTopic, deleteTopic, reorderTopics, updateTopic } from "../services/topic.service";
+import { createTopic, deleteTopic, reorderLessonItems, reorderTopics, updateTopic } from "../services/topic.service";
 import { contentFields, idSchema, reorderSchema } from "./content.schema";
 import { ensureDiscussionThread, hideDiscussionThread } from "../services/forum.service";
 import { getUserById } from "../services/auth.service";
@@ -26,6 +26,10 @@ const base = {
   ...contentFields,
   isPreview: z.boolean().optional(),
   allowDownload: z.boolean().optional(),
+  isPublished: z.boolean().optional(),
+  gradeCategory: z.string().max(120).optional(),
+  contentStatus: z.enum(["complete", "needs_content"]).optional(),
+  adminNote: z.string().max(5000).optional(),
   discussion: z
     .object({
       prompt: z.string().max(5000).optional(),
@@ -93,4 +97,19 @@ export async function reorder(req: Request, res: Response): Promise<void> {
     return;
   }
   res.json({ data: topics });
+}
+
+const itemsSchema = z.object({
+  items: z.array(z.object({ kind: z.enum(["topic", "assignment"]), id: z.string().min(1) })).min(1).max(500),
+});
+
+/** POST /api/admin/courses/lessons/:lessonId/items/reorder — combined topic + assignment order. */
+export async function reorderItems(req: Request, res: Response): Promise<void> {
+  const lessonId = idSchema.parse(req.params.lessonId);
+  const { items } = itemsSchema.parse(req.body);
+  if (!(await reorderLessonItems(lessonId, items))) {
+    res.status(404).json({ error: { message: "Lesson not found." } });
+    return;
+  }
+  res.json({ data: { ok: true } });
 }

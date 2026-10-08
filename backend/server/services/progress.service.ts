@@ -61,31 +61,34 @@ async function loadCourseStructure(courseId: string): Promise<Structure> {
   const [modules, lessons, topics, assessments] = await Promise.all([
     Module.find({ courseId, isPublished: true }).sort({ order: 1, createdAt: 1 }).select("_id").lean(),
     Lesson.find({ courseId }).sort({ order: 1, createdAt: 1 }).select("_id moduleId").lean(),
-    Topic.find({ courseId }).sort({ order: 1, createdAt: 1 }).select("_id lessonId contentType discussion.required").lean(),
-    Assessment.find({ courseId, isPublished: true }).select("_id kind moduleId lessonId isRequired").lean(),
+    // Draft topics (isPublished: false) are invisible to students and not in the sequence.
+    Topic.find({ courseId, isPublished: { $ne: false } }).sort({ order: 1, createdAt: 1 }).select("_id lessonId order contentType discussion.required").lean(),
+    Assessment.find({ courseId, isPublished: true }).select("_id kind moduleId lessonId isRequired order").lean(),
   ]);
-  const topicsByLesson = new Map<string, { id: string }[]>();
+  const topicsByLesson = new Map<string, { id: string; order: number }[]>();
   const requiredDiscussions = new Set<string>();
   for (const t of topics) {
     if (!topicsByLesson.has(t.lessonId)) topicsByLesson.set(t.lessonId, []);
-    topicsByLesson.get(t.lessonId)!.push({ id: String(t._id) });
+    topicsByLesson.get(t.lessonId)!.push({ id: String(t._id), order: t.order ?? 0 });
     if (t.contentType === "discussion" && (t as { discussion?: { required?: boolean } }).discussion?.required) {
       requiredDiscussions.add(String(t._id));
     }
   }
   const moduleAssessment = new Map<string, string>();
-  const lessonAssignment = new Map<string, { id: string; isRequired: boolean }>();
+  const lessonAssignments = new Map<string, { id: string; isRequired: boolean; order: number | null }[]>();
   const assessmentModule = new Map<string, string>();
   for (const a of assessments) {
     assessmentModule.set(String(a._id), a.moduleId);
-    if (a.kind === "lesson" && a.lessonId) lessonAssignment.set(a.lessonId, { id: String(a._id), isRequired: a.isRequired !== false });
-    else moduleAssessment.set(a.moduleId, String(a._id));
+    if (a.kind === "lesson" && a.lessonId) {
+      if (!lessonAssignments.has(a.lessonId)) lessonAssignments.set(a.lessonId, []);
+      lessonAssignments.get(a.lessonId)!.push({ id: String(a._id), isRequired: a.isRequired !== false, order: typeof a.order === "number" ? a.order : null });
+    } else moduleAssessment.set(a.moduleId, String(a._id));
   }
   const lessonsByModule = new Map<string, SequenceInput["lessons"]>();
   for (const l of lessons) {
     const lid = String(l._id);
     if (!lessonsByModule.has(l.moduleId)) lessonsByModule.set(l.moduleId, []);
-    lessonsByModule.get(l.moduleId)!.push({ id: lid, topics: topicsByLesson.get(lid) ?? [], assignment: lessonAssignment.get(lid) ?? null });
+    lessonsByModule.get(l.moduleId)!.push({ id: lid, topics: topicsByLesson.get(lid) ?? [], assignments: lessonAssignments.get(lid) ?? [] });
   }
   const seqModules: SequenceInput[] = modules.map((m) => ({
     id: String(m._id),

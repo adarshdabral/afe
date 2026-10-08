@@ -9,6 +9,7 @@
 import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { defineModel } from "./defineModel";
 import { invalidateOnWrite } from "../cache/content-cache";
+import { importFieldsSchema, indexImportKey, toImportFields, type ImportFieldsView } from "./importFields";
 
 export const DEFAULT_PASSING_SCORE = 60;
 export const ASSESSMENT_KINDS = ["module", "lesson"] as const;
@@ -16,7 +17,7 @@ export type AssessmentKind = (typeof ASSESSMENT_KINDS)[number];
 /** Mongo filter for module assessments (legacy docs have no `kind`). */
 export const MODULE_KIND = { kind: { $ne: "lesson" } } as const;
 
-export interface AssessmentView {
+export interface AssessmentView extends ImportFieldsView {
   id: string;
   kind: AssessmentKind;
   moduleId: string;
@@ -46,6 +47,11 @@ export interface AssessmentView {
   /** When time runs out, submit the saved answers automatically. */
   autoSubmitOnTimeout: boolean;
   isPublished: boolean;
+  /** Lesson assignments: position among the lesson's topics (same scale as Topic.order;
+   *  null = after all topics). Several assignments per lesson are allowed. */
+  order: number | null;
+  /** Grading category this counts towards (Course.gradingWeights; admin-only). */
+  gradeCategory: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -71,18 +77,19 @@ const assessmentSchema = new Schema(
     shuffleOptions: { type: Boolean, default: false },
     autoSubmitOnTimeout: { type: Boolean, default: true },
     isPublished: { type: Boolean, default: false },
+    order: { type: Number, default: null },
+    gradeCategory: { type: String, default: "" },
+    ...importFieldsSchema,
   },
   { timestamps: true },
 );
-// One module assessment per module, one assignment per lesson.
+indexImportKey(assessmentSchema);
+// One module assessment per module; lessons may have several assignments.
 assessmentSchema.index(
   { moduleId: 1 },
   { unique: true, partialFilterExpression: { kind: "module" }, name: "module_assessment_unique" },
 );
-assessmentSchema.index(
-  { lessonId: 1 },
-  { unique: true, partialFilterExpression: { kind: "lesson" }, name: "lesson_assignment_unique" },
-);
+assessmentSchema.index({ lessonId: 1 });
 
 export type AssessmentSchemaType = InferSchemaType<typeof assessmentSchema>;
 export type AssessmentDoc = HydratedDocument<AssessmentSchemaType>;
@@ -117,6 +124,9 @@ export function toAssessment(doc: AssessmentDoc): AssessmentView {
     shuffleOptions: doc.shuffleOptions === true,
     autoSubmitOnTimeout: doc.autoSubmitOnTimeout ?? true,
     isPublished: doc.isPublished === true,
+    order: typeof doc.order === "number" ? doc.order : null,
+    gradeCategory: doc.gradeCategory ?? "",
+    ...toImportFields(doc),
     createdAt: ts.createdAt?.toISOString() ?? new Date(0).toISOString(),
     updatedAt: ts.updatedAt?.toISOString() ?? new Date(0).toISOString(),
   };

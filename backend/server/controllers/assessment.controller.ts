@@ -12,10 +12,9 @@ import {
   deleteAssessment,
   deleteQuestion,
   getAssessment,
-  getAssessmentForLesson,
   getAssessmentForModule,
   getStudentAssessment,
-  lessonHasAssignment,
+  getAssignmentsForLesson,
   listAttempts,
   listQuestions,
   moduleHasAssessment,
@@ -53,6 +52,10 @@ const configFields = {
   shuffleQuestions: z.boolean().optional(),
   shuffleOptions: z.boolean().optional(),
   autoSubmitOnTimeout: z.boolean().optional(),
+  order: z.coerce.number().min(0).max(100000).nullable().optional(),
+  gradeCategory: z.string().max(120).optional(),
+  contentStatus: z.enum(["complete", "needs_content"]).optional(),
+  adminNote: z.string().max(5000).optional(),
 };
 
 const windowOk = (v: { availableFrom?: string | null; availableUntil?: string | null }) =>
@@ -101,8 +104,9 @@ const submitSchema = z.object({ answers: answersSchema });
 // ---- Admin ----
 export async function create(req: Request, res: Response): Promise<void> {
   const data = createSchema.parse(req.body);
-  if (data.lessonId ? await lessonHasAssignment(data.lessonId) : await moduleHasAssessment(data.moduleId!)) {
-    res.status(409).json({ error: { message: data.lessonId ? "This lesson already has an assignment." : "This module already has an assessment." } });
+  // A module has at most one module assessment; lessons may have several assignments.
+  if (!data.lessonId && (await moduleHasAssessment(data.moduleId!))) {
+    res.status(409).json({ error: { message: "This module already has an assessment." } });
     return;
   }
   const a = await createAssessment(data);
@@ -121,12 +125,13 @@ export async function getForModule(req: Request, res: Response): Promise<void> {
   res.json({ data: { assessment, questions } });
 }
 
-/** GET /api/admin/assessments/lesson/:lessonId — the lesson's assignment {assessment|null, questions}. */
+/** GET /api/admin/assessments/lesson/:lessonId — the lesson's assignments, in order:
+ *  { assessment (the first, back-compat), questions (its questions), assignments: [{assessment, questions}] }. */
 export async function getForLesson(req: Request, res: Response): Promise<void> {
   const lessonId = idSchema.parse(req.params.lessonId);
-  const assessment = await getAssessmentForLesson(lessonId);
-  const questions = assessment ? await listQuestions(assessment.id) : [];
-  res.json({ data: { assessment, questions } });
+  const all = await getAssignmentsForLesson(lessonId);
+  const assignments = await Promise.all(all.map(async (a) => ({ assessment: a, questions: await listQuestions(a.id) })));
+  res.json({ data: { assessment: assignments[0]?.assessment ?? null, questions: assignments[0]?.questions ?? [], assignments } });
 }
 
 /** GET /api/admin/assessments/:assessmentId — full (answer key included). */

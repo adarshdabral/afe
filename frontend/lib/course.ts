@@ -23,8 +23,8 @@ export interface LessonOutline {
   title: string;
   description: string;
   topics: TopicOutline[];
-  /** The lesson's assignment (published), if any. */
-  assignment: { title: string; isGraded: boolean } | null;
+  /** The lesson's published assignments, in order. */
+  assignments: { title: string; isGraded: boolean }[];
 }
 export interface ModuleOutline {
   id: string;
@@ -61,6 +61,8 @@ export interface CourseOutline {
   learningObjectives: string[];
   prerequisites: string[];
   tags: string[];
+  /** Assessment categories and weights ("How you're assessed"). */
+  gradingWeights: { category: string; weight: number }[];
   skills: string[];
   tools: string[];
   offeredBy: OfferedBy;
@@ -88,6 +90,7 @@ export function toCourseOutline(tree: CourseTree): CourseOutline {
     prerequisites: tree.prerequisites ?? [],
     tags: tree.tags ?? [],
     skills: tree.skills ?? [],
+    gradingWeights: tree.gradingWeights ?? [],
     tools: tree.tools ?? [],
     offeredBy: {
       name: tree.offeredBy?.name ?? "",
@@ -125,7 +128,9 @@ export function toCourseOutline(tree: CourseTree): CourseOutline {
           contentType: t.contentType,
           estimatedDurationMinutes: t.estimatedDurationMinutes,
         })),
-        assignment: l.assignment && l.assignment.isPublished !== false ? { title: l.assignment.title, isGraded: l.assignment.isGraded } : null,
+        assignments: (l.assignments ?? [])
+          .filter((a) => a.isPublished !== false)
+          .map((a) => ({ title: a.title, isGraded: a.isGraded })),
       })),
     })),
   };
