@@ -70,8 +70,9 @@ check("create course with metadata → 201", created.status === 201, created.jso
 check("skills trimmed + de-duplicated", JSON.stringify(created.json?.data?.skills) === JSON.stringify(["AI literacy", "Data literacy"]), created.json?.data?.skills);
 check("offeredBy defaults missing keys to ''", created.json?.data?.offeredBy?.url === "" && created.json?.data?.offeredBy?.logoUrl === "", created.json?.data?.offeredBy);
 check("instructorTitle defaults to ''", created.json?.data?.instructorTitle === "");
+check("syllabusUrl defaults to ''", created.json?.data?.syllabusUrl === "");
 
-const patched = await admin.patch(`/admin/courses/${courseId}`, { instructorTitle: "Course lead", tools: ["AI copilots", "MLOps tools"], offeredBy: { url: "https://doonuniversity.ac.in" } });
+const patched = await admin.patch(`/admin/courses/${courseId}`, { instructorTitle: "Course lead", tools: ["AI copilots", "MLOps tools"], offeredBy: { url: "https://doonuniversity.ac.in" }, syllabusUrl: "/api/uploads/syllabus.pdf" });
 check("PATCH metadata → 200", patched.status === 200, patched.json);
 check("offeredBy PATCH merges (name kept, url set)", patched.json?.data?.offeredBy?.name === "Doon University" && patched.json?.data?.offeredBy?.url === "https://doonuniversity.ac.in", patched.json?.data?.offeredBy);
 check("empty chip rejected → 400", (await admin.patch(`/admin/courses/${courseId}`, { skills: ["ok", "  "] })).status === 400);
@@ -104,7 +105,7 @@ await admin.post(`/admin/courses/${courseId}/publish`);
 // ── Public tree ──────────────────────────────────────────────────────────────
 const pub = await client().get(`/courses/overview-course`);
 const tree = pub.json?.data;
-check("public tree carries metadata", tree?.instructorTitle === "Course lead" && tree?.skills?.length === 2 && tree?.tools?.includes("MLOps tools") && tree?.offeredBy?.name === "Doon University", tree && { instructorTitle: tree.instructorTitle, skills: tree.skills, tools: tree.tools, offeredBy: tree.offeredBy });
+check("public tree carries metadata", tree?.instructorTitle === "Course lead" && tree?.skills?.length === 2 && tree?.tools?.includes("MLOps tools") && tree?.offeredBy?.name === "Doon University" && tree?.syllabusUrl === "/api/uploads/syllabus.pdf", tree && { syllabusUrl: tree.syllabusUrl, instructorTitle: tree.instructorTitle, skills: tree.skills, tools: tree.tools, offeredBy: tree.offeredBy });
 const M1 = tree?.modules?.find((m: any) => m.id === m1);
 const M2 = tree?.modules?.find((m: any) => m.id === m2);
 check("module node: assessmentDurationMinutes = 15", M1?.assessmentDurationMinutes === 15, M1?.assessmentDurationMinutes);

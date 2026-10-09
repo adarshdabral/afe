@@ -66,6 +66,8 @@ export interface Course {
   /** "Tools you'll learn" chips. */
   tools: string[];
   offeredBy: OfferedBy;
+  /** Downloadable course syllabus (uploaded PDF URL; "" = none). */
+  syllabusUrl: string;
   /** Assessment categories and weights (shown on the course page). */
   gradingWeights: GradingWeight[];
   /** Admin only: import notes (source metadata, inconsistencies). */
@@ -242,6 +244,7 @@ export interface CreateCourseInput {
   skills?: string[];
   tools?: string[];
   offeredBy?: Partial<OfferedBy>;
+  syllabusUrl?: string;
   gradingWeights?: GradingWeight[];
 }
 export type UpdateCourseInput = Partial<CreateCourseInput>;

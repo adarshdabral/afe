@@ -2,11 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FLAGSHIP_SLUG, PLATFORM_NAME } from "@/lib/course";
+import { FLAGSHIP_SLUG, PLATFORM_ATTRIBUTION as ATTRIBUTION, PLATFORM_NAME } from "@/lib/course";
 import { BrandMark } from "@/components/BrandMark";
-
-const ATTRIBUTION =
-  "Mentored by: Center of Excellence in Logistics and Supply Chain Management, School of Management, Doon University";
 
 /** Public pages get the full product footer; app surfaces (dashboards, the
  *  course player) keep the compact institutional attribution line. */

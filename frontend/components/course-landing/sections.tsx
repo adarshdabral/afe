@@ -17,14 +17,13 @@ import {
   ShieldCheck,
   Download,
   Fingerprint,
+  FileText,
   Footprints,
 } from "lucide-react";
 import {
   assessmentCount,
   contentFormats,
   contentSection,
-  courseMinutes,
-  formatMinutes,
   initials,
   learningOutcomes,
   lessonCount,
@@ -35,6 +34,7 @@ import {
 import { CourseCta } from "./CourseCta";
 import { VerifyCertificateForm } from "./VerifyCertificateForm";
 import { ContentRenderer } from "@/components/learn/ContentRenderer";
+import { resolveUploadUrl } from "@/lib/api/uploads";
 
 export function SectionHeading({
   eyebrow,
@@ -65,10 +65,9 @@ export function SectionHeading({
 export function CourseFacts({ course }: { course: CourseOutline }) {
   const lessons = lessonCount(course);
   const assessments = assessmentCount(course);
-  const minutes = courseMinutes(course);
   const formats = contentFormats(course);
 
-  const facts: { icon: typeof Layers; title: string; detail: string }[] = [
+  const facts: { icon: typeof Layers; title: string; detail: string; href?: string }[] = [
     {
       icon: Layers,
       title: `${course.modules.length} modules`,
@@ -83,22 +82,47 @@ export function CourseFacts({ course }: { course: CourseOutline }) {
     ...(formats.length
       ? [{ icon: BookOpenText, title: formats[0], detail: formats.length > 1 ? `Plus ${formats.slice(1).join(", ").toLowerCase()}` : "Structured, readable chapters" }]
       : []),
-    ...(minutes > 0
-      ? [{ icon: Clock, title: `About ${formatMinutes(minutes)}`, detail: "Estimated total learning time" }]
+    // Fixed by the programme design (5 modules × 6 hours), not summed from topic estimates.
+    { icon: Clock, title: "30 hours", detail: "5 modules × 6 hours of learning" },
+    ...(course.syllabusUrl
+      ? [{ icon: FileText, title: "Syllabus", detail: "Click here to download the syllabus", href: syllabusHref(course.syllabusUrl) }]
       : []),
   ];
 
   return (
     <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-px overflow-hidden rounded-3xl border border-border bg-border shadow-soft">
       {facts.map((f, i) => (
-        <li key={f.title} className={`bg-card p-5 md:p-6 ${i === facts.length - 1 ? lastSpan(facts.length) : ""}`}>
-          <f.icon className="w-5 h-5 text-violet-600" aria-hidden />
-          <p className="mt-3 font-semibold text-foreground tracking-tight">{f.title}</p>
-          <p className="mt-0.5 text-[13px] text-muted-foreground leading-snug">{f.detail}</p>
+        <li key={f.title} className={`bg-card ${i === facts.length - 1 ? lastSpan(facts.length) : ""}`}>
+          {f.href ? (
+            <a href={f.href} target="_blank" rel="noopener noreferrer" className="group block h-full p-5 md:p-6 hover:bg-secondary/40 transition-colors">
+              <FactBody f={f} />
+            </a>
+          ) : (
+            <div className="p-5 md:p-6">
+              <FactBody f={f} />
+            </div>
+          )}
         </li>
       ))}
     </ul>
   );
+}
+
+function FactBody({ f }: { f: { icon: typeof Layers; title: string; detail: string; href?: string } }) {
+  return (
+    <>
+      <f.icon className="w-5 h-5 text-violet-600" aria-hidden />
+      <p className="mt-3 font-semibold text-foreground tracking-tight">{f.title}</p>
+      <p className={`mt-0.5 text-[13px] leading-snug ${f.href ? "text-violet-600 group-hover:underline" : "text-muted-foreground"}`}>{f.detail}</p>
+    </>
+  );
+}
+
+/** Backend-stored uploads (`/api/uploads/…`) get `?download=` so they save as a
+ *  file; R2 / external URLs open in a new tab. */
+function syllabusHref(url: string): string {
+  const resolved = resolveUploadUrl(url);
+  return url.startsWith("/api/uploads/") ? `${resolved}?download=syllabus.pdf` : resolved;
 }
 
 /** Let the last fact fill its row so the grid never shows an empty cell

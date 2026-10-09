@@ -48,6 +48,8 @@ export interface CourseView {
   /** "Tools you'll learn" chips. */
   tools: string[];
   offeredBy: OfferedBy;
+  /** Downloadable course syllabus (uploaded PDF URL; "" = none). */
+  syllabusUrl: string;
   /** Assessment categories and their weights (shown on the course page). Items are
    *  tagged with a category (Topic/Assessment.gradeCategory). */
   gradingWeights: GradingWeight[];
@@ -83,6 +85,7 @@ const courseSchema = new Schema(
       description: { type: String, default: "" },
       url: { type: String, default: "" },
     },
+    syllabusUrl: { type: String, default: "" },
     gradingWeights: { type: [{ category: String, weight: Number, _id: false }], default: [] },
     importKey: { type: String, default: null },
     adminNote: { type: String, default: "" },
@@ -129,6 +132,7 @@ export function toCourse(doc: CourseDoc): CourseView {
       description: doc.offeredBy?.description ?? "",
       url: doc.offeredBy?.url ?? "",
     },
+    syllabusUrl: doc.syllabusUrl ?? "",
     gradingWeights: (doc.gradingWeights ?? []).map((w) => ({ category: w.category ?? "", weight: w.weight ?? 0 })),
     importKey: doc.importKey ?? null,
     adminNote: doc.adminNote ?? "",

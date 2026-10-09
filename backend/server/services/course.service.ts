@@ -132,6 +132,7 @@ export interface CreateCourseInput {
   skills?: string[];
   tools?: string[];
   offeredBy?: Partial<OfferedBy>;
+  syllabusUrl?: string;
   gradingWeights?: { category: string; weight: number }[];
 }
 
@@ -160,6 +161,7 @@ export async function createCourse(
     skills: input.skills ?? [],
     tools: input.tools ?? [],
     offeredBy: { ...EMPTY_OFFERED_BY, ...input.offeredBy },
+    syllabusUrl: input.syllabusUrl ?? "",
     createdBy,
   });
   await ensureSections(String(doc._id)); // every course starts with its 3 sections
@@ -202,6 +204,7 @@ export async function updateCourse(
   if (patch.skills !== undefined) doc.set("skills", patch.skills);
   if (patch.gradingWeights !== undefined) doc.set("gradingWeights", patch.gradingWeights);
   if (patch.tools !== undefined) doc.set("tools", patch.tools);
+  if (patch.syllabusUrl !== undefined) doc.syllabusUrl = patch.syllabusUrl;
   if (patch.offeredBy !== undefined) {
     // Merge: omitted keys keep their stored value.
     const current = toCourse(doc).offeredBy;

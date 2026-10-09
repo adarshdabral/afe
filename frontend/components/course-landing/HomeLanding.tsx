@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Award, Footprints, Layers } from "lucide-react";
+import { Award, Footprints, GraduationCap, Layers } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { PLATFORM_NAME, type CourseOutline } from "@/lib/course";
 import { CourseHighlights, InstructorBadge } from "./CourseHighlights";
@@ -44,8 +44,8 @@ export function HomeLanding({ slug, initial }: { slug: string; initial: CourseOu
               {title}
             </h1>
             <p className="mt-6 text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">
-              Understand artificial intelligence, its applications, opportunities and impact —
-              without needing a technical background.
+              Designed for students of Classes 9–12: understand artificial intelligence, its
+              applications, opportunities and impact — without needing a technical background.
             </p>
 
             {course && <InstructorBadge course={course} className="mt-7 w-fit" />}
@@ -62,6 +62,9 @@ export function HomeLanding({ slug, initial }: { slug: string; initial: CourseOu
 
             {course && (
               <ul className="mt-9 flex flex-wrap gap-x-6 gap-y-2 text-[14px] text-muted-foreground">
+                <li className="inline-flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-violet-600" aria-hidden /> Classes 9–12
+                </li>
                 <li className="inline-flex items-center gap-1.5">
                   <Layers className="w-4 h-4 text-violet-600" aria-hidden /> {course.modules.length} modules
                 </li>

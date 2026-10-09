@@ -6,6 +6,10 @@ import type { ContentType, CourseLevel, CourseTree, OfferedBy, SectionKind } fro
 
 /** Platform brand vs. course identity. */
 export const PLATFORM_NAME = "AI on Wheels";
+/** Institutional attribution — the footer line, and the "Offered by" description when the
+ *  platform itself offers the course and no description is set. */
+export const PLATFORM_ATTRIBUTION =
+  "Mentored by: Center of Excellence in Logistics and Supply Chain Management, School of Management, Doon University";
 
 /** Slug of the flagship course. Mirrors `AI_COURSE_META.slug` in
  *  backend/server/seed/ai-course.data.ts — keep in sync. */
@@ -66,6 +70,8 @@ export interface CourseOutline {
   skills: string[];
   tools: string[];
   offeredBy: OfferedBy;
+  /** Uploaded syllabus ("" = none). */
+  syllabusUrl: string;
   sections: CourseSectionOutline[];
   modules: ModuleOutline[];
 }
@@ -98,6 +104,7 @@ export function toCourseOutline(tree: CourseTree): CourseOutline {
       description: tree.offeredBy?.description ?? "",
       url: tree.offeredBy?.url ?? "",
     },
+    syllabusUrl: tree.syllabusUrl ?? "",
     sections: (tree.sections ?? []).map((section) => ({
       id: section.id,
       kind: section.kind,

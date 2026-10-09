@@ -48,6 +48,7 @@ const courseFields = {
   instructorTitle: z.string().max(200).optional(),
   thumbnail: urlish,
   bannerImage: urlish,
+  syllabusUrl: urlish,
   level: z.enum(COURSE_LEVELS).optional(),
   estimatedDurationMinutes: z.coerce.number().int().min(0).max(100000).optional(),
   learningObjectives: stringList.optional(),

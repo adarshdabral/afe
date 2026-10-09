@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { updateCourse, type Course } from "@/lib/api/courses";
-import { uploadFile, uploadErrorMessage } from "@/lib/api/uploads";
+import { resolveUploadUrl, uploadFile, uploadErrorMessage } from "@/lib/api/uploads";
 
 /** "Category | 40" per line → [{category, weight}] (lines without a number are skipped). */
 function parseWeights(text: string): { category: string; weight: number }[] {
@@ -34,6 +34,7 @@ function formFrom(c: Course) {
     offeredDescription: c.offeredBy?.description ?? "",
     offeredUrl: c.offeredBy?.url ?? "",
     offeredLogoUrl: c.offeredBy?.logoUrl ?? "",
+    syllabusUrl: c.syllabusUrl ?? "",
     weights: (c.gradingWeights ?? []).map((w) => `${w.category} | ${w.weight}`).join("\n"),
   };
 }
@@ -57,6 +58,7 @@ export function CourseDetailsEditor({ course, onSaved }: { course: Course; onSav
         skills: parseChips(form.skills),
         tools: parseChips(form.tools),
         gradingWeights: parseWeights(form.weights),
+        syllabusUrl: form.syllabusUrl.trim(),
         offeredBy: {
           name: form.offeredName.trim(),
           description: form.offeredDescription.trim(),
@@ -73,14 +75,14 @@ export function CourseDetailsEditor({ course, onSaved }: { course: Course; onSav
     }
   };
 
-  const uploadLogo = async (file: File) => {
+  const upload = async (file: File, field: "offeredLogoUrl" | "syllabusUrl", label: string) => {
     setUploading(true);
     try {
       const res = await uploadFile(file);
-      set("offeredLogoUrl", res.url);
-      toast.success("Logo uploaded — save to apply.");
+      set(field, res.url);
+      toast.success(`${label} uploaded — save to apply.`);
     } catch (err) {
-      toast.error(uploadErrorMessage(err, "Logo upload failed"));
+      toast.error(uploadErrorMessage(err, `${label} upload failed`));
     } finally {
       setUploading(false);
     }
@@ -96,7 +98,7 @@ export function CourseDetailsEditor({ course, onSaved }: { course: Course; onSav
       >
         <span>
           <span className="block text-sm font-semibold text-foreground">Course page details</span>
-          <span className="block text-xs text-muted-foreground">Instructor, skills, tools, &ldquo;Offered by&rdquo; and assessment weights</span>
+          <span className="block text-xs text-muted-foreground">Instructor, skills, tools, &ldquo;Offered by&rdquo;, syllabus and assessment weights</span>
         </span>
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
       </button>
@@ -151,11 +153,36 @@ export function CourseDetailsEditor({ course, onSaved }: { course: Course; onSav
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     e.target.value = "";
-                    if (f) void uploadLogo(f);
+                    if (f) void upload(f, "offeredLogoUrl", "Logo");
                   }}
                 />
               </label>
             </div>
+          </div>
+          <div className="space-y-1.5 md:col-span-2">
+            <Label htmlFor="cd-syllabus">Syllabus (PDF — downloadable from the landing page)</Label>
+            <div className="flex gap-2">
+              <Input id="cd-syllabus" value={form.syllabusUrl} onChange={(e) => set("syllabusUrl", e.target.value)} placeholder="https:// or upload" />
+              <label className="inline-flex items-center gap-1 shrink-0 h-9 px-3 rounded-md border border-input text-sm cursor-pointer hover:bg-secondary">
+                <Upload className="w-4 h-4" aria-hidden /> {uploading ? "Uploading…" : "Upload"}
+                <input
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  className="sr-only"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) void upload(f, "syllabusUrl", "Syllabus");
+                  }}
+                />
+              </label>
+            </div>
+            {form.syllabusUrl && (
+              <a href={resolveUploadUrl(form.syllabusUrl)} target="_blank" rel="noopener noreferrer" className="text-xs text-violet-600 hover:underline">
+                View current syllabus
+              </a>
+            )}
           </div>
           <div className="space-y-1.5 md:col-span-2">
             <Label htmlFor="cd-weights">How students are assessed — one per line: category | weight %</Label>

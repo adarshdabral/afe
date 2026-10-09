@@ -302,7 +302,9 @@ Consistent per-feature layering under `backend/` — follow it for new features:
 - **Reviews** recompute a per-course `CourseRating` aggregate after every mutation.
 - **Course-page metadata** lives on `Course`: `instructorTitle` (badge credential line),
   `skills` / `tools` (chip lists, trimmed + de-duplicated, ≤30) and `offeredBy
-  {name, logoUrl, description, url}` (PATCH merges keys). Edited in the course builder's
+  {name, logoUrl, description, url}` (PATCH merges keys). Also `syllabusUrl` (uploaded PDF; the landing's
+  facts grid shows a "Syllabus" download tile only when set). With no description, an "Offered
+  by" of AI on Wheels shows `PLATFORM_ATTRIBUTION` (`lib/course.ts`, the footer line). Edited in the course builder's
   "Course page details" panel (`components/course/CourseDetailsEditor.tsx`), rendered by
   `components/course-landing/CourseHighlights.tsx`. Existing DBs: `npm run
   backfill:course-meta` fills only empty values for the flagship (+ assessment estimates).

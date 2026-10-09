@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { ArrowUpRight, BadgeCheck, Building2, Sparkles, Wrench } from "lucide-react";
 import { resolveUploadUrl } from "@/lib/api/uploads";
-import { initials, PLATFORM_NAME, type CourseOutline } from "@/lib/course";
+import { initials, PLATFORM_ATTRIBUTION, PLATFORM_NAME, type CourseOutline } from "@/lib/course";
 import { BrandMark } from "@/components/BrandMark";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +55,7 @@ export function OfferedByCard({ course, className }: { course: CourseOutline; cl
   const o = course.offeredBy;
   const [logoFailed, setLogoFailed] = useState(false);
   if (!o.name) return null;
+  const description = o.description || (o.name === PLATFORM_NAME ? PLATFORM_ATTRIBUTION : "");
   const body = (
     <>
       {!o.logoUrl && o.name === PLATFORM_NAME ? (
@@ -79,7 +80,7 @@ export function OfferedByCard({ course, className }: { course: CourseOutline; cl
           {o.name}
           {o.url && <ArrowUpRight className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden />}
         </span>
-        {o.description && <span className="mt-0.5 block text-[13px] text-muted-foreground leading-snug">{o.description}</span>}
+        {description && <span className="mt-0.5 block text-[13px] text-muted-foreground leading-snug">{description}</span>}
       </span>
     </>
   );
