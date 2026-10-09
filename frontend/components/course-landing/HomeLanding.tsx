@@ -44,8 +44,8 @@ export function HomeLanding({ slug, initial }: { slug: string; initial: CourseOu
               {title}
             </h1>
             <p className="mt-6 text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">
-              Designed for students of Classes 9–12: understand artificial intelligence, its
-              applications, opportunities and impact — without needing a technical background.
+              <span lang="hi" className="font-medium text-foreground">गाँव से पहचान। AI से नई उड़ान।</span>{" "}
+              (Designed for students of Classes 9–12 in Uttarakhand)
             </p>
 
             {course && <InstructorBadge course={course} className="mt-7 w-fit" />}
