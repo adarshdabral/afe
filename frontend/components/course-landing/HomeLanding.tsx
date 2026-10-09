@@ -44,7 +44,7 @@ export function HomeLanding({ slug, initial }: { slug: string; initial: CourseOu
               {title}
             </h1>
             <p className="mt-6 text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">
-              <span lang="hi" className="font-medium text-foreground">गाँव से पहचान। AI से नई उड़ान।</span>{" "}
+              <span lang="hi" className="block font-medium text-foreground">गाँव से पहचान। AI से नई उड़ान।</span>
               (Designed for students of Classes 9–12 in Uttarakhand)
             </p>
 
