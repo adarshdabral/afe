@@ -795,6 +795,15 @@ export const AI_COURSE_META = {
   title: "Demystifying AI for Everyone",
   slug: "demystifying-ai-for-everyone",
   instructor: "Dr. Sudhanshu Joshi",
+  // "Meet the Instructor" section body (markdown). `npm run update:instructor` writes it
+  // to an existing database without a re-seed.
+  instructorProfile: [
+    "Dr Sudhanshu Joshi is Professor of Management at the School of Management, Doon University, India, where he coordinates the PM Gati Shakti Centre of Excellence in Logistics and Supply Chain Management.",
+    "",
+    "He is also a Visiting Researcher at the International Center for AI and Cyber Security Research and Innovations (CCRI), Asia University, Taiwan. Previously, he served as a Visiting Professor (Research) at the Centre for Supply Chain Improvement, University of Derby, UK, and at the University of Technology Sydney, Australia.",
+    "",
+    "His research spans digital systems, circular economy, sustainable supply chain management and city logistics. His work addresses challenges in smart cities, including traffic management, emissions reduction and AI integration, as well as green hydrogen supply chains and AI in healthcare. Recognised among the world’s top 2% scientists in the Stanford University–Elsevier rankings for 2024, 2025 and 2026, Professor Joshi is also the editor of Research Notes on Operations and Supply Chain Management for Apple Academic Press. His work connects academic research with practical solutions for sustainable, technology-driven operations.",
+  ].join("\n"),
   shortDescription:
     "A complete AI-literacy course — from what AI is to building responsible AI projects — in 12 modules.",
   description:

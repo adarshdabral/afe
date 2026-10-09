@@ -127,7 +127,7 @@ export async function seedAiCourse({
   await updateSection(courseId, "instructor", {
     title: "Meet the Instructor",
     contentType: "rich_text",
-    content: `**${AI_COURSE_META.instructor}** leads all ${AI_FOR_EVERYONE_MODULES.length} modules of ${AI_COURSE_META.title}.`,
+    content: AI_COURSE_META.instructorProfile,
   });
 
   // 5. Rebuild the 12 modules: one lesson (the chapter) with 7 topics, + one assessment.

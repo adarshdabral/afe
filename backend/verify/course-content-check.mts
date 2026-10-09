@@ -95,7 +95,9 @@ const tree = (await student.get("/courses/demystifying-ai-for-everyone")).json?.
 {
   const mods = tree?.modules ?? [];
   check("course has exactly 12 modules", mods.length === 12, mods.length);
-  check("course page metadata seeded (skills, tools, offered by)", tree?.skills?.length > 0 && tree?.tools?.length > 0 && tree?.offeredBy?.name === "Doon University", { skills: tree?.skills, tools: tree?.tools, offeredBy: tree?.offeredBy });
+  check("course page metadata seeded (skills, tools, offered by)", tree?.skills?.length > 0 && tree?.tools?.length > 0 && tree?.offeredBy?.name === "AI on Wheels", { skills: tree?.skills, tools: tree?.tools, offeredBy: tree?.offeredBy });
+  const instructor = tree?.sections?.find((s: any) => s.kind === "instructor");
+  check("instructor profile seeded", typeof instructor?.content === "string" && instructor.content.includes("PM Gati Shakti Centre of Excellence") && instructor.content.includes("technology-driven operations."), instructor?.content?.slice(0, 120));
   check("every module assessment has a time estimate", mods.every((m: any) => m.assessmentDurationMinutes > 0), mods.map((m: any) => m.assessmentDurationMinutes));
   check("modules are in ascending order 0..11", mods.every((m: any, i: number) => m.order === i), mods.map((m: any) => m.order));
   check("module titles match the required curriculum exactly", JSON.stringify(mods.map((m: any) => m.title)) === JSON.stringify(REQUIRED_MODULES), mods.map((m: any) => m.title));

@@ -11,6 +11,7 @@
     "seed:flagship": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx server/seed/index.ts --keep-others",
     "r2:cors": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/r2-cors.ts",
     "backfill:objectives": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx server/seed/backfill-objectives.ts",
+    "update:instructor": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx server/seed/update-instructor-profile.ts",
     "backfill:course-meta": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx server/seed/backfill-course-meta.ts",
     "enable:downloads": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx server/seed/enable-downloads.ts",
     "import:course": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx server/seed/import-course.ts"
